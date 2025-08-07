@@ -1,0 +1,16 @@
+[workspace]
+resolver = "3"
+
+members = [
+    "bundle_status_service",
+    "common",
+    "config",
+    "jito_fee_service",
+    "jupiter_trader_data",
+    "jupiter_trader_service",
+    "price_service",
+    "service_v1",
+    "ws_price_service",
+]
+
+
