@@ -1,0 +1,216 @@
+use dashmap::DashMap;
+use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
+use std::time::Duration;
+use tokio::sync::broadcast;
+
+use crate::domain::BundleStage;
+
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserBundleUpdate {
+    pub bundle_id: String,
+    pub old_status: String,
+    pub new_status: BundleStage,
+    pub timestamp: u64,
+    pub slot: Option<u64>,
+}
+
+#[derive(Debug, Clone)]
+struct UserStats {
+    bundles_count: usize,
+    last_activity: std::time::Instant,
+    total_updates_sent: u64,
+}
+
+#[derive(Debug, Clone)]
+pub struct UserStreamNotificationSystem {
+    user_streams: Arc<DashMap<String, broadcast::Sender<UserBundleUpdate>>>,
+    bundle_ownership: Arc<DashMap<String, String>>,
+    user_bundles: Arc<DashMap<String, HashSet<String>>>,
+    active_users: Arc<DashMap<String, UserStats>>,
+}
+
+impl UserStreamNotificationSystem {
+    pub fn new() -> Self {
+        Self {
+            user_streams: Arc::new(DashMap::new()),
+            bundle_ownership: Arc::new(DashMap::new()),
+            user_bundles: Arc::new(DashMap::new()),
+            active_users: Arc::new(DashMap::new()),
+        }
+    }
+
+    pub fn subscribe_to_user_stream(
+        &self,
+        user_id: String,
+    ) -> broadcast::Receiver<UserBundleUpdate> {
+        let sender = self
+            .user_streams
+            .entry(user_id.clone())
+            .or_insert_with(|| {
+                let (sender, _) = broadcast::channel(100);
+                sender
+            })
+            .clone();
+
+        self.active_users
+            .entry(user_id.clone())
+            .and_modify(|stats| stats.last_activity = std::time::Instant::now())
+            .or_insert_with(|| UserStats {
+                bundles_count: self.get_user_bundle_count(&user_id),
+                last_activity: std::time::Instant::now(),
+                total_updates_sent: 0,
+            });
+
+        sender.subscribe()
+    }
+
+    pub async fn start_connection_management(&self) {
+        let cleanup_system: UserStreamNotificationSystem = self.clone();
+
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(Duration::from_secs(30));
+
+            loop {
+                interval.tick().await;
+                cleanup_system.cleanup_inactive_users().await;
+            }
+        });
+    }
+
+    pub async fn cleanup_inactive_users(&self) {
+        let cuttof = std::time::Instant::now() - Duration::from_secs(15);
+
+        let inactive_users: Vec<String> = self
+            .active_users
+            .iter()
+            .filter(|entry| entry.value().last_activity < cuttof)
+            .map(|entry| entry.key().clone())
+            .collect();
+
+        self.active_users.retain(|_, user_data| {
+            let is_active = user_data.last_activity >= cuttof;
+            if !is_active {
+                tracing::info!("Cleaning up inactive user");
+            }
+            is_active
+        });
+
+        for user_id in inactive_users {
+            self.user_streams.remove(&user_id);
+        }
+    }
+
+    pub fn notify_bundle_change(
+        &self,
+        bundle_id: &str,
+        old_status: String,
+        new_status: BundleStage,
+        slot: Option<u64>,
+    ) {
+        let user_id = match self.bundle_ownership.get(bundle_id) {
+            Some(owner) => owner.value().clone(),
+            None => {
+                tracing::warn!("Bundle {} has no owner", bundle_id);
+                return;
+            }
+        };
+
+        let update = UserBundleUpdate {
+            bundle_id: bundle_id.to_string(),
+            old_status,
+            new_status: new_status,
+            timestamp: chrono::Utc::now().timestamp_millis() as u64,
+            slot,
+        };
+
+        if let Some(sender) = self.user_streams.get(&user_id) {
+            if let Err(_) = sender.send(update) {
+                tracing::debug!("No active listeners for user {}", user_id);
+            } else {
+                self.active_users
+                    .entry(user_id)
+                    .and_modify(|stats| stats.total_updates_sent += 1);
+            }
+        }
+    }
+
+    pub fn register_user_bundle(&self, user_id: &str, bundle_id: &str) {
+        self.bundle_ownership
+            .insert(bundle_id.to_string(), user_id.to_string());
+
+        self.user_bundles
+            .entry(user_id.to_string())
+            .or_insert_with(HashSet::new)
+            .insert(bundle_id.to_string());
+    }
+
+    pub fn user_owns_bundle(&self, user_id: &str, bundle_id: &str) -> bool {
+        self.bundle_ownership
+            .get(bundle_id)
+            .map(|owner| owner.value() == user_id)
+            .unwrap_or(false)
+    }
+
+    pub fn get_user_bundles(&self, user_id: &str) -> Vec<String> {
+        self.user_bundles
+            .get(user_id)
+            .map(|bundles| bundles.iter().cloned().collect())
+            .unwrap_or_default()
+    }
+
+    pub fn get_user_id(&self, bundle_id: &str) -> Option<String> {
+        self.bundle_ownership
+            .get(bundle_id)
+            .map(|entry| entry.value().clone())
+    }
+
+    pub fn cleanup_bundle(&self, bundle_id: &str) {
+        if let Some((_, user_id)) = self.bundle_ownership.remove(bundle_id) {
+            if let Some(mut user_bundles) = self.user_bundles.get_mut(&user_id) {
+                user_bundles.remove(bundle_id);
+            }
+        }
+    }
+
+    pub fn get_stats(&self) -> HashMap<String, usize> {
+        let mut stats = HashMap::new();
+        stats.insert("active_user_streams".to_string(), self.user_streams.len());
+        stats.insert("total_bundles".to_string(), self.bundle_ownership.len());
+        stats.insert("active_users".to_string(), self.active_users.len());
+
+        let total_user_bundles: usize = self
+            .user_bundles
+            .iter()
+            .map(|entry| entry.value().len())
+            .sum();
+        stats.insert("total_user_bundles".to_string(), total_user_bundles);
+
+        stats
+    }
+
+    fn get_user_bundle_count(&self, user_id: &str) -> usize {
+        self.user_bundles
+            .get(user_id)
+            .map(|bundles| bundles.len())
+            .unwrap_or(0)
+    }
+
+    // fn calculate_progress(&self, status: &str) -> String {
+    //     match status {
+    //         "Submitted" => "1/5".to_string(),
+    //         "InFlight" => "2/5".to_string(),
+    //         "Landed" => "3/5".to_string(),
+    //         "Confirmed" => "4/5".to_string(),
+    //         "Finalized" => "5/5".to_string(),
+    //         "Failed" => "❌".to_string(),
+    //         _ => "?/5".to_string(),
+    //     }
+    // }
+
+    // pub async fn get_current_user_bundle_statuses(&self, user_id: &str) -> Vec<UserBundleUpdate> {
+    //     vec![]
+    // }
+}

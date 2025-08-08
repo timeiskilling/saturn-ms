@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package streaming;
+
+service BundleService {
+    rpc GetStatusesStream (AddBundlesRequest) returns (stream UserBundleUpdate) {};
+    
+    rpc CoinsInformation (Empty) returns (stream CoinsData) {};
+}
+
+message Empty {}
+
+message CoinsData {
+    string price = 1;
+    string change_percent = 2;
+    string image_url = 3;
+    optional uint32 rank = 4;
+    string coin_name = 5;
+}
+
+message AddBundlesRequest {
+    repeated string bundle_ids = 1;
+    string user_id = 2;
+}
+
+message UserBundleUpdate {
+    string bundle_id = 1;
+    string old_status = 2;
+    BundleStage new_status = 3;
+    uint64 timestamp = 4;
+    optional uint64 slot = 5;
+}
+
+enum BundleStage {
+  BUNDLE_STAGE_UNSPECIFIED = 0;  
+  BUNDLE_STAGE_SUBMITTED = 1;    
+  BUNDLE_STAGE_IN_FLIGHT = 2;    
+  BUNDLE_STAGE_LANDED = 3;       
+  BUNDLE_STAGE_CONFIRMED = 4;    
+  BUNDLE_STAGE_FINALIZED = 5;    
+  BUNDLE_STAGE_FAILED = 6;       
+}
