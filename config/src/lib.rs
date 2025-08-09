@@ -32,6 +32,9 @@ pub struct Config {
     pub jwt_expire_refresh_token_seconds: i64,
     pub jwt_validation_leeway_seconds: i64,
     pub jwt_enable_revoked_tokens: bool,
+
+    pub jito_tip_redis_host : String,
+    pub jito_tip_redis_port : u16,
 }
 
 impl Config {
@@ -41,6 +44,10 @@ impl Config {
     }
 
     pub fn redis_url(&self) -> String {
+        format!("redis://{}:{}", self.redis_host, self.redis_port)
+    }
+
+    pub fn jito_tip_redis_url(&self) -> String {
         format!("redis://{}:{}", self.redis_host, self.redis_port)
     }
 
@@ -90,6 +97,8 @@ pub fn load() -> Config {
         jwt_expire_refresh_token_seconds: env_parse("JWT_EXPIRE_REFRESH_TOKEN_SECONDS"),
         jwt_validation_leeway_seconds: env_parse("JWT_VALIDATION_LEEWAY_SECONDS"),
         jwt_enable_revoked_tokens: env_parse("JWT_ENABLE_REVOKED_TOKENS"),
+        jito_tip_redis_host: env_get("JITO_TIP_REDIS_HOST"),
+        jito_tip_redis_port: env_parse("JITO_TIP_REDIS_PORT"),
     };
 
     tracing::trace!("configuration: {:#?}", config);

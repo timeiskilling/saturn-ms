@@ -1,6 +1,7 @@
 use base64::{Engine, engine::general_purpose};
 use borsh::BorshDeserialize;
-use common::{jito_tips::TipManager, models::DayTickerEvent};
+use common::models::DayTickerEvent;
+
 use config::Config;
 use core::str;
 use dashmap::DashMap;
@@ -12,6 +13,7 @@ use jupiter_trader_data::models::{
         JupiterSwapResponse, JupiterUltraQuoteResponse, PriorityLevel, QuoteOptions, TokenNaming,
     },
 };
+use redis::AsyncCommands;
 use reqwest::Client;
 use serde_json::Value;
 use solana_client::nonblocking::rpc_client::RpcClient;
@@ -30,7 +32,7 @@ use solana_sdk::{
     transaction::{Transaction, VersionedTransaction},
 };
 use std::{collections::HashMap, str::FromStr, sync::Arc};
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, RwLock};
 
 use crate::{
     client::UserStreamNotificationSystem,
@@ -44,6 +46,7 @@ pub type SharedPriceState = Arc<Mutex<HashMap<String, DayTickerEvent>>>;
 pub struct JupiterTrader {
     client: RpcClient,
     pub http_client: Client,
+    tip_cache: Arc<RwLock<Option<f64>>>,
     keypair: Arc<Keypair>,
     jupiter_base_url: String,
     jupiter_ultra_url: String,
@@ -51,20 +54,15 @@ pub struct JupiterTrader {
     pub shared_price_state: SharedPriceState,
     pub redis: Mutex<redis::aio::MultiplexedConnection>,
     pub config: Config,
+    jito_tip_redis: Arc<Mutex<redis::aio::MultiplexedConnection>>,
     // pub atl_pubkey: Pubkey,
-    tip_manager: Arc<Mutex<TipManager>>,
     notification_system: Arc<UserStreamNotificationSystem>,
     bundle_status: Arc<RedisBundleTracker>,
     pub coin_naming: Arc<DashMap<String, String>>,
 }
 
 impl JupiterTrader {
-    pub async fn new(
-        rpc_url: &str,
-        keypair: Keypair,
-        tip_manager: Arc<Mutex<TipManager>>,
-        redis_urls: Vec<String>,
-    ) -> Self {
+    pub async fn new(rpc_url: &str, keypair: Keypair, redis_urls: Vec<String>) -> Self {
         let http_client = reqwest::Client::builder().build().unwrap();
         let client = solana_client::nonblocking::rpc_client::RpcClient::new_with_commitment(
             rpc_url.to_string(),
@@ -90,8 +88,10 @@ impl JupiterTrader {
             jupiter_ultra_url,
             shared_price_state: Arc::new(Mutex::new(HashMap::new())),
             redis: Mutex::new(redis_con::connection::redis_conn(&config).await),
+            jito_tip_redis: Arc::new(Mutex::new(
+                redis_con::connection::jito_tip_redis_conn(&config).await,
+            )),
             config: config,
-            tip_manager,
             notification_system: Arc::new(UserStreamNotificationSystem::new()),
             bundle_status: Arc::new(
                 RedisBundleTracker::new(redis_urls, tracker_config)
@@ -99,6 +99,7 @@ impl JupiterTrader {
                     .unwrap(),
             ),
             coin_naming: Arc::new(DashMap::new()),
+            tip_cache: Arc::new(RwLock::new(None)),
         }
     }
     pub fn get_notification_system(&self) -> Arc<UserStreamNotificationSystem> {
@@ -713,15 +714,13 @@ impl JupiterTrader {
 
         let mut bundle_transactions: Vec<String> = Vec::with_capacity(NUMBER_TRANSACTIONS);
 
-        let min_jito_tip = self.tip_manager.lock().await;
-        let data = min_jito_tip.get_price().await;
+        let data = *self.tip_cache.read().await;
 
         let tip_instruction = if let Some(tip) = data {
             transfer(&self.keypair.pubkey(), &jito_tip_acc, tip as u64)
         } else {
             transfer(&self.keypair.pubkey(), &jito_tip_acc, MIN_JITO_TIP_LAMPORTS)
         };
-        drop(min_jito_tip);
 
         let mut tip_transaction =
             Transaction::new_with_payer(&[tip_instruction], Some(&self.keypair.pubkey()));
@@ -744,28 +743,25 @@ impl JupiterTrader {
             .send_bundle(Some(buncle_json), None)
             .await;
 
-
         match bundle_result {
-            Ok(response_json) => {
-                match response_json["result"].as_str() {
-                    Some(bundle_uuid) => {
-                        tracing::info!("Bundle sent successfully with UUID: {}", bundle_uuid);
-                        self.bundle_status
-                            .add_bundles(
-                                vec![bundle_uuid.to_string()],
-                                self.keypair.pubkey().to_string(),
-                            )
-                            .await
-                            .unwrap(); 
-                        Ok(bundle_uuid.to_string())
-                    }
-                    None => {
-                        let error_msg = "Failed to get bundle UUID from response JSON";
-                        tracing::error!("{}",error_msg);
-                        Err(error_msg.into())
-                    }
+            Ok(response_json) => match response_json["result"].as_str() {
+                Some(bundle_uuid) => {
+                    tracing::info!("Bundle sent successfully with UUID: {}", bundle_uuid);
+                    self.bundle_status
+                        .add_bundles(
+                            vec![bundle_uuid.to_string()],
+                            self.keypair.pubkey().to_string(),
+                        )
+                        .await
+                        .unwrap();
+                    Ok(bundle_uuid.to_string())
                 }
-            }
+                None => {
+                    let error_msg = "Failed to get bundle UUID from response JSON";
+                    tracing::error!("{}", error_msg);
+                    Err(error_msg.into())
+                }
+            },
             Err(e) => {
                 tracing::error!("Failed to send bundle: {}", e);
                 Err(e.into())
@@ -773,6 +769,10 @@ impl JupiterTrader {
         }
     }
 
+    async fn get_tip(tip_cache: &Arc<RwLock<Option<f64>>>) -> Option<f64> {
+        *tip_cache.read().await
+    }
+    
     async fn create_swap_transaction(
         &self,
         quote: JupiterQuoteResponse,
@@ -821,6 +821,31 @@ impl JupiterTrader {
 
     pub fn wallet_adrres(&self) -> String {
         self.keypair.pubkey().to_string()
+    }
+
+    async fn jito_tip_listener(&self) {
+        const REDIS_KEY: &str = "jito:tip:latest";
+        const VALUE_FIELD: &str = "value";
+
+        let cache = self.tip_cache.clone();
+        let redis = self.jito_tip_redis.clone(); // Arc<Mutex<MultiplexedConnection>>
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(tokio::time::Duration::from_millis(500));
+            loop {
+                interval.tick().await;
+
+                let mut con = redis.lock().await;
+                match con.hget::<_, _, f64>(REDIS_KEY, VALUE_FIELD).await {
+                    Ok(v) => {
+                        *cache.write().await = Some(v);
+                        tracing::info!("Updated tip cache from Redis: {}", v);
+                    }
+                    Err(e) => {
+                        tracing::error!("Failed to fetch tip from Redis: {}", e);
+                    }
+                }
+            }
+        });
     }
 
     // pub async fn execute_arbitrage_bundle(
