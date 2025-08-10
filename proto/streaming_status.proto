@@ -4,8 +4,43 @@ package streaming;
 
 service BundleService {
     rpc GetStatusesStream (AddBundlesRequest) returns (stream UserBundleUpdate) {};
-    
     rpc CoinsInformation (Empty) returns (stream CoinsData) {};
+    // rpc UserPubK (UserPk) returns (Response);
+    rpc CreateTransactions (TrasnactionInstruction) returns (TransactionsToSign) {};
+    rpc SendTransactions (SignedTransactions) returns (stream UserBundleUpdate) {};
+}
+
+
+// pub struct WebTakeQoute {
+//     pub input_mint: String,
+//     pub output_mint: String,
+//     pub amount: u64,
+//     pub slippage_bps: u16,
+//     pub option: Option<QuoteOptions>,
+// }
+
+message SignedTransactions {
+    repeated string transactions = 1;
+}
+
+message TransactionsToSign {
+    repeated string transactions = 1;
+}
+
+message TrasnactionInstruction {
+    string input_mint = 1;
+    string output_mint = 2;
+    uint64 amount = 3;
+    uint32 slippage_bps = 4;
+    QuoteOptions options = 5;
+    string user_pk = 6;
+}
+
+message QuoteOptions {
+    uint32 swap_mode = 1;
+    repeated string dexes = 2;
+    repeated string exclude_dexes = 3; 
+    optional bool dynamic_slippage = 4;
 }
 
 message Empty {}

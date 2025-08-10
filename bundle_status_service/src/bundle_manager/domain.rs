@@ -8,7 +8,8 @@ use tokio::sync::{Mutex, Semaphore};
 use tokio::time::{Duration, Instant};
 use tracing::{debug, error, info, warn};
 
-use crate::client::{UserBundleUpdate, UserStreamNotificationSystem};
+use crate::bundle_manager::client::{UserBundleUpdate, UserStreamNotificationSystem};
+
 
 
 #[derive(Debug, Serialize, Deserialize)]

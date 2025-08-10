@@ -15,6 +15,7 @@ use jupiter_trader_data::models::{
 };
 use redis::AsyncCommands;
 use reqwest::Client;
+use serde::Serialize;
 use serde_json::Value;
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{
@@ -35,10 +36,7 @@ use std::{collections::HashMap, str::FromStr, sync::Arc};
 use tokio::sync::{Mutex, RwLock};
 
 use crate::{
-    client::UserStreamNotificationSystem,
-    constant::{HEADER_SIZE, MIN_JITO_TIP_LAMPORTS, NUMBER_TRANSACTIONS, SOL_MINT, USDC_MINT},
-    domain::{RedisBundleTracker, TrackerConfig},
-    redis_con,
+    bundle_manager::{client::UserStreamNotificationSystem, domain::{RedisBundleTracker, TrackerConfig}}, constant::{HEADER_SIZE, MIN_JITO_TIP_LAMPORTS, NUMBER_TRANSACTIONS, SOL_MINT, USDC_MINT}, redis_con
 };
 
 pub type SharedPriceState = Arc<Mutex<HashMap<String, DayTickerEvent>>>;
@@ -226,6 +224,15 @@ impl JupiterTrader {
 
         Ok(quote)
     }
+
+    // async fn build_adnd_send_transaction(
+    //     &self,
+    //     input_mint: &str,
+    //     output_mint: &str,
+    //     amount: u64,
+    //     slippage_bps: u16,
+    //     options: &QuoteOptions,
+    // ) ->
 
     pub async fn get_quote_with_options(
         &self,
@@ -440,7 +447,19 @@ impl JupiterTrader {
             .await?;
 
         let versioned_message = VersionedMessage::V0(message);
-        let transaction = VersionedTransaction::try_new(versioned_message, &[&self.keypair])?;
+
+        let num_required = match &versioned_message {
+            VersionedMessage::Legacy(m) => m.header.num_required_signatures as usize,
+            VersionedMessage::V0(m) => m.header.num_required_signatures as usize,
+        };
+
+        let transaction = VersionedTransaction {
+            signatures: vec![Signature::default(); num_required],
+            message: versioned_message,
+        };
+
+        let serialized_tx = bincode::serialize(&transaction)?;
+        let base64_tx = base64::engine::general_purpose::STANDARD.encode(serialized_tx);
 
         Ok(transaction)
     }
@@ -716,11 +735,11 @@ impl JupiterTrader {
 
         let data = *self.tip_cache.read().await;
 
-        let tip_instruction = if let Some(tip) = data {
-            transfer(&self.keypair.pubkey(), &jito_tip_acc, tip as u64)
-        } else {
-            transfer(&self.keypair.pubkey(), &jito_tip_acc, MIN_JITO_TIP_LAMPORTS)
-        };
+        let tip_instruction = transfer(
+            &self.keypair.pubkey(),
+            &jito_tip_acc,
+            data.unwrap_or(MIN_JITO_TIP_LAMPORTS as f64) as u64,
+        );
 
         let mut tip_transaction =
             Transaction::new_with_payer(&[tip_instruction], Some(&self.keypair.pubkey()));
@@ -772,7 +791,9 @@ impl JupiterTrader {
     async fn get_tip(tip_cache: &Arc<RwLock<Option<f64>>>) -> Option<f64> {
         *tip_cache.read().await
     }
+
     
+
     async fn create_swap_transaction(
         &self,
         quote: JupiterQuoteResponse,

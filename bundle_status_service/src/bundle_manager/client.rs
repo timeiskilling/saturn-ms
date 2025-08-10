@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::broadcast;
 
-use crate::domain::BundleStage;
+use crate::bundle_manager::domain::BundleStage;
 
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
