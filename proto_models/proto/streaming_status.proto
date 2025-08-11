@@ -3,8 +3,8 @@ syntax = "proto3";
 package streaming;
 
 service BundleService {
-    rpc GetStatusesStream (AddBundlesRequest) returns (stream UserBundleUpdate) {};
-    rpc CoinsInformation (Empty) returns (stream CoinsData) {};
+    // rpc GetStatusesStream (AddBundlesRequest) returns (stream UserBundleUpdate) {};
+    // rpc CoinsInformation (Empty) returns (stream CoinsData) {};
     // rpc UserPubK (UserPk) returns (Response);
     rpc CreateTransactions (TrasnactionInstruction) returns (TransactionsToSign) {};
     rpc SendTransactions (SignedTransactions) returns (stream UserBundleUpdate) {};
@@ -37,7 +37,7 @@ message TrasnactionInstruction {
 }
 
 message QuoteOptions {
-    uint32 swap_mode = 1;
+    optional uint32 swap_mode = 1;
     repeated string dexes = 2;
     repeated string exclude_dexes = 3; 
     optional bool dynamic_slippage = 4;

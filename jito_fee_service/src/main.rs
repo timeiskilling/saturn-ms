@@ -12,7 +12,6 @@ use tracing::{error, info, warn};
 pub struct JitoResponse {
     pub landed_tips_99th_percentile: f64,
 }
-
 pub const REDIS_KEY: &str = "jito:tip:latest";
 pub const VALUE_FIELD: &str = "value";
 pub const TIMESTAMP_FIELD: &str = "updated_at_unix";

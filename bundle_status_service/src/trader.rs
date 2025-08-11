@@ -32,11 +32,16 @@ use solana_sdk::{
     system_instruction::transfer,
     transaction::{Transaction, VersionedTransaction},
 };
-use std::{collections::HashMap, str::FromStr, sync::Arc};
+use std::{collections::HashMap, str::FromStr, sync::Arc, thread};
 use tokio::sync::{Mutex, RwLock};
 
 use crate::{
-    bundle_manager::{client::UserStreamNotificationSystem, domain::{RedisBundleTracker, TrackerConfig}}, constant::{HEADER_SIZE, MIN_JITO_TIP_LAMPORTS, NUMBER_TRANSACTIONS, SOL_MINT, USDC_MINT}, redis_con
+    bundle_manager::{
+        client::UserStreamNotificationSystem,
+        domain::{RedisBundleTracker, TrackerConfig},
+    },
+    constant::{HEADER_SIZE, MIN_JITO_TIP_LAMPORTS, NUMBER_TRANSACTIONS, SOL_MINT, USDC_MINT},
+    redis_con,
 };
 
 pub type SharedPriceState = Arc<Mutex<HashMap<String, DayTickerEvent>>>;
@@ -240,7 +245,7 @@ impl JupiterTrader {
         output_mint: &str,
         amount: u64,
         slippage_bps: u16,
-        options: &QuoteOptions,
+        options: QuoteOptions,
         // fee_account : &str,
     ) -> Result<JupiterQuoteResponse, Box<dyn std::error::Error + Send + Sync>> {
         let url = format!("{}/quote", self.jupiter_base_url);
@@ -350,66 +355,67 @@ impl JupiterTrader {
         Ok(signature)
     }
 
-    pub async fn execute_swap_instruction(
-        &self,
-        quote: JupiterQuoteResponse,
-    ) -> Result<Signature, Box<dyn std::error::Error + Send + Sync>> {
-        use solana_sdk::hash::Hash;
+    // pub async fn execute_swap_instruction(
+    //     &self,
+    //     quote: JupiterQuoteResponse,
+    // ) -> Result<Signature, Box<dyn std::error::Error + Send + Sync>> {
+    //     use solana_sdk::hash::Hash;
 
-        let url = format!("{}/swap-instructions", self.jupiter_base_url);
+    //     let url = format!("{}/swap-instructions", self.jupiter_base_url);
 
-        let swap_instructions = JupiterSwapRequest::new(
-            self.keypair.pubkey().to_string(),
-            quote,
-            10_000_000,
-            PriorityLevel::VeryHigh,
-            true,
-        );
+    //     let swap_instructions = JupiterSwapRequest::new(
+    //         self.keypair.pubkey().to_string(),
+    //         quote,
+    //         10_000_000,
+    //         PriorityLevel::VeryHigh,
+    //         true,
+    //     );
 
-        let response = self
-            .http_client
-            .post(&url)
-            .json(&swap_instructions)
-            .send()
-            .await?;
+    //     let response = self
+    //         .http_client
+    //         .post(&url)
+    //         .json(&swap_instructions)
+    //         .send()
+    //         .await?;
 
-        if !response.status().is_success() {
-            let error_txt = response.text().await?;
-            tracing::error!("Jupiter API err : {}", error_txt);
-            return Err("err".into());
-        }
+    //     if !response.status().is_success() {
+    //         let error_txt = response.text().await?;
+    //         tracing::error!("Jupiter API err : {}", error_txt);
+    //         return Err("err".into());
+    //     }
 
-        let swap_instruction_response: JupiterSwapInstructionsRsponse = response.json().await?;
+    //     let swap_instruction_response: JupiterSwapInstructionsRsponse = response.json().await?;
 
-        if let Some(simulation_error) = &swap_instruction_response.simulation_error {
-            tracing::error!(
-                "Simulation error: {} - {}",
-                simulation_error.error_code,
-                simulation_error.error
-            );
-            return Err(format!("Simulation failed: {}", simulation_error.error).into());
-        }
+    //     if let Some(simulation_error) = &swap_instruction_response.simulation_error {
+    //         tracing::error!(
+    //             "Simulation error: {} - {}",
+    //             simulation_error.error_code,
+    //             simulation_error.error
+    //         );
+    //         return Err(format!("Simulation failed: {}", simulation_error.error).into());
+    //     }
 
-        let blockhash =
-            Hash::try_from_slice(&swap_instruction_response.blockhash_with_metadata.blockhash)?;
+    //     let blockhash =
+    //         Hash::try_from_slice(&swap_instruction_response.blockhash_with_metadata.blockhash)?;
 
-        let transaction: VersionedTransaction = self
-            .build_transaction_from_instructions(&swap_instruction_response, blockhash)
-            .await?;
+    //     let transaction: VersionedTransaction = self
+    //         .build_transaction_from_instructions(&swap_instruction_response, blockhash)
+    //         .await?;
 
-        let signature = self
-            .client
-            .send_and_confirm_transaction(&transaction)
-            .await?;
-        tracing::info!("Swap executed successfully: {}", signature);
-        Ok(signature)
-    }
+    //     let signature = self
+    //         .client
+    //         .send_and_confirm_transaction(&transaction)
+    //         .await?;
+    //     tracing::info!("Swap executed successfully: {}", signature);
+    //     Ok(signature)
+    // }
 
     async fn build_transaction_from_instructions(
         &self,
         swap_response: &JupiterSwapInstructionsRsponse,
         blockhash: Hash,
-    ) -> Result<VersionedTransaction, Box<dyn std::error::Error + Send + Sync>> {
+        pubkey: &Pubkey
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         let mut instructions = Vec::new();
 
         for compute_instruction in &swap_response.compute_budget_instructions {
@@ -443,7 +449,7 @@ impl JupiterTrader {
             };
 
         let message = self
-            .create_v0_message_with_alt(&instructions, &address_lookup_table_accounts, blockhash)
+            .create_v0_message_with_alt(&instructions, &address_lookup_table_accounts, blockhash, pubkey)
             .await?;
 
         let versioned_message = VersionedMessage::V0(message);
@@ -459,9 +465,9 @@ impl JupiterTrader {
         };
 
         let serialized_tx = bincode::serialize(&transaction)?;
-        let base64_tx = base64::engine::general_purpose::STANDARD.encode(serialized_tx);
+        let base58_tx = bs58::encode(serialized_tx).into_string();
 
-        Ok(transaction)
+        Ok(base58_tx)
     }
 
     async fn fetch_map_address_lookup_tables(
@@ -542,9 +548,10 @@ impl JupiterTrader {
         instructions: &[solana_sdk::instruction::Instruction],
         alt_account: &[AddressLookupTableAccount],
         blockhash: Hash,
+        pubkey: &Pubkey
     ) -> Result<v0::Message, Box<dyn std::error::Error + Send + Sync>> {
         let message =
-            Message::try_compile(&self.keypair.pubkey(), instructions, alt_account, blockhash)?;
+            Message::try_compile(pubkey, instructions, alt_account, blockhash)?;
 
         Ok(message)
     }
@@ -622,21 +629,21 @@ impl JupiterTrader {
         Ok(signature)
     }
 
-    pub async fn swap_sol_to_usdc_instruction(
-        &self,
-        sol_amount: f64,
-        slippage_bps: u16,
-    ) -> Result<Signature, Box<dyn std::error::Error + Send + Sync>> {
-        let amount_lamports = (sol_amount * 1_000_000_000.0) as u64;
+    // pub async fn swap_sol_to_usdc_instruction(
+    //     &self,
+    //     sol_amount: f64,
+    //     slippage_bps: u16,
+    // ) -> Result<Signature, Box<dyn std::error::Error + Send + Sync>> {
+    //     let amount_lamports = (sol_amount * 1_000_000_000.0) as u64;
 
-        let quote = self
-            .get_quote(SOL_MINT, USDC_MINT, amount_lamports, slippage_bps)
-            .await?;
+    //     let quote = self
+    //         .get_quote(SOL_MINT, USDC_MINT, amount_lamports, slippage_bps)
+    //         .await?;
 
-        let signature = self.execute_swap_instruction(quote).await?;
+    //     let signature = self.execute_swap_instruction(quote).await?;
 
-        Ok(signature)
-    }
+    //     Ok(signature)
+    // }
 
     pub async fn get_balance(&self) -> Result<f64, Box<dyn std::error::Error + Send + Sync>> {
         let balance = self.client.get_balance(&self.keypair.pubkey()).await?;
@@ -659,150 +666,176 @@ impl JupiterTrader {
     //     }
     // }
 
-    pub async fn send_template(&self, quote: Vec<WebTakeQoute>) {
-        let mut quotes = Vec::with_capacity(5);
+    // pub async fn send_template(&self, quote: Vec<WebTakeQoute>) {
+    //     let mut quotes = Vec::with_capacity(5);
 
-        for data in quote {
-            if let Some(with_optinal_data) = data.option {
-                tracing::info!("Calling get_quote_with_options");
-                match self
-                    .get_quote_with_options(
-                        &data.input_mint,
-                        &data.output_mint,
-                        data.amount,
-                        data.slippage_bps,
-                        &with_optinal_data,
-                    )
-                    .await
-                {
-                    Ok(response_struct) => {
-                        tracing::info!("get_quote_with_options successful: {:?}", response_struct);
-                        quotes.push(response_struct);
-                    }
-                    Err(e) => {
-                        tracing::error!("Error from get_quote_with_options: {:?}", e)
-                    }
-                }
-            } else {
-                tracing::info!("Calling get_quote (without options)");
-                match self
-                    .get_quote(
-                        &data.input_mint,
-                        &data.output_mint,
-                        data.amount,
-                        data.slippage_bps,
-                    )
-                    .await
-                {
-                    Ok(response_struct) => {
-                        tracing::info!("get_quote successful: {:?}", response_struct);
-                        quotes.push(response_struct);
-                    }
-                    Err(e) => {
-                        tracing::error!("Error from get_quote: {:?}", e);
-                    }
-                }
-            }
-        }
+    //     for data in quote {
+    //         if let Some(with_optinal_data) = data.option {
+    //             tracing::info!("Calling get_quote_with_options");
+    //             match self
+    //                 .get_quote_with_options(
+    //                     &data.input_mint,
+    //                     &data.output_mint,
+    //                     data.amount,
+    //                     data.slippage_bps,
+    //                     with_optinal_data,
+    //                 )
+    //                 .await
+    //             {
+    //                 Ok(response_struct) => {
+    //                     tracing::info!("get_quote_with_options successful: {:?}", response_struct);
+    //                     quotes.push(response_struct);
+    //                 }
+    //                 Err(e) => {
+    //                     tracing::error!("Error from get_quote_with_options: {:?}", e)
+    //                 }
+    //             }
+    //         } else {
+    //             tracing::info!("Calling get_quote (without options)");
+    //             match self
+    //                 .get_quote(
+    //                     &data.input_mint,
+    //                     &data.output_mint,
+    //                     data.amount,
+    //                     data.slippage_bps,
+    //                 )
+    //                 .await
+    //             {
+    //                 Ok(response_struct) => {
+    //                     tracing::info!("get_quote successful: {:?}", response_struct);
+    //                     quotes.push(response_struct);
+    //                 }
+    //                 Err(e) => {
+    //                     tracing::error!("Error from get_quote: {:?}", e);
+    //                 }
+    //             }
+    //         }
+    //     }
 
-        match self.send_swap_bundle_transaction(quotes).await {
-            Ok(data) => {
-                tracing::info!("sending bundle to jito {}", data);
-            }
-            Err(_) => {
-                tracing::info!("Err in sending_bundle0");
-            }
-        }
-    }
+    //     match self.send_swap_bundle_transaction(quotes).await {
+    //         Ok(data) => {
+    //             tracing::info!("sending bundle to jito {}", data);
+    //         }
+    //         Err(_) => {
+    //             tracing::info!("Err in sending_bundle0");
+    //         }
+    //     }
+    // }
 
-    pub async fn send_swap_bundle_transaction(
+    // pub async fn send_swap_bundle_transaction(
+    //     &self,
+    //     swaps: Vec<JupiterQuoteResponse>,
+    // ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    //     if swaps.len() > 5 {
+    //         tracing::error!("Over max transactions in bundle");
+    //         return Err("Bundle must contain less than 5 transactions".into());
+    //     }
+
+    //     let jito_tip_acc = Pubkey::from_str(&self.jito_endpoint.get_random_tip_account().await?)?;
+
+    //     tracing::info!("tip account {}", jito_tip_acc);
+
+    //     let blockhash = self.client.get_latest_blockhash().await?;
+    //     tracing::info!("latest blockhash {}", blockhash);
+
+    //     let mut bundle_transactions: Vec<String> = Vec::with_capacity(NUMBER_TRANSACTIONS);
+
+    //     let data = *self.tip_cache.read().await;
+
+    //     let tip_instruction = transfer(
+    //         &self.keypair.pubkey(),
+    //         &jito_tip_acc,
+    //         data.unwrap_or(MIN_JITO_TIP_LAMPORTS as f64) as u64,
+    //     );
+
+    //     let mut tip_transaction =
+    //         Transaction::new_with_payer(&[tip_instruction], Some(&self.keypair.pubkey()));
+
+    //     tip_transaction.sign(&[&self.keypair], blockhash);
+
+    //     let tip_encoded = general_purpose::STANDARD.encode(bincode::serialize(&tip_transaction)?);
+    //     bundle_transactions.push(tip_encoded);
+
+    //     for quote in swaps {
+    //         let swap_transaction = self.create_swap_transaction(quote, blockhash).await?;
+    //         let encoded_transaction = base64::engine::general_purpose::STANDARD
+    //             .encode(bincode::serialize(&swap_transaction)?);
+    //         bundle_transactions.push(encoded_transaction);
+    //     }
+
+    //     let buncle_json = serde_json::json!(bundle_transactions);
+    //     let bundle_result = self
+    //         .jito_endpoint
+    //         .send_bundle(Some(buncle_json), None)
+    //         .await;
+
+    //     match bundle_result {
+    //         Ok(response_json) => match response_json["result"].as_str() {
+    //             Some(bundle_uuid) => {
+    //                 tracing::info!("Bundle sent successfully with UUID: {}", bundle_uuid);
+    //                 self.bundle_status
+    //                     .add_bundles(
+    //                         vec![bundle_uuid.to_string()],
+    //                         self.keypair.pubkey().to_string(),
+    //                     )
+    //                     .await
+    //                     .unwrap();
+    //                 Ok(bundle_uuid.to_string())
+    //             }
+    //             None => {
+    //                 let error_msg = "Failed to get bundle UUID from response JSON";
+    //                 tracing::error!("{}", error_msg);
+    //                 Err(error_msg.into())
+    //             }
+    //         },
+    //         Err(e) => {
+    //             tracing::error!("Failed to send bundle: {}", e);
+    //             Err(e.into())
+    //         }
+    //     }
+    // }
+
+    pub async fn create_transactions(
         &self,
-        swaps: Vec<JupiterQuoteResponse>,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        if swaps.len() > 5 {
-            tracing::error!("Over max transactions in bundle");
-            return Err("Bundle must contain less than 5 transactions".into());
-        }
-
+        pubkey: &str,
+        quote: JupiterQuoteResponse,
+    ) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>> {
+        let mut transactions: Vec<String> = Vec::with_capacity(6);
         let jito_tip_acc = Pubkey::from_str(&self.jito_endpoint.get_random_tip_account().await?)?;
-
-        tracing::info!("tip account {}", jito_tip_acc);
-
-        let blockhash = self.client.get_latest_blockhash().await?;
-        tracing::info!("latest blockhash {}", blockhash);
-
-        let mut bundle_transactions: Vec<String> = Vec::with_capacity(NUMBER_TRANSACTIONS);
+        let user_pubkey = Pubkey::from_str(pubkey)?;
 
         let data = *self.tip_cache.read().await;
-
         let tip_instruction = transfer(
-            &self.keypair.pubkey(),
+            &user_pubkey,
             &jito_tip_acc,
             data.unwrap_or(MIN_JITO_TIP_LAMPORTS as f64) as u64,
         );
 
-        let mut tip_transaction =
-            Transaction::new_with_payer(&[tip_instruction], Some(&self.keypair.pubkey()));
+        let tip_transaction =
+            Transaction::new_with_payer(&[tip_instruction], Some(&user_pubkey));
 
-        tip_transaction.sign(&[&self.keypair], blockhash);
+        let tip_encoded = bs58::encode(bincode::serialize(&tip_transaction)?).into_string();
+        transactions.push(tip_encoded);
+        
+        let blockhash = self.client.get_latest_blockhash().await?;
+        let swap_transaction = self.create_swap_transaction(quote, blockhash, &user_pubkey).await?;
+        
+        transactions.push(swap_transaction);
 
-        let tip_encoded = general_purpose::STANDARD.encode(bincode::serialize(&tip_transaction)?);
-        bundle_transactions.push(tip_encoded);
-
-        for quote in swaps {
-            let swap_transaction = self.create_swap_transaction(quote, blockhash).await?;
-            let encoded_transaction = base64::engine::general_purpose::STANDARD
-                .encode(bincode::serialize(&swap_transaction)?);
-            bundle_transactions.push(encoded_transaction);
-        }
-
-        let buncle_json = serde_json::json!(bundle_transactions);
-        let bundle_result = self
-            .jito_endpoint
-            .send_bundle(Some(buncle_json), None)
-            .await;
-
-        match bundle_result {
-            Ok(response_json) => match response_json["result"].as_str() {
-                Some(bundle_uuid) => {
-                    tracing::info!("Bundle sent successfully with UUID: {}", bundle_uuid);
-                    self.bundle_status
-                        .add_bundles(
-                            vec![bundle_uuid.to_string()],
-                            self.keypair.pubkey().to_string(),
-                        )
-                        .await
-                        .unwrap();
-                    Ok(bundle_uuid.to_string())
-                }
-                None => {
-                    let error_msg = "Failed to get bundle UUID from response JSON";
-                    tracing::error!("{}", error_msg);
-                    Err(error_msg.into())
-                }
-            },
-            Err(e) => {
-                tracing::error!("Failed to send bundle: {}", e);
-                Err(e.into())
-            }
-        }
+        Ok(transactions)
     }
 
-    async fn get_tip(tip_cache: &Arc<RwLock<Option<f64>>>) -> Option<f64> {
-        *tip_cache.read().await
-    }
-
-    
 
     async fn create_swap_transaction(
         &self,
         quote: JupiterQuoteResponse,
         blockhash: solana_sdk::hash::Hash,
-    ) -> Result<VersionedTransaction, Box<dyn std::error::Error + Send + Sync>> {
+        pubkey: &Pubkey
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         let url = format!("{}/swap-instructions", self.jupiter_base_url);
 
         let swap_request = JupiterSwapRequest::new(
-            self.keypair.pubkey().to_string(),
+            pubkey.to_string(),
             quote,
             100_000_000,
             PriorityLevel::VeryHigh,
@@ -834,7 +867,7 @@ impl JupiterTrader {
         }
 
         let transactions = self
-            .build_transaction_from_instructions(&swap_instructions, blockhash)
+            .build_transaction_from_instructions(&swap_instructions, blockhash,pubkey)
             .await?;
 
         Ok(transactions)

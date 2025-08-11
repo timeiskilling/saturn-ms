@@ -1,4 +1,4 @@
-use crate::models::jupiter_models::QuoteOptions;
+use crate::models::jupiter_models::{QuoteOptions, SwapMode};
 
 impl QuoteOptions {
     #[inline]
@@ -34,8 +34,8 @@ impl QuoteOptions {
     pub fn cleaned(&self) -> Self {
         let mut cleaned = self.clone();
 
-        let dexes_has_values = self.dexes.as_ref().map_or(false, |d| !d.is_empty());
-        let exclude_has_values = self.exclude_dexes.as_ref().map_or(false, |d| !d.is_empty());
+        let dexes_has_values = self.dexes.as_ref().is_some_and(|d| !d.is_empty());
+        let exclude_has_values = self.exclude_dexes.as_ref().is_some_and(|d| !d.is_empty());
 
         if dexes_has_values && exclude_has_values {
             cleaned.exclude_dexes = None;
@@ -43,5 +43,27 @@ impl QuoteOptions {
         }
 
         cleaned
+    }
+}
+
+
+impl From<proto_models::grpc::QuoteOptions>
+    for QuoteOptions
+{
+    fn from(value: proto_models::grpc::QuoteOptions) -> Self {
+        Self {
+            swap_mode: match value.swap_mode {
+                Some(0) => Some(SwapMode::ExactIn),
+                Some(1) => Some(SwapMode::ExactOut),
+                _ => None,
+            },
+            dexes: Some(value.dexes),
+            exclude_dexes: Some(value.exclude_dexes),
+            restrict_intermediate_tokens: Some(true),
+            only_direct_routes: Some(false),
+            as_legacy_transaction: Some(false),
+            max_accounts: Some(64),
+            dynamic_slippage: value.dynamic_slippage,
+        }
     }
 }
