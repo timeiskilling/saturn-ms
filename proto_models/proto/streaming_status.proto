@@ -21,6 +21,7 @@ service BundleService {
 
 message SignedTransactions {
     repeated string transactions = 1;
+    string user_pk = 2;
 }
 
 message TransactionsToSign {

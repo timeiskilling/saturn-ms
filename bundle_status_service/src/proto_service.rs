@@ -1,18 +1,17 @@
 use futures::stream::StreamExt;
-use jupiter_trader_data::models::jupiter_models::SwapMode;
 use std::pin::Pin;
 use std::sync::Arc;
 
 use proto_models::grpc::bundle_service_server::BundleService;
 use tonic::{Request, Response, Status};
-
-use tokio_stream::Stream;
-
-use crate::trader::JupiterTrader;
+use crate::{bundle_manager::client, trader::JupiterTrader};
 use proto_models::grpc::{SignedTransactions, TransactionsToSign, TrasnactionInstruction};
-
-struct TransactionService {
-    trader: Arc<JupiterTrader>,
+use tokio_stream::{
+    Stream,
+    wrappers::{BroadcastStream,ReceiverStream}
+};
+pub struct TransactionService {
+    pub trader: Arc<JupiterTrader>,
 }
 
 #[tonic::async_trait]
@@ -24,7 +23,7 @@ impl BundleService for TransactionService {
         let trader = self.trader.clone();
         let request_clone = request.into_inner().clone();
         tracing::info!("Starting tokio task to create transactions");
-        
+
         let transactions = tokio::spawn(async move {
             let options = request_clone.options.unwrap();
 
@@ -39,16 +38,19 @@ impl BundleService for TransactionService {
                 .await
                 .unwrap();
 
-            trader.create_transactions(&request_clone.user_pk, quote).await.unwrap()
-        }).await;
-
+            trader
+                .create_transactions(&request_clone.user_pk, quote)
+                .await
+                .unwrap()
+        })
+        .await;
 
         match transactions {
             Ok(transactions) => return Ok(Response::new(TransactionsToSign { transactions })),
             Err(err) => {
                 tracing::error!("Error in tokio task to create transactions");
                 return Err(Status::data_loss("Loss data"));
-            },
+            }
         };
     }
 
@@ -63,6 +65,53 @@ impl BundleService for TransactionService {
         &self,
         request: Request<SignedTransactions>,
     ) -> Result<Response<Self::SendTransactionsStream>, Status> {
-        unimplemented!()
+        let transactions = request.into_inner();
+        let continiue = self
+            .trader
+            .send_transactions(transactions.transactions, &transactions.user_pk)
+            .await
+            .unwrap();
+
+        let user_id_for_stream = transactions.user_pk.clone();
+
+        let not_sys = self.trader.get_notification_system();
+
+        let rx = not_sys.subscribe_to_user_stream(transactions.user_pk);
+
+        let stream = BroadcastStream::new(rx).filter_map(move |result_from_broadcast| {
+            let notification_system = not_sys.clone();
+            let user_id = user_id_for_stream.clone();
+
+            async move {
+                let active_bundles = notification_system.get_user_bundles(&user_id);
+                if active_bundles.is_empty() {
+                    tracing::info!("User {} has no more bundles, closing stream.", user_id);
+                    return None;
+                }
+                match result_from_broadcast {
+                    Ok(internal_update) => Some(Ok(internal_update.into())),
+                    Err(e) => {
+                        tracing::error!("Stream for user {} lagged: {}", user_id, e);
+                        Some(Err(Status::internal("Internal stream error")))
+                    }
+                }
+            }
+        });
+
+        let response_stream: Self::SendTransactionsStream = Box::pin(stream);
+
+        Ok(Response::new(response_stream))
+    }
+}
+
+impl From<client::UserBundleUpdate> for proto_models::grpc::UserBundleUpdate {
+    fn from(internal: client::UserBundleUpdate) -> Self {
+        proto_models::grpc::UserBundleUpdate {
+            bundle_id: internal.bundle_id,
+            old_status: internal.old_status,
+            new_status: internal.new_status as i32,
+            timestamp: internal.timestamp,
+            slot: internal.slot,
+        }
     }
 }

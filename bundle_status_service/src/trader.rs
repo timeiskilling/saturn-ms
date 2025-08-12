@@ -16,7 +16,7 @@ use jupiter_trader_data::models::{
 use redis::AsyncCommands;
 use reqwest::Client;
 use serde::Serialize;
-use serde_json::Value;
+use serde_json::{json, Value};
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{
     // address_lookup_table::{instruction::create_lookup_table, state::AddressLookupTable},
@@ -44,17 +44,17 @@ use crate::{
     redis_con,
 };
 
-pub type SharedPriceState = Arc<Mutex<HashMap<String, DayTickerEvent>>>;
+// pub type SharedPriceState = Arc<Mutex<HashMap<String, DayTickerEvent>>>;
 
 pub struct JupiterTrader {
-    client: RpcClient,
+    pub client: RpcClient,
     pub http_client: Client,
     tip_cache: Arc<RwLock<Option<f64>>>,
-    keypair: Arc<Keypair>,
+    // keypair: Arc<Keypair>,
     jupiter_base_url: String,
     jupiter_ultra_url: String,
     jito_endpoint: JitoJsonRpcSDK,
-    pub shared_price_state: SharedPriceState,
+    // pub shared_price_state: SharedPriceState,
     pub redis: Mutex<redis::aio::MultiplexedConnection>,
     pub config: Config,
     jito_tip_redis: Arc<Mutex<redis::aio::MultiplexedConnection>>,
@@ -65,7 +65,7 @@ pub struct JupiterTrader {
 }
 
 impl JupiterTrader {
-    pub async fn new(rpc_url: &str, keypair: Keypair, redis_urls: Vec<String>) -> Self {
+    pub async fn new(rpc_url: &str, /*keypair: Keypair*/ redis_urls: Vec<String>) -> Self {
         let http_client = reqwest::Client::builder().build().unwrap();
         let client = solana_client::nonblocking::rpc_client::RpcClient::new_with_commitment(
             rpc_url.to_string(),
@@ -85,11 +85,11 @@ impl JupiterTrader {
             // atl_pubkey: create_atl(&keypair, &client).await,
             client,
             http_client,
-            keypair: Arc::new(keypair),
+            // keypair: Arc::new(keypair),
             jupiter_base_url,
             jito_endpoint,
             jupiter_ultra_url,
-            shared_price_state: Arc::new(Mutex::new(HashMap::new())),
+            // shared_price_state: Arc::new(Mutex::new(HashMap::new())),
             redis: Mutex::new(redis_con::connection::redis_conn(&config).await),
             jito_tip_redis: Arc::new(Mutex::new(
                 redis_con::connection::jito_tip_redis_conn(&config).await,
@@ -307,53 +307,53 @@ impl JupiterTrader {
         Ok(quote)
     }
 
-    pub async fn exrcute_swap(
-        &self,
-        quote: JupiterQuoteResponse,
-    ) -> Result<Signature, Box<dyn std::error::Error + Send + Sync>> {
-        let url = format!("{}/swap", self.jupiter_base_url);
+    // pub async fn exrcute_swap(
+    //     &self,
+    //     quote: JupiterQuoteResponse,
+    // ) -> Result<Signature, Box<dyn std::error::Error + Send + Sync>> {
+    //     let url = format!("{}/swap", self.jupiter_base_url);
 
-        let swap = JupiterSwapRequest::new(
-            self.keypair.pubkey().to_string(),
-            quote,
-            10_000_000,
-            PriorityLevel::VeryHigh,
-            true,
-        );
+    //     let swap = JupiterSwapRequest::new(
+    //         self.keypair.pubkey().to_string(),
+    //         quote,
+    //         10_000_000,
+    //         PriorityLevel::VeryHigh,
+    //         true,
+    //     );
 
-        let response = self.http_client.post(&url).json(&swap).send().await?;
+    //     let response = self.http_client.post(&url).json(&swap).send().await?;
 
-        if !response.status().is_success() {
-            let error_txt = response.text().await?;
-            tracing::error!("Jupiter API err : {}", error_txt);
-            return Err("err".into());
-        }
+    //     if !response.status().is_success() {
+    //         let error_txt = response.text().await?;
+    //         tracing::error!("Jupiter API err : {}", error_txt);
+    //         return Err("err".into());
+    //     }
 
-        let swap_response: JupiterSwapResponse = response.json().await?;
+    //     let swap_response: JupiterSwapResponse = response.json().await?;
 
-        if let Some(simulation_error) = &swap_response.simulation_error {
-            tracing::error!(
-                "Simulation error: {} - {}",
-                simulation_error.error_code,
-                simulation_error.error
-            );
-            return Err(format!("Simulation failed: {}", simulation_error.error).into());
-        }
+    //     if let Some(simulation_error) = &swap_response.simulation_error {
+    //         tracing::error!(
+    //             "Simulation error: {} - {}",
+    //             simulation_error.error_code,
+    //             simulation_error.error
+    //         );
+    //         return Err(format!("Simulation failed: {}", simulation_error.error).into());
+    //     }
 
-        let transactions_data =
-            general_purpose::STANDARD.decode(&swap_response.swap_transaction)?;
-        let mut transaction: Transaction = bincode::deserialize(&transactions_data)?;
+    //     let transactions_data =
+    //         general_purpose::STANDARD.decode(&swap_response.swap_transaction)?;
+    //     let mut transaction: Transaction = bincode::deserialize(&transactions_data)?;
 
-        let recent_blockhash = self.client.get_latest_blockhash().await?;
-        transaction.partial_sign(&[self.keypair.clone()], recent_blockhash);
+    //     let recent_blockhash = self.client.get_latest_blockhash().await?;
+    //     transaction.partial_sign(&[self.keypair.clone()], recent_blockhash);
 
-        let signature = self
-            .client
-            .send_and_confirm_transaction(&transaction)
-            .await?;
+    //     let signature = self
+    //         .client
+    //         .send_and_confirm_transaction(&transaction)
+    //         .await?;
 
-        Ok(signature)
-    }
+    //     Ok(signature)
+    // }
 
     // pub async fn execute_swap_instruction(
     //     &self,
@@ -414,7 +414,7 @@ impl JupiterTrader {
         &self,
         swap_response: &JupiterSwapInstructionsRsponse,
         blockhash: Hash,
-        pubkey: &Pubkey
+        pubkey: &Pubkey,
     ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         let mut instructions = Vec::new();
 
@@ -449,7 +449,12 @@ impl JupiterTrader {
             };
 
         let message = self
-            .create_v0_message_with_alt(&instructions, &address_lookup_table_accounts, blockhash, pubkey)
+            .create_v0_message_with_alt(
+                &instructions,
+                &address_lookup_table_accounts,
+                blockhash,
+                pubkey,
+            )
             .await?;
 
         let versioned_message = VersionedMessage::V0(message);
@@ -548,10 +553,9 @@ impl JupiterTrader {
         instructions: &[solana_sdk::instruction::Instruction],
         alt_account: &[AddressLookupTableAccount],
         blockhash: Hash,
-        pubkey: &Pubkey
+        pubkey: &Pubkey,
     ) -> Result<v0::Message, Box<dyn std::error::Error + Send + Sync>> {
-        let message =
-            Message::try_compile(pubkey, instructions, alt_account, blockhash)?;
+        let message = Message::try_compile(pubkey, instructions, alt_account, blockhash)?;
 
         Ok(message)
     }
@@ -613,21 +617,21 @@ impl JupiterTrader {
         })
     }
 
-    pub async fn swap_sol_to_usdc(
-        &self,
-        sol_amount: f64,
-        slippage_bps: u16,
-    ) -> Result<Signature, Box<dyn std::error::Error + Send + Sync>> {
-        let amount_lamports = (sol_amount * 1_000_000_000.0) as u64;
+    // pub async fn swap_sol_to_usdc(
+    //     &self,
+    //     sol_amount: f64,
+    //     slippage_bps: u16,
+    // ) -> Result<Signature, Box<dyn std::error::Error + Send + Sync>> {
+    //     let amount_lamports = (sol_amount * 1_000_000_000.0) as u64;
 
-        let quote = self
-            .get_quote(SOL_MINT, USDC_MINT, amount_lamports, slippage_bps)
-            .await?;
+    //     let quote = self
+    //         .get_quote(SOL_MINT, USDC_MINT, amount_lamports, slippage_bps)
+    //         .await?;
 
-        let signature = self.exrcute_swap(quote).await?;
+    //     let signature = self.exrcute_swap(quote).await?;
 
-        Ok(signature)
-    }
+    //     Ok(signature)
+    // }
 
     // pub async fn swap_sol_to_usdc_instruction(
     //     &self,
@@ -645,10 +649,10 @@ impl JupiterTrader {
     //     Ok(signature)
     // }
 
-    pub async fn get_balance(&self) -> Result<f64, Box<dyn std::error::Error + Send + Sync>> {
-        let balance = self.client.get_balance(&self.keypair.pubkey()).await?;
-        Ok(balance as f64 / 1_000_000_000.0)
-    }
+    // pub async fn get_balance(&self) -> Result<f64, Box<dyn std::error::Error + Send + Sync>> {
+    //     let balance = self.client.get_balance(&self.keypair.pubkey()).await?;
+    //     Ok(balance as f64 / 1_000_000_000.0)
+    // }
 
     // pub async fn get_uscd_balance(&self) -> Result<f64, Box<dyn std::error::Error + Send + Sync>> {
     //     let pubkey_usdc = Pubkey::from_str(USDC_MINT)?;
@@ -811,26 +815,64 @@ impl JupiterTrader {
             data.unwrap_or(MIN_JITO_TIP_LAMPORTS as f64) as u64,
         );
 
-        let tip_transaction =
-            Transaction::new_with_payer(&[tip_instruction], Some(&user_pubkey));
+        let tip_transaction = Transaction::new_with_payer(&[tip_instruction], Some(&user_pubkey));
 
         let tip_encoded = bs58::encode(bincode::serialize(&tip_transaction)?).into_string();
         transactions.push(tip_encoded);
-        
+
         let blockhash = self.client.get_latest_blockhash().await?;
-        let swap_transaction = self.create_swap_transaction(quote, blockhash, &user_pubkey).await?;
-        
+        let swap_transaction = self
+            .create_swap_transaction(quote, blockhash, &user_pubkey)
+            .await?;
+
         transactions.push(swap_transaction);
 
         Ok(transactions)
     }
 
+    pub async fn send_transactions(&self, transaction: Vec<String>, user_pbk: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        tracing::info!("Prepearung sending transactions");
+        let transactions = json!(transaction);
+        let params = json!([
+            transactions, 
+            { "encoding": "base64" }
+        ]);
+        let bundle_result = self
+            .jito_endpoint
+            .send_bundle(Some(params), None)
+            .await;
+
+        match bundle_result {
+            Ok(response_json) => match response_json["result"].as_str() {
+                Some(bundle_uuid) => {
+                    tracing::info!("Bundle sent successfully with UUID: {}", bundle_uuid);
+                    self.bundle_status
+                        .add_bundles(
+                            vec![bundle_uuid.to_string()],
+                            user_pbk.to_string(),
+                        )
+                        .await
+                        .unwrap();
+                    Ok(bundle_uuid.to_string())
+                }
+                None => {
+                    let error_msg = "Failed to get bundle UUID from response JSON";
+                    tracing::error!("{}", error_msg);
+                    Err(error_msg.into())
+                }
+            },
+            Err(e) => {
+                tracing::error!("Failed to send bundle: {}", e);
+                Err(e.into())
+            }
+        }
+    }
 
     async fn create_swap_transaction(
         &self,
         quote: JupiterQuoteResponse,
         blockhash: solana_sdk::hash::Hash,
-        pubkey: &Pubkey
+        pubkey: &Pubkey,
     ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         let url = format!("{}/swap-instructions", self.jupiter_base_url);
 
@@ -867,17 +909,17 @@ impl JupiterTrader {
         }
 
         let transactions = self
-            .build_transaction_from_instructions(&swap_instructions, blockhash,pubkey)
+            .build_transaction_from_instructions(&swap_instructions, blockhash, pubkey)
             .await?;
 
         Ok(transactions)
     }
 
-    pub fn wallet_adrres(&self) -> String {
-        self.keypair.pubkey().to_string()
-    }
+    // pub fn wallet_adrres(&self) -> String {
+    //     self.keypair.pubkey().to_string()
+    // }
 
-    async fn jito_tip_listener(&self) {
+    pub async fn jito_tip_listener(&self) {
         const REDIS_KEY: &str = "jito:tip:latest";
         const VALUE_FIELD: &str = "value";
 
