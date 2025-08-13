@@ -48,7 +48,7 @@ impl Config {
     }
 
     pub fn jito_tip_redis_url(&self) -> String {
-        format!("redis://{}:{}", self.redis_host, self.redis_port)
+        format!("redis://{}:{}", self.jito_tip_redis_host, self.jito_tip_redis_port)
     }
 
     pub fn postgres_url(&self) -> String {

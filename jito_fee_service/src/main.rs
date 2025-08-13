@@ -18,10 +18,14 @@ pub const TIMESTAMP_FIELD: &str = "updated_at_unix";
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    tracing_subscriber::fmt::init();
-
+    tracing_subscriber::fmt()
+    .with_max_level(tracing::Level::DEBUG)
+    .with_target(false)
+    .init();
+    println!("data loader");
+    
     let redis_url =
-        std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
+        std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6380".to_string());
     let client = redis::Client::open(redis_url)?;
     let con = client.get_multiplexed_tokio_connection().await?;
     info!("Successfully connected to Redis");

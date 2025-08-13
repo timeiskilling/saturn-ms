@@ -1,22 +1,18 @@
 use base64::{Engine, engine::general_purpose};
-use borsh::BorshDeserialize;
-use common::models::DayTickerEvent;
+
+//2025-08-13T11:37:46.333106Z ERROR bundle_status_service::trader: Failed to fetch tip from Redis: Response was of incompatible type - TypeError: "Response type not convertible to numeric." (response was nil)
 
 use config::Config;
 use core::str;
 use dashmap::DashMap;
 use jito_sdk_rust::JitoJsonRpcSDK;
-use jupiter_trader_data::models::{
-    api_models::WebTakeQoute,
-    jupiter_models::{
-        Instruction, JupiterQuoteResponse, JupiterSwapInstructionsRsponse, JupiterSwapRequest,
-        JupiterSwapResponse, JupiterUltraQuoteResponse, PriorityLevel, QuoteOptions, TokenNaming,
-    },
+use jupiter_trader_data::models::jupiter_models::{
+    Instruction, JupiterQuoteResponse, JupiterSwapInstructionsRsponse, JupiterSwapRequest,
+    JupiterSwapResponse, JupiterUltraQuoteResponse, PriorityLevel, QuoteOptions, TokenNaming,
 };
 use redis::AsyncCommands;
 use reqwest::Client;
-use serde::Serialize;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{
     // address_lookup_table::{instruction::create_lookup_table, state::AddressLookupTable},
@@ -26,13 +22,12 @@ use solana_sdk::{
         AddressLookupTableAccount, VersionedMessage,
         v0::{self, Message},
     },
-    program_pack::Pack,
     pubkey::Pubkey,
     signature::{Keypair, Signature, Signer},
     system_instruction::transfer,
     transaction::{Transaction, VersionedTransaction},
 };
-use std::{collections::HashMap, str::FromStr, sync::Arc, thread};
+use std::{str::FromStr, sync::Arc, time::Duration};
 use tokio::sync::{Mutex, RwLock};
 
 use crate::{
@@ -40,7 +35,7 @@ use crate::{
         client::UserStreamNotificationSystem,
         domain::{RedisBundleTracker, TrackerConfig},
     },
-    constant::{HEADER_SIZE, MIN_JITO_TIP_LAMPORTS, NUMBER_TRANSACTIONS, SOL_MINT, USDC_MINT},
+    constant::{HEADER_SIZE, MIN_JITO_TIP_LAMPORTS},
     redis_con,
 };
 
@@ -73,10 +68,8 @@ impl JupiterTrader {
         );
         let jupiter_base_url = "https://lite-api.jup.ag/swap/v1".to_string();
         let jupiter_ultra_url = "https://lite-api.jup.ag/ultra/v1".to_string();
-        let jito_endpoint = JitoJsonRpcSDK::new(
-            "https://mainnet.block-engine.jito.wtf/api/v1/transactions",
-            None,
-        );
+        let jito_endpoint =
+            JitoJsonRpcSDK::new("https://mainnet.block-engine.jito.wtf/api/v1", None);
 
         let tracker_config = TrackerConfig::default();
 
@@ -94,7 +87,7 @@ impl JupiterTrader {
             jito_tip_redis: Arc::new(Mutex::new(
                 redis_con::connection::jito_tip_redis_conn(&config).await,
             )),
-            config: config,
+            config,
             notification_system: Arc::new(UserStreamNotificationSystem::new()),
             bundle_status: Arc::new(
                 RedisBundleTracker::new(redis_urls, tracker_config)
@@ -441,9 +434,11 @@ impl JupiterTrader {
 
         let address_lookup_table_accounts =
             if let Some(address_lookup_tables) = &swap_response.addresses_by_lookup_table_address {
+                tracing::info!("fetch addresses 1");
                 self.fetch_map_address_lookup_tables(address_lookup_tables)
                     .await?
             } else {
+                tracing::info!("fetch addresses 2");
                 self.fetch_address_lookup_tables(&swap_response.address_lookup_table_addresses)
                     .await?
             };
@@ -523,7 +518,7 @@ impl JupiterTrader {
         let mut lookup_table_accounts = Vec::new();
 
         for alt in alt_address {
-            let pubkey = Pubkey::from_str(&alt)?;
+            let pubkey = Pubkey::from_str(alt)?;
 
             let account_data = self.client.get_account_data(&pubkey).await?;
 
@@ -556,7 +551,6 @@ impl JupiterTrader {
         pubkey: &Pubkey,
     ) -> Result<v0::Message, Box<dyn std::error::Error + Send + Sync>> {
         let message = Message::try_compile(pubkey, instructions, alt_account, blockhash)?;
-
         Ok(message)
     }
 
@@ -805,8 +799,35 @@ impl JupiterTrader {
         quote: JupiterQuoteResponse,
     ) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>> {
         let mut transactions: Vec<String> = Vec::with_capacity(6);
-        let jito_tip_acc = Pubkey::from_str(&self.jito_endpoint.get_random_tip_account().await?)?;
-        let user_pubkey = Pubkey::from_str(pubkey)?;
+        // tokio::time::sleep(Duration::from_secs(5)).await;
+
+        // let jito_tip_acc = Pubkey::from_str(&self.jito_endpoint.get_random_tip_account().await?)?;
+        let jito_tip_acc = Pubkey::from_str("96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5")?;
+        let user_pubkey = Pubkey::from_str(pubkey);
+
+        let user_pubkey = match user_pubkey {
+            Ok(pubk) => pubk,
+            Err(err) => {
+                tracing::error!("Err in decoding pubkey");
+                panic!("err")
+            }
+        };
+        // let balance = self.client.get_balance(&user_pubkey).await?;
+        // if balance < 1_000_000_000 {
+        //     // Менше 1 SOL
+        //     tracing::info!("Low balance, requesting airdrop...");
+
+        //     // Запитуємо airdrop на 2 SOL
+        //     let airdrop_signature = self
+        //         .client
+        //         .request_airdrop(&user_pubkey, 2_000_000_000)
+        //         .await?;
+
+        //     // Чекаємо підтвердження
+        //     self.client.confirm_transaction(&airdrop_signature).await?;
+
+        //     tracing::info!("Airdrop successful");
+        // }
 
         let data = *self.tip_cache.read().await;
         let tip_instruction = transfer(
@@ -818,6 +839,7 @@ impl JupiterTrader {
         let tip_transaction = Transaction::new_with_payer(&[tip_instruction], Some(&user_pubkey));
 
         let tip_encoded = bs58::encode(bincode::serialize(&tip_transaction)?).into_string();
+
         transactions.push(tip_encoded);
 
         let blockhash = self.client.get_latest_blockhash().await?;
@@ -830,27 +852,26 @@ impl JupiterTrader {
         Ok(transactions)
     }
 
-    pub async fn send_transactions(&self, transaction: Vec<String>, user_pbk: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn send_transactions(
+        &self,
+        transaction: Vec<String>,
+        user_pbk: &str,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         tracing::info!("Prepearung sending transactions");
         let transactions = json!(transaction);
         let params = json!([
-            transactions, 
+            transactions,
             { "encoding": "base64" }
         ]);
-        let bundle_result = self
-            .jito_endpoint
-            .send_bundle(Some(params), None)
-            .await;
+        tokio::time::sleep(Duration::from_secs(10)).await;
+        let bundle_result = self.jito_endpoint.send_bundle(Some(params), None).await;
 
         match bundle_result {
             Ok(response_json) => match response_json["result"].as_str() {
                 Some(bundle_uuid) => {
                     tracing::info!("Bundle sent successfully with UUID: {}", bundle_uuid);
                     self.bundle_status
-                        .add_bundles(
-                            vec![bundle_uuid.to_string()],
-                            user_pbk.to_string(),
-                        )
+                        .add_bundles(vec![bundle_uuid.to_string()], user_pbk.to_string())
                         .await
                         .unwrap();
                     Ok(bundle_uuid.to_string())
@@ -899,15 +920,6 @@ impl JupiterTrader {
 
         let swap_instructions: JupiterSwapInstructionsRsponse = response.json().await?;
 
-        if let Some(simulation_error) = &swap_instructions.simulation_error {
-            tracing::error!(
-                "Simulation error: {} - {}",
-                simulation_error.error_code,
-                simulation_error.error
-            );
-            return Err(format!("Simulation failed: {}", simulation_error.error).into());
-        }
-
         let transactions = self
             .build_transaction_from_instructions(&swap_instructions, blockhash, pubkey)
             .await?;
@@ -926,15 +938,18 @@ impl JupiterTrader {
         let cache = self.tip_cache.clone();
         let redis = self.jito_tip_redis.clone(); // Arc<Mutex<MultiplexedConnection>>
         tokio::spawn(async move {
-            let mut interval = tokio::time::interval(tokio::time::Duration::from_millis(500));
+            let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(4));
             loop {
                 interval.tick().await;
 
                 let mut con = redis.lock().await;
-                match con.hget::<_, _, f64>(REDIS_KEY, VALUE_FIELD).await {
-                    Ok(v) => {
+                match con.hget::<_, _, Option<f64>>(REDIS_KEY, VALUE_FIELD).await {
+                    Ok(Some(v)) => {
                         *cache.write().await = Some(v);
-                        tracing::info!("Updated tip cache from Redis: {}", v);
+                        // tracing::info!("Updated tip cache from Redis: {}", v);
+                    }
+                    Ok(None) => {
+                        tracing::warn!("Tip value is missing in Redis");
                     }
                     Err(e) => {
                         tracing::error!("Failed to fetch tip from Redis: {}", e);

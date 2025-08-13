@@ -32,15 +32,6 @@ pub struct JupiterSwapInstructionsRsponse {
     #[serde(rename = "prioritizationType")]
     pub prioritization_type: PrioritizationType,
 
-    #[serde(rename = "simulationSlot")]
-    pub simulation_slot: u64,
-
-    #[serde(rename = "dynamicSlippageReport")]
-    pub dynamic_slippage_report: Option<serde_json::Value>,
-
-    #[serde(rename = "simulationError")]
-    pub simulation_error: Option<SimulationError>,
-
     #[serde(rename = "addressesByLookupTableAddress")]
     pub addresses_by_lookup_table_address: Option<serde_json::Value>,
 

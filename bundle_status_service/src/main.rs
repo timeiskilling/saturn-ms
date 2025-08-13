@@ -20,7 +20,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "redis://localhost:6379".to_string(),
         "redis://localhost:6380".to_string(),
     ];
-    let trader = Arc::new(JupiterTrader::new("https://api.devnet.solana.com", redis_url).await);
+    let trader = Arc::new(JupiterTrader::new("https://api.mainnet-beta.solana.com", redis_url).await);
     let trader_clone = trader.clone();
 
     tokio::spawn(async move {

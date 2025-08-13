@@ -2,14 +2,11 @@ use futures::stream::StreamExt;
 use std::pin::Pin;
 use std::sync::Arc;
 
-use proto_models::grpc::bundle_service_server::BundleService;
-use tonic::{Request, Response, Status};
 use crate::{bundle_manager::client, trader::JupiterTrader};
+use proto_models::grpc::bundle_service_server::BundleService;
 use proto_models::grpc::{SignedTransactions, TransactionsToSign, TrasnactionInstruction};
-use tokio_stream::{
-    Stream,
-    wrappers::{BroadcastStream,ReceiverStream}
-};
+use tokio_stream::{Stream, wrappers::BroadcastStream};
+use tonic::{Request, Response, Status};
 pub struct TransactionService {
     pub trader: Arc<JupiterTrader>,
 }
@@ -38,16 +35,33 @@ impl BundleService for TransactionService {
                 .await
                 .unwrap();
 
-            trader
+            let transaction = match trader
                 .create_transactions(&request_clone.user_pk, quote)
                 .await
-                .unwrap()
+            {
+                Ok(account) => account,
+                Err(e) => {
+                    tracing::error!("Failed to get Jito tip account: {:?}", e);
+                    // Повертаємо гарну gRPC помилку клієнту!
+                    return Err(Status::internal(
+                        "Internal service error: could not fetch Jito tip account.",
+                    ));
+                }
+            };
+
+            Ok(transaction)
         })
         .await;
-
         match transactions {
-            Ok(transactions) => return Ok(Response::new(TransactionsToSign { transactions })),
-            Err(err) => {
+            Ok(Ok(transactions)) => {
+                return Ok(Response::new(TransactionsToSign { transactions }))
+            }
+
+            Ok(Err(transaction)) => {
+                return Err(transaction);
+            }
+                
+            Err(_err) => {
                 tracing::error!("Error in tokio task to create transactions");
                 return Err(Status::data_loss("Loss data"));
             }

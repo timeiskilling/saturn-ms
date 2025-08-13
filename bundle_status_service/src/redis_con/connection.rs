@@ -29,12 +29,12 @@ pub async fn jito_tip_redis_conn(config : &Config) -> MultiplexedConnection {
                 conn
             },
             Err(e) => {
-                tracing::error!("Cloud not connect to redis {}",e);
+                tracing::error!("Cloud not connect to redis jito {}",e);
                 std::process::exit(1);
             },
         },
         Err(e) => {
-            tracing::error!("Cloud not open redis {}", e);
+            tracing::error!("Cloud not open redis jito {}", e);
             std::process::exit(1);
         },
     }
