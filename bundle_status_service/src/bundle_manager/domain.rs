@@ -10,8 +10,6 @@ use tracing::{debug, error, info, warn};
 
 use crate::bundle_manager::client::{UserBundleUpdate, UserStreamNotificationSystem};
 
-
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BundleStatusResponse {
     pub context: Context,
@@ -57,17 +55,17 @@ pub enum BundleStage {
 
 impl BundleStage {
     fn can_transition_to(&self, new_stage: &BundleStage) -> bool {
-        match (self, new_stage) {
-            (BundleStage::Submitted, BundleStage::InFlight) => true,
-            (BundleStage::InFlight, BundleStage::Landed) => true,
-            (BundleStage::InFlight, BundleStage::Failed) => true,
-            (BundleStage::Landed, BundleStage::Confirmed) => true,
-            (BundleStage::Landed, BundleStage::Failed) => true,
-            (BundleStage::Confirmed, BundleStage::Finalized) => true,
-            (BundleStage::Confirmed, BundleStage::Failed) => true,
-            (_, BundleStage::Failed) => true,
-            _ => false,
-        }
+        matches!(
+            (self, new_stage),
+            (BundleStage::Submitted, BundleStage::InFlight)
+                | (BundleStage::InFlight, BundleStage::Landed)
+                | (BundleStage::InFlight, BundleStage::Failed)
+                | (BundleStage::Landed, BundleStage::Confirmed)
+                | (BundleStage::Landed, BundleStage::Failed)
+                | (BundleStage::Confirmed, BundleStage::Finalized)
+                | (BundleStage::Confirmed, BundleStage::Failed)
+                | (_, BundleStage::Failed)
+        )
     }
 
     pub fn is_terminal(&self) -> bool {
@@ -88,7 +86,7 @@ impl ToString for BundleStage {
     }
 }
 
-impl From<BundleStage> for i32{
+impl From<BundleStage> for i32 {
     fn from(value: BundleStage) -> Self {
         match value {
             BundleStage::Submitted => 1,
@@ -664,10 +662,7 @@ impl RedisBundleTracker {
         Ok(())
     }
 
-    pub async fn get_user_bundle_statuses(
-        &self,
-        user_id: &str,
-    ) -> Vec<UserBundleUpdate> {
+    pub async fn get_user_bundle_statuses(&self, user_id: &str) -> Vec<UserBundleUpdate> {
         if let Some(notification_system) = &self.notification_system {
             let user_bundles = notification_system.get_user_bundles(user_id);
 

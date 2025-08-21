@@ -6,7 +6,7 @@ service BundleService {
     // rpc GetStatusesStream (AddBundlesRequest) returns (stream UserBundleUpdate) {};
     // rpc CoinsInformation (Empty) returns (stream CoinsData) {};
     // rpc UserPubK (UserPk) returns (Response);
-    rpc CreateTransactions (TrasnactionInstruction) returns (TransactionsToSign) {};
+    rpc CreateTransactions (TransactionsBuld) returns (TransactionsToSign) {};
     rpc SendTransactions (SignedTransactions) returns (stream UserBundleUpdate) {};
 }
 
@@ -26,6 +26,10 @@ message SignedTransactions {
 
 message TransactionsToSign {
     repeated string transactions = 1;
+}
+
+message TransactionsBuld {
+    repeated TrasnactionInstruction transactions = 1;
 }
 
 message TrasnactionInstruction {

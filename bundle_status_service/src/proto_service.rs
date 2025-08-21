@@ -1,71 +1,96 @@
+use futures::future::join_all;
 use futures::stream::StreamExt;
+use tokio::sync::Semaphore;
 use std::pin::Pin;
 use std::sync::Arc;
 
+use crate::blockhash_data::BlockhashCache;
 use crate::{bundle_manager::client, trader::JupiterTrader};
 use proto_models::grpc::bundle_service_server::BundleService;
-use proto_models::grpc::{SignedTransactions, TransactionsToSign, TrasnactionInstruction};
+use proto_models::grpc::{SignedTransactions, TransactionsBuld, TransactionsToSign};
 use tokio_stream::{Stream, wrappers::BroadcastStream};
 use tonic::{Request, Response, Status};
 pub struct TransactionService {
     pub trader: Arc<JupiterTrader>,
+    pub rpc_semaphore : Arc<Semaphore>,
+    pub cashed_blockhash : Arc<BlockhashCache>
 }
 
 #[tonic::async_trait]
 impl BundleService for TransactionService {
     async fn create_transactions(
         &self,
-        request: Request<TrasnactionInstruction>,
+        request: Request<TransactionsBuld>,
     ) -> Result<Response<TransactionsToSign>, Status> {
-        let trader = self.trader.clone();
-        let request_clone = request.into_inner().clone();
-        tracing::info!("Starting tokio task to create transactions");
+        let transactions_req = request.into_inner().transactions;
+        let mut tasks: Vec<tokio::task::JoinHandle<Result<Vec<String>, Status>>> =
+            Vec::with_capacity(transactions_req.len());
 
-        let transactions = tokio::spawn(async move {
-            let options = request_clone.options.unwrap();
+        for transaction in transactions_req {
+            let trader = self.trader.clone();
+            let semaphore = self.rpc_semaphore.clone();
+            let block_hash = self.cashed_blockhash.clone();
 
-            let quote = trader
-                .get_quote_with_options(
-                    &request_clone.input_mint,
-                    &request_clone.output_mint,
-                    request_clone.amount,
-                    request_clone.slippage_bps as u16,
-                    options.into(),
-                )
-                .await
-                .unwrap();
+            tasks.push(tokio::spawn(async move {
+                let permit = semaphore.acquire_owned().await.expect("Failed to acquire semaphore permit");
 
-            let transaction = match trader
-                .create_transactions(&request_clone.user_pk, quote)
-                .await
-            {
-                Ok(account) => account,
+                let _permit = permit;
+                let options = transaction.options.ok_or_else(|| {
+                    Status::invalid_argument(
+                        "Field 'options' is missing in one of the transactions.",
+                    )
+                })?;
+                let quote = trader
+                    .get_quote_with_options(
+                        &transaction.input_mint,
+                        &transaction.output_mint,
+                        transaction.amount,
+                        transaction.slippage_bps as u16,
+                        options.into(),
+                    )
+                    .await
+                    .map_err(|e| {
+                        tracing::error!("Failed to get quote: {:?}", e);
+                        Status::internal("Failed to get a quote for one of the transactions.")
+                    })?;
+
+                let transactions = trader
+                    .create_transactions(&transaction.user_pk, quote, &block_hash)
+                    .await
+                    .map_err(|e| {
+                        tracing::error!("Failed to create transaction: {:?}", e);
+                        Status::internal("Failed to create a transaction from the quote.")
+                    })?;
+                Ok(transactions)
+            }));
+        }
+        let results = join_all(tasks).await;
+
+        let mut transactions_to_sign = Vec::new();
+
+        for result in results {
+            match result {
+                Ok(transaction_result) => match transaction_result {
+                    Ok(transactions) => {
+                        transactions_to_sign.extend(transactions);
+                    }
+                    Err(status) => {
+                        tracing::error!("A sub-task failed with status: {}", status.message());
+                        return Err(status);
+                    }
+                },
                 Err(e) => {
-                    tracing::error!("Failed to get Jito tip account: {:?}", e);
-                    // Повертаємо гарну gRPC помилку клієнту!
+                    tracing::error!("A task panicked: {:?}", e);
                     return Err(Status::internal(
-                        "Internal service error: could not fetch Jito tip account.",
+                        "A critical error occurred while processing transactions.",
                     ));
                 }
-            };
+            }
+        }
 
-            Ok(transaction)
-        })
-        .await;
-        match transactions {
-            Ok(Ok(transactions)) => {
-                return Ok(Response::new(TransactionsToSign { transactions }))
-            }
-
-            Ok(Err(transaction)) => {
-                return Err(transaction);
-            }
-                
-            Err(_err) => {
-                tracing::error!("Error in tokio task to create transactions");
-                return Err(Status::data_loss("Loss data"));
-            }
-        };
+        Ok(Response::new(TransactionsToSign {
+            transactions: transactions_to_sign,
+        }))
     }
 
     type SendTransactionsStream = Pin<
@@ -80,7 +105,7 @@ impl BundleService for TransactionService {
         request: Request<SignedTransactions>,
     ) -> Result<Response<Self::SendTransactionsStream>, Status> {
         let transactions = request.into_inner();
-        let continiue = self
+        let _continiue = self
             .trader
             .send_transactions(transactions.transactions, &transactions.user_pk)
             .await

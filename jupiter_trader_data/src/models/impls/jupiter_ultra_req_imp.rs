@@ -32,17 +32,3 @@ impl JupiterUltraQuoteRequest {
     }    
 
 }
-
-impl Default for JupiterUltraQuoteRequest {
-    fn default() -> Self {
-        Self {
-            input_mint : String::new(), 
-            output_mint : String::new(),
-            amount: String::new(),
-            taker: Default::default(),
-            referral_account: Default::default(),
-            referral_fee: Default::default(),
-            exclude_routers: Default::default(),
-        }
-    }
-}

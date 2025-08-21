@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize,Clone)]
 pub struct JupiterSwapInstructionsRsponse {
     #[serde(rename = "tokenLedgerInstruction")]
     pub token_ledger_instruction: Option<Instruction>,
@@ -39,7 +39,7 @@ pub struct JupiterSwapInstructionsRsponse {
     pub blockhash_with_metadata: BlockhashWithMetadata,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize,Clone)]
 pub struct Instruction {
     #[serde(rename = "programId")]
     pub program_id: String,
@@ -49,7 +49,7 @@ pub struct Instruction {
     pub data: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize,Clone)]
 pub struct AccountMeta {
     pub pubkey: String,
 
@@ -60,13 +60,13 @@ pub struct AccountMeta {
     pub is_writable: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize,Clone)]
 pub struct PrioritizationType {
     #[serde(rename = "computeBudget")]
     pub compute_budget: ComputeBudget,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize,Clone)]
 pub struct ComputeBudget {
     #[serde(rename = "microLamports")]
     pub micro_lamports: u64,
@@ -83,7 +83,7 @@ pub struct SimulationError {
     pub error: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize,Clone)]
 pub struct BlockhashWithMetadata {
     pub blockhash: Vec<u8>,
 
@@ -94,7 +94,7 @@ pub struct BlockhashWithMetadata {
     pub fetched_at: FetchedAt,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize,Clone)]
 pub struct FetchedAt {
     #[serde(rename = "secs_since_epoch")]
     pub secs_since_epoch: u64,
@@ -104,6 +104,7 @@ pub struct FetchedAt {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct JupiterUltraQuoteRequest {
     #[serde(rename = "inputMint")]
     pub input_mint: String,

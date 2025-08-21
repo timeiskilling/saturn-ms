@@ -8,7 +8,7 @@ use dashmap::DashMap;
 use jito_sdk_rust::JitoJsonRpcSDK;
 use jupiter_trader_data::models::jupiter_models::{
     Instruction, JupiterQuoteResponse, JupiterSwapInstructionsRsponse, JupiterSwapRequest,
-    JupiterSwapResponse, JupiterUltraQuoteResponse, PriorityLevel, QuoteOptions, TokenNaming,
+    JupiterUltraQuoteResponse, PriorityLevel, QuoteOptions, TokenNaming,
 };
 use redis::AsyncCommands;
 use reqwest::Client;
@@ -23,14 +23,16 @@ use solana_sdk::{
         v0::{self, Message},
     },
     pubkey::Pubkey,
-    signature::{Keypair, Signature, Signer},
+    signature::Signature,
     system_instruction::transfer,
     transaction::{Transaction, VersionedTransaction},
 };
 use std::{str::FromStr, sync::Arc, time::Duration};
 use tokio::sync::{Mutex, RwLock};
+use tracing::instrument;
 
 use crate::{
+    blockhash_data::BlockhashCache,
     bundle_manager::{
         client::UserStreamNotificationSystem,
         domain::{RedisBundleTracker, TrackerConfig},
@@ -165,12 +167,12 @@ impl JupiterTrader {
         let input_amount = quote.in_amount.parse::<u64>().unwrap_or(0) as f64;
         let output_amount = quote.out_amount.parse::<u64>().unwrap_or(0) as f64;
 
-        println!("   Send: {:.6} SOL", input_amount / 1_000_000_000.0);
-        println!("   Take: {:.2} USDC", output_amount / 1_000_000.0);
-        println!("   Slipping: {}%", quote.slippage_bps as f64 / 100.0);
+        // println!("   Send: {:.6} SOL", input_amount / 1_000_000_000.0);
+        // println!("   Take: {:.2} USDC", output_amount / 1_000_000.0);
+        // println!("   Slipping: {}%", quote.slippage_bps as f64 / 100.0);
 
-        // Handle the price impact
-        println!("Impact on price: {}%", quote.price_impact_pct);
+        // // Handle the price impact
+        // println!("Impact on price: {}%", quote.price_impact_pct);
 
         Ok(quote)
     }
@@ -215,10 +217,10 @@ impl JupiterTrader {
         let input_amount = quote.in_amount.parse::<u64>().unwrap_or(0) as f64;
         let output_amount = quote.out_amount.parse::<u64>().unwrap_or(0) as f64;
 
-        println!("   Send: {:.6} SOL", input_amount / 1_000_000_000.0);
-        println!("   Take: {:.2} USDC", output_amount / 1_000_000.0);
-        println!("   Slipping: {}%", quote.slippage_bps as f64 / 100.0);
-        println!("   Impact on price: {}%", quote.price_impact_pct);
+        // println!("   Send: {:.6} SOL", input_amount / 1_000_000_000.0);
+        // println!("   Take: {:.2} USDC", output_amount / 1_000_000.0);
+        // println!("   Slipping: {}%", quote.slippage_bps as f64 / 100.0);
+        // println!("   Impact on price: {}%", quote.price_impact_pct);
 
         Ok(quote)
     }
@@ -291,11 +293,11 @@ impl JupiterTrader {
         let input_amount = quote.in_amount.parse::<u64>().unwrap_or(0) as f64;
         let output_amount = quote.out_amount.parse::<u64>().unwrap_or(0) as f64;
 
-        println!("   Send: {:.6} SOL", input_amount / 1_000_000_000.0);
-        println!("   Take: {:.2} USDC", output_amount / 1_000_000.0);
-        println!("   Slipping: {}%", quote.slippage_bps as f64 / 100.0);
-        println!("   Impact on price: {}%", quote.price_impact_pct);
-        println!("_____________________________________________________");
+        // println!("   Send: {:.6} SOL", input_amount / 1_000_000_000.0);
+        // println!("   Take: {:.2} USDC", output_amount / 1_000_000.0);
+        // println!("   Slipping: {}%", quote.slippage_bps as f64 / 100.0);
+        // println!("   Impact on price: {}%", quote.price_impact_pct);
+        // println!("_____________________________________________________");
 
         Ok(quote)
     }
@@ -403,32 +405,79 @@ impl JupiterTrader {
     //     Ok(signature)
     // }
 
+    #[instrument(skip_all, level = "info")]
     async fn build_transaction_from_instructions(
         &self,
         swap_response: &JupiterSwapInstructionsRsponse,
         blockhash: Hash,
         pubkey: &Pubkey,
     ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        let mut instructions = Vec::new();
+        let len = swap_response.instruction_count();
+        let mut instructions = Vec::with_capacity(len);
 
-        for compute_instruction in &swap_response.compute_budget_instructions {
-            instructions.push(self.convert_instruction_to_solana(compute_instruction)?);
-        }
+        instructions.extend(convert_instruction_to_solana(
+            &swap_response.compute_budget_instructions,
+        )?);
+        instructions.extend(convert_instruction_to_solana(
+            &swap_response.setup_instructions,
+        )?);
 
-        for setup_instruction in &swap_response.setup_instructions {
-            instructions.push(self.convert_instruction_to_solana(setup_instruction)?);
+        if let Some(token_leader) = &swap_response.token_ledger_instruction {
+            instructions.extend(convert_instruction_to_solana(std::slice::from_ref(
+                token_leader,
+            ))?);
         }
 
         if let Some(token_leader) = &swap_response.token_ledger_instruction {
-            instructions.push(self.convert_instruction_to_solana(token_leader)?);
+            instructions.extend(convert_instruction_to_solana(std::slice::from_ref(
+                token_leader,
+            ))?);
         }
+        instructions.extend(convert_instruction_to_solana(std::slice::from_ref(
+            &swap_response.swap_instruction,
+        ))?);
 
-        instructions.push(self.convert_instruction_to_solana(&swap_response.swap_instruction)?);
-        instructions.push(self.convert_instruction_to_solana(&swap_response.cleanup_instruction)?);
+        instructions.extend(convert_instruction_to_solana(std::slice::from_ref(
+            &swap_response.cleanup_instruction,
+        ))?);
 
-        for other_instruction in &swap_response.other_instructions {
-            instructions.push(self.convert_instruction_to_solana(other_instruction)?);
-        }
+        instructions.extend(convert_instruction_to_solana(
+            &swap_response.other_instructions,
+        )?);
+
+        // for compute_instruction in &swap_response.compute_budget_instructions {
+        //     instructions.push(
+        //         self.convert_instruction_to_solana(compute_instruction)
+        //             .await?,
+        //     );
+        // }
+
+        // for setup_insіruction in &swap_response.setup_instructions {
+        //     instructions.push(
+        //         self.convert_instruction_to_solana(setup_instruction)
+        //             .await?,
+        //     );
+        // }
+
+        // if let Some(token_leader) = &swap_response.token_ledger_instruction {
+        //     instructions.push(self.convert_instruction_to_solana(token_leader).await?);
+        // }
+
+        // instructions.push(
+        //     self.convert_instruction_to_solana(&swap_response.swap_instruction)
+        //         .await?,
+        // );
+        // instructions.push(
+        //     self.convert_instruction_to_solana(&swap_response.cleanup_instruction)
+        //         .await?,
+        // );
+
+        // for other_instruction in &swap_response.other_instructions {
+        //     instructions.push(
+        //         self.convert_instruction_to_solana(other_instruction)
+        //             .await?,
+        //     );
+        // }
 
         // instructions.push(make_fee_instruction(program_id, fee_account, authority, amount).await);
 
@@ -478,7 +527,7 @@ impl JupiterTrader {
 
         if let Some(account_address) = address.as_object() {
             for (key, acc_addresses) in account_address {
-                let pubkey = Pubkey::from_str(&key)?;
+                let pubkey = Pubkey::from_str(key)?;
 
                 if let Some(data) = acc_addresses.as_array() {
                     let mut addresses = Vec::new();
@@ -511,25 +560,49 @@ impl JupiterTrader {
 
         Ok(tabel_accounts)
     }
+    #[instrument(skip_all, level = "info")]
     async fn fetch_address_lookup_tables(
         &self,
         alt_address: &[String],
     ) -> Result<Vec<AddressLookupTableAccount>, Box<dyn std::error::Error + Send + Sync>> {
-        let mut lookup_table_accounts = Vec::new();
+        let vec_pubkeys: Result<Vec<Pubkey>, _> = alt_address
+            .iter()
+            .map(|address| Pubkey::from_str(address))
+            .collect();
 
-        for alt in alt_address {
-            let pubkey = Pubkey::from_str(alt)?;
+        let vec_pubkeys = vec_pubkeys?; 
 
-            let account_data = self.client.get_account_data(&pubkey).await?;
+        // let futures: Vec<_> = alt_address
+        //     .iter()
+        //     .map(|alt| async move {
+        //         self.client.get_multiple_accounts(&vec_pubkeys);
+        //         let account_data = self.client.get_account_data(&pubkey).await?;
 
-            let lookup_table_account = AddressLookupTableAccount {
-                key: pubkey,
-                addresses: self.parse_lookup_table(account_data.as_slice())?,
-            };
+        //         Ok::<AddressLookupTableAccount, Box<dyn std::error::Error + Send + Sync>>(
+        //             AddressLookupTableAccount {
+        //                 key: pubkey,
+        //                 addresses: self.parse_lookup_table(account_data.as_slice())?,
+        //             },
+        //         )
+        //     })
+        //     .collect();
 
-            lookup_table_accounts.push(lookup_table_account);
-        }
+        let accounts = self.client.get_multiple_accounts(&vec_pubkeys).await?;
 
+        let parsed: Result<Vec<_>, Box<dyn std::error::Error + Send + Sync>> = accounts
+            .into_iter()
+            .zip(vec_pubkeys.into_iter())
+            .map(|(account_opt, pubkey)| {
+                if let Some(account) = account_opt {
+                    Ok(AddressLookupTableAccount {
+                        key: pubkey,
+                        addresses: self.parse_lookup_table(&account.data)?,
+                    })
+                } else {
+                    Err("Account not found".into())
+                }
+            })
+            .collect();
         // let rpc_response = self.client.get_account(&self.atl_pubkey).await?;
         // let address_lookup_table = AddressLookupTable::deserialize(&rpc_response.data)?;
 
@@ -540,9 +613,17 @@ impl JupiterTrader {
 
         // lookup_table_accounts.push(convertation_alt);
 
-        Ok(lookup_table_accounts)
+        // let lookup_table_accounts = futures::future::try_join_all(futures).await?;
+        match parsed {
+            Ok(accounts) => Ok(accounts),
+            Err(err) => {
+                tracing::error!("Err parcing fetch_address_lookup_tables");
+                Err(err)
+            }
+        }
     }
 
+    #[instrument(skip_all, level = "info")]
     async fn create_v0_message_with_alt(
         &self,
         instructions: &[solana_sdk::instruction::Instruction],
@@ -553,7 +634,7 @@ impl JupiterTrader {
         let message = Message::try_compile(pubkey, instructions, alt_account, blockhash)?;
         Ok(message)
     }
-
+    #[instrument(skip_all, level = "info")]
     fn parse_lookup_table(
         &self,
         account_data: &[u8],
@@ -576,39 +657,6 @@ impl JupiterTrader {
         }
 
         Ok(address)
-    }
-    fn convert_instruction_to_solana(
-        &self,
-        jupiter_instruction: &Instruction,
-    ) -> Result<solana_sdk::instruction::Instruction, Box<dyn std::error::Error + Send + Sync>>
-    {
-        use solana_sdk::instruction::{
-            AccountMeta as SolanaAccountMeta, Instruction as SolanaInstruction,
-        };
-
-        let program_id: Pubkey = jupiter_instruction.program_id.parse()?;
-
-        let accounts: Result<Vec<SolanaAccountMeta>, Box<dyn std::error::Error + Send + Sync>> =
-            jupiter_instruction
-                .accounts
-                .iter()
-                .map(|acc| {
-                    let pubkey: Pubkey = acc.pubkey.parse()?;
-                    Ok(SolanaAccountMeta {
-                        pubkey,
-                        is_signer: acc.is_signer,
-                        is_writable: acc.is_writable,
-                    })
-                })
-                .collect();
-
-        let data = general_purpose::STANDARD.decode(&jupiter_instruction.data)?;
-
-        Ok(SolanaInstruction {
-            program_id,
-            accounts: accounts?,
-            data,
-        })
     }
 
     // pub async fn swap_sol_to_usdc(
@@ -793,10 +841,12 @@ impl JupiterTrader {
     //     }
     // }
 
+    #[instrument(skip_all, level = "info")]
     pub async fn create_transactions(
         &self,
         pubkey: &str,
         quote: JupiterQuoteResponse,
+        blockhash: &BlockhashCache,
     ) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>> {
         let mut transactions: Vec<String> = Vec::with_capacity(6);
         // tokio::time::sleep(Duration::from_secs(5)).await;
@@ -804,10 +854,9 @@ impl JupiterTrader {
         // let jito_tip_acc = Pubkey::from_str(&self.jito_endpoint.get_random_tip_account().await?)?;
         let jito_tip_acc = Pubkey::from_str("96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5")?;
         let user_pubkey = Pubkey::from_str(pubkey);
-
         let user_pubkey = match user_pubkey {
             Ok(pubk) => pubk,
-            Err(err) => {
+            Err(_err) => {
                 tracing::error!("Err in decoding pubkey");
                 panic!("err")
             }
@@ -842,7 +891,8 @@ impl JupiterTrader {
 
         transactions.push(tip_encoded);
 
-        let blockhash = self.client.get_latest_blockhash().await?;
+        let blockhash = blockhash.get().await.blockhash;
+
         let swap_transaction = self
             .create_swap_transaction(quote, blockhash, &user_pubkey)
             .await?;
@@ -889,6 +939,7 @@ impl JupiterTrader {
         }
     }
 
+    #[instrument(skip_all, level = "info")]
     async fn create_swap_transaction(
         &self,
         quote: JupiterQuoteResponse,
@@ -896,7 +947,7 @@ impl JupiterTrader {
         pubkey: &Pubkey,
     ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         let url = format!("{}/swap-instructions", self.jupiter_base_url);
-
+        tracing::info!("CREATING_TRANSACTION");
         let swap_request = JupiterSwapRequest::new(
             pubkey.to_string(),
             quote,
@@ -1024,4 +1075,102 @@ impl JupiterTrader {
 
     //     Ok(())
     // }
+}
+
+// #[instrument(skip_all, level = "info")]
+// pub async fn convert_instruction_to_solana(
+//     jupiter_instruction: Vec<Instruction>,
+// ) -> Result<Vec<solana_sdk::instruction::Instruction>, Box<dyn std::error::Error + Send + Sync>> {
+//     use solana_sdk::instruction::{
+//         AccountMeta as SolanaAccountMeta, Instruction as SolanaInstruction,
+//     };
+
+//     let accounts: Vec<_> = jupiter_instruction
+//         .iter()
+//         .map(|instruct| async move {
+//             let program_id: Pubkey = instruct.program_id.parse()?;
+//             let accounts: Vec<_> = instruct
+//                 .accounts
+//                 .iter()
+//                 .map(|acc| async move {
+//                     let pubkey: Pubkey = acc.pubkey.parse()?;
+//                     Ok::<SolanaAccountMeta, Box<dyn std::error::Error + Send + Sync>>(
+//                         SolanaAccountMeta {
+//                             pubkey,
+//                             is_signer: acc.is_signer,
+//                             is_writable: acc.is_writable,
+//                         },
+//                     )
+//                 })
+//                 .collect();
+//             let account_info = futures::future::try_join_all(accounts).await?;
+
+//             let data = general_purpose::STANDARD.decode(&instruct.data)?;
+//             Ok::<SolanaInstruction, Box<dyn std::error::Error + Send + Sync>>(SolanaInstruction {
+//                 program_id,
+//                 accounts: account_info,
+//                 data,
+//             })
+//         })
+//         .collect();
+//     // let accounts : Vec<_> =
+//     //     jupiter_instruction
+//     //         .accounts
+//     //         .iter()
+//     //         .map(|acc| async move {
+//     //             let pubkey: Pubkey = acc.pubkey.parse()?;
+//     //             Ok::<SolanaAccountMeta,Box<dyn std::error::Error + Send + Sync>>(SolanaAccountMeta {
+//     //                 pubkey,
+//     //                 is_signer: acc.is_signer,
+//     //                 is_writable: acc.is_writable,
+//     //             })
+//     //         })
+//     //         .collect();
+
+//     let account_instruction = futures::future::try_join_all(accounts).await?;
+
+//     Ok(account_instruction)
+
+//     // Ok(SolanaInstruction {
+//     //     program_id,
+//     //     accounts: account_info,
+//     //     data,
+//     // })
+// }
+
+#[instrument(skip_all, level = "info")]
+pub fn convert_instruction_to_solana(
+    jupiter_instructions: &[Instruction],
+) -> Result<Vec<solana_sdk::instruction::Instruction>, Box<dyn std::error::Error + Send + Sync>> {
+    use solana_sdk::instruction::{
+        AccountMeta as SolanaAccountMeta, Instruction as SolanaInstruction,
+    };
+
+    jupiter_instructions
+        .iter()
+        .map(|instruct| {
+            let program_id = Pubkey::from_str(&instruct.program_id)?;
+            let data = general_purpose::STANDARD.decode(&instruct.data)?;
+
+            let accounts: Result<Vec<SolanaAccountMeta>, _> = instruct
+                .accounts
+                .iter()
+                .map(|acc| {
+                    Ok::<SolanaAccountMeta, Box<dyn std::error::Error + Send + Sync>>(
+                        SolanaAccountMeta {
+                            pubkey: Pubkey::from_str(&acc.pubkey)?,
+                            is_signer: acc.is_signer,
+                            is_writable: acc.is_writable,
+                        },
+                    )
+                })
+                .collect();
+
+            Ok(SolanaInstruction {
+                program_id,
+                accounts: accounts?,
+                data,
+            })
+        })
+        .collect()
 }
