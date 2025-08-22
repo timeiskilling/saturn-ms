@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
 use proto_models::grpc::bundle_service_server::BundleServiceServer;
+use redis::ToRedisArgs;
 use solana_client::nonblocking::rpc_client::RpcClient;
+use solana_sdk::pubkey::Pubkey;
 use tokio::sync::Semaphore;
 use tonic::{service::LayerExt, transport::Server};
 use tracing_subscriber::fmt::format::FmtSpan;

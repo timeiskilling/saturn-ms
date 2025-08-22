@@ -37,7 +37,7 @@ use crate::{
         client::UserStreamNotificationSystem,
         domain::{RedisBundleTracker, TrackerConfig},
     },
-    constant::{HEADER_SIZE, MIN_JITO_TIP_LAMPORTS},
+    constant::{self, HEADER_SIZE, MIN_JITO_TIP_LAMPORTS},
     redis_con,
 };
 
@@ -55,6 +55,7 @@ pub struct JupiterTrader {
     pub redis: Mutex<redis::aio::MultiplexedConnection>,
     pub config: Config,
     jito_tip_redis: Arc<Mutex<redis::aio::MultiplexedConnection>>,
+    alt_redis: redis::aio::MultiplexedConnection,
     // pub atl_pubkey: Pubkey,
     notification_system: Arc<UserStreamNotificationSystem>,
     bundle_status: Arc<RedisBundleTracker>,
@@ -89,6 +90,7 @@ impl JupiterTrader {
             jito_tip_redis: Arc::new(Mutex::new(
                 redis_con::connection::jito_tip_redis_conn(&config).await,
             )),
+            alt_redis: redis_con::connection::atl_redis_conn(&config).await,
             config,
             notification_system: Arc::new(UserStreamNotificationSystem::new()),
             bundle_status: Arc::new(
@@ -565,13 +567,47 @@ impl JupiterTrader {
         &self,
         alt_address: &[String],
     ) -> Result<Vec<AddressLookupTableAccount>, Box<dyn std::error::Error + Send + Sync>> {
+        use constant::TTL_FOR_ATL;
+        let mut con = self.alt_redis.clone();
+
+        let values: Vec<Option<Vec<u8>>> = con.mget(alt_address).await?;
+
         let vec_pubkeys: Result<Vec<Pubkey>, _> = alt_address
             .iter()
             .map(|address| Pubkey::from_str(address))
             .collect();
 
-        let vec_pubkeys = vec_pubkeys?; 
+        let vec_pubkeys = vec_pubkeys?;
+        let mut acc_data = Vec::with_capacity(alt_address.len());
 
+        for (data,pubkey) in values.iter().zip(&vec_pubkeys) {
+            match data {
+                Some(data) => {
+                    tracing::info!("SKIPING");
+                    acc_data.push(data.to_owned());
+                },
+                None => {
+                    let atl_data = self.client.get_account_data(pubkey).await?;
+                    tracing::info!("ADD into Redis ATL");
+                    let _ : ()= con.set_ex(pubkey.to_string(),&atl_data,TTL_FOR_ATL).await.unwrap();
+                    acc_data.push(atl_data);
+                }
+            }
+        }
+
+
+        let parsed: Result<Vec<_>, Box<dyn std::error::Error + Send + Sync>> = acc_data
+            .into_iter()
+            .zip(vec_pubkeys.into_iter())
+            .map(|(account_opt, pubkey)| {
+                    Ok(AddressLookupTableAccount {
+                        key: pubkey,
+                        addresses: self.parse_lookup_table(&account_opt)?,
+                    })
+            })
+            .collect();
+
+        tracing::info!("End Building ATL");
         // let futures: Vec<_> = alt_address
         //     .iter()
         //     .map(|alt| async move {
@@ -587,22 +623,6 @@ impl JupiterTrader {
         //     })
         //     .collect();
 
-        let accounts = self.client.get_multiple_accounts(&vec_pubkeys).await?;
-
-        let parsed: Result<Vec<_>, Box<dyn std::error::Error + Send + Sync>> = accounts
-            .into_iter()
-            .zip(vec_pubkeys.into_iter())
-            .map(|(account_opt, pubkey)| {
-                if let Some(account) = account_opt {
-                    Ok(AddressLookupTableAccount {
-                        key: pubkey,
-                        addresses: self.parse_lookup_table(&account.data)?,
-                    })
-                } else {
-                    Err("Account not found".into())
-                }
-            })
-            .collect();
         // let rpc_response = self.client.get_account(&self.atl_pubkey).await?;
         // let address_lookup_table = AddressLookupTable::deserialize(&rpc_response.data)?;
 

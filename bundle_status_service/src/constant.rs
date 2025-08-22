@@ -7,6 +7,8 @@ pub const SOL_MINT: &str = "So11111111111111111111111111111111111111112";
 pub const BUNDLE_TRACKER : &str = "bundle_tracker";
 pub const JITO_ACTIVE_STATUS : &str = "active_bundles";
 
+pub const ALT_REDIS_KEY : &str = "usage_atl";
+pub const TTL_FOR_ATL : u64 = 7200;
 pub const JWT_REDIS_REVOKE_GLOBAL_BEFORE_KEY: &str = "jwt.revoke.global.before";
 pub const JWT_REDIS_REVOKE_USER_BEFORE_KEY: &str = "jwt.revoke.user.before";
 pub const JWT_REDIS_REVOKED_TOKENS_KEY: &str = "jwt.revoked.tokens";

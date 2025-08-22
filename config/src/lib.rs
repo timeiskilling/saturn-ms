@@ -35,6 +35,9 @@ pub struct Config {
 
     pub jito_tip_redis_host : String,
     pub jito_tip_redis_port : u16,
+
+    pub alt_redis_host : String,
+    pub alt_redis_port : u16,
 }
 
 impl Config {
@@ -49,6 +52,10 @@ impl Config {
 
     pub fn jito_tip_redis_url(&self) -> String {
         format!("redis://{}:{}", self.jito_tip_redis_host, self.jito_tip_redis_port)
+    }
+
+    pub fn alt_redis_url(&self) -> String {
+        format!("redis://{}:{}", self.alt_redis_host, self.alt_redis_port)
     }
 
     pub fn postgres_url(&self) -> String {
@@ -99,6 +106,8 @@ pub fn load() -> Config {
         jwt_enable_revoked_tokens: env_parse("JWT_ENABLE_REVOKED_TOKENS"),
         jito_tip_redis_host: env_get("JITO_TIP_REDIS_HOST"),
         jito_tip_redis_port: env_parse("JITO_TIP_REDIS_PORT"),
+        alt_redis_host: env_get("ATL_REDIS_HOST"),
+        alt_redis_port: env_parse("ATL_REDIS_PORT"),
     };
 
     tracing::trace!("configuration: {:#?}", config);

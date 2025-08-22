@@ -29,18 +29,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB".to_string(),
         "2zMMhcVQEXDtdE6vsFS7S7D5oUodfJHE8vd1gnBouauv".to_string(),
         "7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs".to_string(),
-        // "9xzF5pmvWcEhmCCnuXKXttdF6HfQFy5V246v34SFpump".to_string(),
+        "9xzF5pmvWcEhmCCnuXKXttdF6HfQFy5V246v34SFpump".to_string(),
         "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN".to_string(),
-        // "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263".to_string(),
-        // "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn".to_string(),
-        // "27G8MtK7VtTcCHkpASjSDdkWWYfoqT6ggEuKidVJidD4".to_string(),
+        "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263".to_string(),
+        "27G8MtK7VtTcCHkpASjSDdkWWYfoqT6ggEuKidVJidD4".to_string(),
         // "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij".to_string(),
         // "9tqjeRS1swj36Ee5C1iGiwAxjQJNGAVCzaTLwFY8bonk".to_string(),
         // "BFgdzMkTPdKKJeTipv2njtDEwhKxkgFueJQfJGt1jups".to_string(),
     ];
 
     let mut rng = rand::rng();
-    let mut interval = tokio::time::interval(std::time::Duration::from_secs(3));
+    let mut interval = tokio::time::interval(std::time::Duration::from_secs(2));
 
     let tracker = JupiterTracker {
         http_client: reqwest::Client::builder().build().unwrap(),
@@ -71,7 +70,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             continue;
         }
         let random_amount: u32 = rand::Rng::random_range(&mut rng, ..=50000);
-        let amount = round_up(random_amount, 10000);
+        let amount = round_up(random_amount, 1000);
 
         let random_slipage: u16 = rand::Rng::random_range(&mut rng, 10..=100);
         let slipage: u16 = round_up(random_slipage.into(), 10).try_into().unwrap();
