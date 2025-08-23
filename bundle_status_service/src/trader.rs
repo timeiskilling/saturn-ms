@@ -85,8 +85,8 @@ impl JupiterTrader {
             jupiter_base_url,
             jito_endpoint,
             jupiter_ultra_url,
-            // shared_price_state: Arc::new(Mutex::new(HashMap::new())),
             redis: Mutex::new(redis_con::connection::redis_conn(&config).await),
+            // shared_price_state: Arc::new(Mutex::new(HashMap::new())),
             jito_tip_redis: Arc::new(Mutex::new(
                 redis_con::connection::jito_tip_redis_conn(&config).await,
             )),
@@ -235,7 +235,7 @@ impl JupiterTrader {
     //     slippage_bps: u16,
     //     options: &QuoteOptions,
     // ) ->
-
+    #[instrument(skip_all, level = "info")]
     pub async fn get_quote_with_options(
         &self,
         input_mint: &str,
@@ -262,27 +262,19 @@ impl JupiterTrader {
         let cleaned_options = options.cleaned();
         let additional_params = cleaned_options.to_params();
 
-        let additional_params_refs: Vec<(&'static str, &str)> = additional_params
-            .iter()
-            .map(|(k, v_string)| (*k, v_string.as_str()))
-            .collect();
-
-        let all_params: Vec<(&str, &str)> = base_params
-            .into_iter()
-            .chain(additional_params_refs.into_iter())
-            .collect();
-
-        let url_with_params = reqwest::Url::parse_with_params(&url, &all_params)?;
-
-        let mut headers = reqwest::header::HeaderMap::new();
-        headers.insert("Accept", "application/json".parse()?);
-
-        let response = self
-            .http_client
-            .get(url_with_params)
-            .headers(headers)
-            .send()
-            .await?;
+        let response = self.http_client.get(&url)
+        .query(&[
+            ("inputMint", input_mint),
+            ("outputMint", output_mint),
+            ("amount", &amount_str),
+            ("slippageBps", &slippage_bps_str),
+            ("platformFeeBps", "20"),
+        ])
+        // Додаємо опціональні параметри
+        .query(&additional_params)
+        .header("Accept", "application/json")
+        .send()
+        .await?;
 
         if !response.status().is_success() {
             let error_txt = response.text().await?;
@@ -291,10 +283,6 @@ impl JupiterTrader {
         }
 
         let quote: JupiterQuoteResponse = response.json().await?;
-
-        let input_amount = quote.in_amount.parse::<u64>().unwrap_or(0) as f64;
-        let output_amount = quote.out_amount.parse::<u64>().unwrap_or(0) as f64;
-
         // println!("   Send: {:.6} SOL", input_amount / 1_000_000_000.0);
         // println!("   Take: {:.2} USDC", output_amount / 1_000_000.0);
         // println!("   Slipping: {}%", quote.slippage_bps as f64 / 100.0);
@@ -407,7 +395,7 @@ impl JupiterTrader {
     //     Ok(signature)
     // }
 
-    #[instrument(skip_all, level = "info")]
+    //#[instrument(skip_all, level = "info")]
     async fn build_transaction_from_instructions(
         &self,
         swap_response: &JupiterSwapInstructionsRsponse,
@@ -579,31 +567,57 @@ impl JupiterTrader {
 
         let vec_pubkeys = vec_pubkeys?;
         let mut acc_data = Vec::with_capacity(alt_address.len());
+        let mut missing_data = Vec::with_capacity(alt_address.len());
 
-        for (data,pubkey) in values.iter().zip(&vec_pubkeys) {
+        for (data, pubkey) in values.iter().zip(&vec_pubkeys) {
             match data {
                 Some(data) => {
                     tracing::info!("SKIPING");
                     acc_data.push(data.to_owned());
-                },
+                }
                 None => {
-                    let atl_data = self.client.get_account_data(pubkey).await?;
-                    tracing::info!("ADD into Redis ATL");
-                    let _ : ()= con.set_ex(pubkey.to_string(),&atl_data,TTL_FOR_ATL).await.unwrap();
-                    acc_data.push(atl_data);
+                    // let atl_data = self.client.get_account_data(pubkey).await?;
+                    // let _ : ()= con.set_ex(pubkey.to_string(),&atl_data,TTL_FOR_ATL).await.unwrap();
+                    missing_data.push(*pubkey);
                 }
             }
         }
 
+        let accounts: Result<Vec<Vec<u8>>, Box<dyn std::error::Error + Send + Sync>> =
+            if !missing_data.is_empty() {
+                let data = async move {
+                    let mut extended = Vec::with_capacity(missing_data.len());
+                    let mut pype_line = redis::pipe();
+                    let accounts_data = self.client.get_multiple_accounts(&missing_data).await?;
 
+                    let _accounst = accounts_data.into_iter().zip(missing_data).map(
+                        |(account_data, pubkey)| {
+                            if let Some(acc) = account_data {
+                                pype_line.set_ex(pubkey.to_string(), &acc.data, TTL_FOR_ATL);
+                                extended.push(acc.data);
+                            };
+                        },
+                    );
+                    let _ : () = pype_line.query_async(&mut con).await?;
+
+                    tracing::info!("ADD into Redis ATL");
+                    Ok::<Vec<_>, Box<dyn std::error::Error + Send + Sync>>(extended)
+                }
+                .await?;
+                Ok(data)
+            } else {
+                Err("Errr".into())
+            };
+        
+        acc_data.extend(accounts?);
         let parsed: Result<Vec<_>, Box<dyn std::error::Error + Send + Sync>> = acc_data
             .into_iter()
             .zip(vec_pubkeys.into_iter())
             .map(|(account_opt, pubkey)| {
-                    Ok(AddressLookupTableAccount {
-                        key: pubkey,
-                        addresses: self.parse_lookup_table(&account_opt)?,
-                    })
+                Ok(AddressLookupTableAccount {
+                    key: pubkey,
+                    addresses: self.parse_lookup_table(&account_opt)?,
+                })
             })
             .collect();
 
@@ -643,7 +657,7 @@ impl JupiterTrader {
         }
     }
 
-    #[instrument(skip_all, level = "info")]
+    //#[instrument(skip_all, level = "info")]
     async fn create_v0_message_with_alt(
         &self,
         instructions: &[solana_sdk::instruction::Instruction],
@@ -959,7 +973,7 @@ impl JupiterTrader {
         }
     }
 
-    #[instrument(skip_all, level = "info")]
+    //#[instrument(skip_all, level = "info")]
     async fn create_swap_transaction(
         &self,
         quote: JupiterQuoteResponse,
@@ -1158,7 +1172,7 @@ impl JupiterTrader {
 //     // })
 // }
 
-#[instrument(skip_all, level = "info")]
+//#[instrument(skip_all, level = "info")]
 pub fn convert_instruction_to_solana(
     jupiter_instructions: &[Instruction],
 ) -> Result<Vec<solana_sdk::instruction::Instruction>, Box<dyn std::error::Error + Send + Sync>> {

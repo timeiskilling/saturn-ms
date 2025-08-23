@@ -1,6 +1,7 @@
 use futures::future::join_all;
 use futures::stream::StreamExt;
 use tokio::sync::Semaphore;
+use tracing::instrument;
 use std::pin::Pin;
 use std::sync::Arc;
 
@@ -18,6 +19,8 @@ pub struct TransactionService {
 
 #[tonic::async_trait]
 impl BundleService for TransactionService {
+    
+    #[instrument(skip_all, level = "info")]
     async fn create_transactions(
         &self,
         request: Request<TransactionsBuld>,

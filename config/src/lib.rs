@@ -18,20 +18,20 @@ pub struct Config {
     pub redis_port: u16,
 
     // PostgreSQL configuration.
-    pub postgres_user: String,
-    pub postgres_password: String,
-    pub postgres_host: String,
-    pub postgres_port: u16,
-    pub postgres_db: String,
-    pub postgres_connection_pool: u32,
+    // pub postgres_user: String,
+    // pub postgres_password: String,
+    // pub postgres_host: String,
+    // pub postgres_port: u16,
+    // pub postgres_db: String,
+    // pub postgres_connection_pool: u32,
 
     // JWT configuration.
-    pub jwt_secret: String,
-    pub jwt_keys: JwtKeys,
-    pub jwt_expire_access_token_seconds: i64,
-    pub jwt_expire_refresh_token_seconds: i64,
-    pub jwt_validation_leeway_seconds: i64,
-    pub jwt_enable_revoked_tokens: bool,
+    // pub jwt_secret: String,
+    // pub jwt_keys: JwtKeys,
+    // pub jwt_expire_access_token_seconds: i64,
+    // pub jwt_expire_refresh_token_seconds: i64,
+    // pub jwt_validation_leeway_seconds: i64,
+    // pub jwt_enable_revoked_tokens: bool,
 
     pub jito_tip_redis_host : String,
     pub jito_tip_redis_port : u16,
@@ -58,16 +58,16 @@ impl Config {
         format!("redis://{}:{}", self.alt_redis_host, self.alt_redis_port)
     }
 
-    pub fn postgres_url(&self) -> String {
-        format!(
-            "postgresql://{}:{}@{}:{}/{}",
-            self.postgres_user,
-            self.postgres_password,
-            self.postgres_host,
-            self.postgres_port,
-            self.postgres_db
-        )
-    }
+    // pub fn postgres_url(&self) -> String {
+    //     format!(
+    //         "postgresql://{}:{}@{}:{}/{}",
+    //         self.postgres_user,
+    //         self.postgres_password,
+    //         self.postgres_host,
+    //         self.postgres_port,
+    //         self.postgres_db
+    //     )
+    // }
 }
 
 pub fn load() -> Config {
@@ -92,18 +92,18 @@ pub fn load() -> Config {
         service_port: env_parse("SERVICE_PORT"),
         redis_host: env_get("REDIS_HOST"),
         redis_port: env_parse("REDIS_PORT"),
-        postgres_user: env_get("POSTGRES_USER"),
-        postgres_password: env_get("POSTGRES_PASSWORD"),
-        postgres_host: env_get("POSTGRES_HOST"),
-        postgres_port: env_parse("POSTGRES_PORT"),
-        postgres_db: env_get("POSTGRES_DB"),
-        postgres_connection_pool: env_parse("POSTGRES_CONNECTION_POOL"),
-        jwt_keys: JwtKeys::new(jwt_secret.as_bytes()),
-        jwt_secret,
-        jwt_expire_access_token_seconds: env_parse("JWT_EXPIRE_ACCESS_TOKEN_SECONDS"),
-        jwt_expire_refresh_token_seconds: env_parse("JWT_EXPIRE_REFRESH_TOKEN_SECONDS"),
-        jwt_validation_leeway_seconds: env_parse("JWT_VALIDATION_LEEWAY_SECONDS"),
-        jwt_enable_revoked_tokens: env_parse("JWT_ENABLE_REVOKED_TOKENS"),
+        // postgres_user: env_get("POSTGRES_USER"),
+        // postgres_password: env_get("POSTGRES_PASSWORD"),
+        // postgres_host: env_get("POSTGRES_HOST"),
+        // postgres_port: env_parse("POSTGRES_PORT"),
+        // postgres_db: env_get("POSTGRES_DB"),
+        // postgres_connection_pool: env_parse("POSTGRES_CONNECTION_POOL"),
+        // jwt_keys: JwtKeys::new(jwt_secret.as_bytes()),
+        // jwt_secret,
+        // jwt_expire_access_token_seconds: env_parse("JWT_EXPIRE_ACCESS_TOKEN_SECONDS"),
+        // jwt_expire_refresh_token_seconds: env_parse("JWT_EXPIRE_REFRESH_TOKEN_SECONDS"),
+        // jwt_validation_leeway_seconds: env_parse("JWT_VALIDATION_LEEWAY_SECONDS"),
+        // jwt_enable_revoked_tokens: env_parse("JWT_ENABLE_REVOKED_TOKENS"),
         jito_tip_redis_host: env_get("JITO_TIP_REDIS_HOST"),
         jito_tip_redis_port: env_parse("JITO_TIP_REDIS_PORT"),
         alt_redis_host: env_get("ATL_REDIS_HOST"),

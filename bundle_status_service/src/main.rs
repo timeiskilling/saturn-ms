@@ -28,8 +28,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let addr = "127.0.0.1:3000".parse().unwrap();
     let redis_url = vec![
-        "redis://localhost:6379".to_string(),
-        "redis://localhost:6380".to_string(),
+        "redis://redis_main:6379".to_string(),
+        "redis://redis_jito:6379".to_string(),
     ];
     let trader = Arc::new(
         JupiterTrader::new(
