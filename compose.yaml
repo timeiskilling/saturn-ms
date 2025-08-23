@@ -44,6 +44,12 @@ services:
       dockerfile: jito_fee_service/Dockerfile
     depends_on:
       - redis_jito
+    env_file:
+      - .env
+    # --- ВИПРАВЛЕННЯ ТУТ ---
+    environment:
+      - REDIS_URL=redis://redis_jito:6379
+      - RUST_BACKTRACE=1
 
 volumes:
   redis_main:
