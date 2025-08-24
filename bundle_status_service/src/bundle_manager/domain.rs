@@ -418,8 +418,7 @@ impl RedisBundleTracker {
                 if let Ok(bundle_data) = conn
                     .hget::<_, _, String>("bundle_tracker", &bundle_id)
                     .await
-                {
-                    if let Ok(bundle) = serde_json::from_str::<BundleStatusUpdate>(&bundle_data) {
+                    && let Ok(bundle) = serde_json::from_str::<BundleStatusUpdate>(&bundle_data) {
                         if let Some(cached) = self.local_cache.get(&bundle_id) {
                             if cached.last_checked.elapsed() >= min_age {
                                 result.push(bundle);
@@ -428,7 +427,6 @@ impl RedisBundleTracker {
                             result.push(bundle);
                         }
                     }
-                }
             }
             Ok(result)
         }
@@ -464,26 +462,24 @@ impl RedisBundleTracker {
 
         let response: InflightBundleStatusResponse = serde_json::from_value(status_response)?;
 
-        for status_opt in response.value {
-            if let Some(status) = status_opt {
-                let (new_stage, new_status) = match status.status.as_str() {
-                    "Pending" => (BundleStage::InFlight, "InFlight"),
-                    "Landed" => (BundleStage::Landed, "Landed"),
-                    "Failed" | "Invalid" => (BundleStage::Failed, "Failed"),
-                    _ => (BundleStage::InFlight, "InFlight"),
-                };
+        for status in response.value.into_iter().flatten() {
+            let (new_stage, new_status) = match status.status.as_str() {
+                "Pending" => (BundleStage::InFlight, "InFlight"),
+                "Landed" => (BundleStage::Landed, "Landed"),
+                "Failed" | "Invalid" => (BundleStage::Failed, "Failed"),
+                _ => (BundleStage::InFlight, "InFlight"),
+            };
 
-                if let Err(e) = self
-                    .update_bundle_status(
-                        &status.bundle_id,
-                        new_status,
-                        new_stage,
-                        status.landed_slot,
-                    )
-                    .await
-                {
-                    error!("Failed to update bundle {}: {}", status.bundle_id, e);
-                }
+            if let Err(e) = self
+                .update_bundle_status(
+                    &status.bundle_id,
+                    new_status,
+                    new_stage,
+                    status.landed_slot,
+                )
+                .await
+            {
+                error!("Failed to update bundle {}: {}", status.bundle_id, e);
             }
         }
 
@@ -520,25 +516,23 @@ impl RedisBundleTracker {
 
         let response: BundleStatusResponse = serde_json::from_value(status_response)?;
 
-        for status_opt in response.value {
-            if let Some(status) = status_opt {
-                let (new_stage, new_status) = match status.confirmation_status.as_str() {
-                    "Confirmed" => (BundleStage::Confirmed, "Confirmed"),
-                    "Finalized" | "Processed" => (BundleStage::Finalized, "Finalized"),
-                    _ => continue,
-                };
+        for status in response.value.into_iter().flatten() {
+            let (new_stage, new_status) = match status.confirmation_status.as_str() {
+                "Confirmed" => (BundleStage::Confirmed, "Confirmed"),
+                "Finalized" | "Processed" => (BundleStage::Finalized, "Finalized"),
+                _ => continue,
+            };
 
-                if let Err(e) = self
-                    .update_bundle_status(
-                        &status.bundle_id,
-                        new_status,
-                        new_stage,
-                        Some(status.slot),
-                    )
-                    .await
-                {
-                    error!("Failed to update bundle {}: {}", status.bundle_id, e);
-                }
+            if let Err(e) = self
+                .update_bundle_status(
+                    &status.bundle_id,
+                    new_status,
+                    new_stage,
+                    Some(status.slot),
+                )
+                .await
+            {
+                error!("Failed to update bundle {}: {}", status.bundle_id, e);
             }
         }
 
@@ -552,11 +546,10 @@ impl RedisBundleTracker {
         let redis = self.get_redis_connection(0);
         let mut conn = redis.lock().await;
 
-        if let Ok(bundle_data) = conn.hget::<_, _, String>("bundle_tracker", bundle_id).await {
-            if let Ok(bundle) = serde_json::from_str::<BundleStatusUpdate>(&bundle_data) {
+        if let Ok(bundle_data) = conn.hget::<_, _, String>("bundle_tracker", bundle_id).await
+            && let Ok(bundle) = serde_json::from_str::<BundleStatusUpdate>(&bundle_data) {
                 return Ok(bundle.version);
             }
-        }
 
         Ok(1)
     }
@@ -596,10 +589,9 @@ impl RedisBundleTracker {
 
         if let Some(cached) = self.local_cache.get(bundle_id) {
             if !cached.stage.can_transition_to(&new_stage) {
-                return Ok(());
+            &&  return Ok(());
             }
         }
-
         let serialized = serde_json::to_string(&bundle_update)?;
 
         let redis = self.get_redis_connection(0);
@@ -631,8 +623,8 @@ impl RedisBundleTracker {
                     },
                 );
 
-                if let Some(notification_system) = &self.notification_system {
-                    if old_status != new_status {
+                if let Some(notification_system) = &self.notification_system
+                    && old_status != new_status {
                         notification_system.notify_bundle_change(
                             bundle_id,
                             old_status,
@@ -640,7 +632,6 @@ impl RedisBundleTracker {
                             slot,
                         );
                     }
-                }
 
                 self.metrics
                     .stage_transitions
