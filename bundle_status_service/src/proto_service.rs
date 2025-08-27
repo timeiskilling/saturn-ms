@@ -1,25 +1,26 @@
 use futures::future::join_all;
 use futures::stream::StreamExt;
-use tokio::sync::Semaphore;
-use tracing::instrument;
 use std::pin::Pin;
 use std::sync::Arc;
+use tokio::sync::Semaphore;
+use tonic_health::server::HealthReporter;
+use tracing::instrument;
 
 use crate::blockhash_data::BlockhashCache;
+use crate::constant;
 use crate::{bundle_manager::client, trader::JupiterTrader};
-use proto_models::grpc::bundle_service_server::BundleService;
+use proto_models::grpc::bundle_service_server::{BundleService, BundleServiceServer};
 use proto_models::grpc::{SignedTransactions, TransactionsBuld, TransactionsToSign};
 use tokio_stream::{Stream, wrappers::BroadcastStream};
 use tonic::{Request, Response, Status};
 pub struct TransactionService {
     pub trader: Arc<JupiterTrader>,
-    pub rpc_semaphore : Arc<Semaphore>,
-    pub cashed_blockhash : Arc<BlockhashCache>
+    pub rpc_semaphore: Arc<Semaphore>,
+    pub cashed_blockhash: Arc<BlockhashCache>,
 }
 
 #[tonic::async_trait]
 impl BundleService for TransactionService {
-    
     #[instrument(skip_all, level = "info")]
     async fn create_transactions(
         &self,
@@ -35,7 +36,10 @@ impl BundleService for TransactionService {
             let block_hash = self.cashed_blockhash.clone();
 
             tasks.push(tokio::spawn(async move {
-                let permit = semaphore.acquire_owned().await.expect("Failed to acquire semaphore permit");
+                let permit = semaphore
+                    .acquire_owned()
+                    .await
+                    .expect("Failed to acquire semaphore permit");
 
                 let _permit = permit;
                 let options = transaction.options.ok_or_else(|| {
@@ -154,6 +158,40 @@ impl From<client::UserBundleUpdate> for proto_models::grpc::UserBundleUpdate {
             new_status: internal.new_status as i32,
             timestamp: internal.timestamp,
             slot: internal.slot,
+        }
+    }
+}
+
+pub async fn service_jupiter_status(reporter: HealthReporter) {
+    let http_client = reqwest::Client::builder().build().unwrap();
+    let mut interval = tokio::time::interval(std::time::Duration::from_secs(
+        constant::GRPC_HEALTH_CHECK_INTERVAL,
+    ));
+    let params = [
+            ("ids", "So11111111111111111111111111111111111111112"),
+        ];
+    loop {
+        interval.tick().await;
+        let mut headers = reqwest::header::HeaderMap::new();
+        headers.insert("Accept", "application/json".parse().unwrap());
+        let response = http_client
+            .get("https://lite-api.jup.ag/price/v3")
+            .headers(headers)
+            .query(&params)
+            .send()
+            .await;
+
+        match response {
+            Ok(_) => {
+                reporter
+                    .set_serving::<BundleServiceServer<TransactionService>>()
+                    .await
+            }
+            Err(_) => {
+                reporter
+                    .set_not_serving::<BundleServiceServer<TransactionService>>()
+                    .await
+            }
         }
     }
 }

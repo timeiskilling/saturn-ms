@@ -1,14 +1,12 @@
 use std::sync::Arc;
 
 use proto_models::grpc::bundle_service_server::BundleServiceServer;
-use redis::ToRedisArgs;
 use solana_client::nonblocking::rpc_client::RpcClient;
-use solana_sdk::pubkey::Pubkey;
 use tokio::sync::Semaphore;
 use tonic::{service::LayerExt, transport::Server};
 use tracing_subscriber::fmt::format::FmtSpan;
 
-use crate::{proto_service::TransactionService, trader::JupiterTrader};
+use crate::{proto_service::{service_jupiter_status, TransactionService}, trader::JupiterTrader};
 
 pub mod blockhash_data;
 pub mod bundle_manager;
@@ -63,9 +61,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .named_layer(BundleServiceServer::new(transaction_serve));
 
     println!("GreeterServer listening on {addr}");
+    let (health_reporter, health_service) = tonic_health::server::health_reporter();
+    health_reporter
+        .set_serving::<BundleServiceServer<TransactionService>>()
+        .await;
+
+    tokio::spawn(service_jupiter_status(health_reporter.clone()));
 
     Server::builder()
         .accept_http1(true)
+        .add_service(health_service)
         .add_service(transaction_serve)
         .serve(addr)
         .await?;
