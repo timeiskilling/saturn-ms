@@ -250,31 +250,23 @@ impl JupiterTrader {
         let amount_str = amount.to_string();
         let slippage_bps_str = slippage_bps.to_string();
 
-        let base_params: Vec<(&str, &str)> = vec![
-            ("inputMint", input_mint),
-            ("outputMint", output_mint),
-            ("amount", &amount_str),
-            ("slippageBps", &slippage_bps_str),
-            ("platformFeeBps", "20"),
-            // ("feeAccount",fee_account)
-        ];
-
         let cleaned_options = options.cleaned();
         let additional_params = cleaned_options.to_params();
 
-        let response = self.http_client.get(&url)
-        .query(&[
-            ("inputMint", input_mint),
-            ("outputMint", output_mint),
-            ("amount", &amount_str),
-            ("slippageBps", &slippage_bps_str),
-            ("platformFeeBps", "20"),
-        ])
-        // Додаємо опціональні параметри
-        .query(&additional_params)
-        .header("Accept", "application/json")
-        .send()
-        .await?;
+        let response = self
+            .http_client
+            .get(&url)
+            .query(&[
+                ("inputMint", input_mint),
+                ("outputMint", output_mint),
+                ("amount", &amount_str),
+                ("slippageBps", &slippage_bps_str),
+                ("platformFeeBps", "20"),
+            ])
+            .query(&additional_params)
+            .header("Accept", "application/json")
+            .send()
+            .await?;
 
         if !response.status().is_success() {
             let error_txt = response.text().await?;
@@ -598,7 +590,7 @@ impl JupiterTrader {
                             };
                         },
                     );
-                    let _ : () = pype_line.query_async(&mut con).await?;
+                    let _: () = pype_line.query_async(&mut con).await?;
 
                     tracing::info!("ADD into Redis ATL");
                     Ok::<Vec<_>, Box<dyn std::error::Error + Send + Sync>>(extended)
@@ -608,7 +600,7 @@ impl JupiterTrader {
             } else {
                 Err("Errr".into())
             };
-        
+
         acc_data.extend(accounts?);
         let parsed: Result<Vec<_>, Box<dyn std::error::Error + Send + Sync>> = acc_data
             .into_iter()
@@ -942,30 +934,45 @@ impl JupiterTrader {
         user_pbk: &str,
     ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         tracing::info!("Prepearung sending transactions");
-        let transactions = json!(transaction);
-        let params = json!([
-            transactions,
-            { "encoding": "base64" }
-        ]);
+        // let transactions = json!(transaction);
+        // let params = json!([
+        //     transactions,
+        //     { "encoding": "base64" }
+        // ]);
+        let params = json!([transaction]); 
         tokio::time::sleep(Duration::from_secs(10)).await;
         let bundle_result = self.jito_endpoint.send_bundle(Some(params), None).await;
 
         match bundle_result {
-            Ok(response_json) => match response_json["result"].as_str() {
-                Some(bundle_uuid) => {
-                    tracing::info!("Bundle sent successfully with UUID: {}", bundle_uuid);
-                    self.bundle_status
-                        .add_bundles(vec![bundle_uuid.to_string()], user_pbk.to_string())
-                        .await
-                        .unwrap();
-                    Ok(bundle_uuid.to_string())
+            Ok(response_json) => {
+                tracing::info!("Full Jito response: {:?}", response_json);
+
+                match response_json["result"].as_str() {
+                    Some(bundle_uuid) => {
+                        tracing::info!("Bundle sent successfully with UUID: {}", bundle_uuid);
+                        self.bundle_status
+                            .add_bundles(vec![bundle_uuid.to_string()], user_pbk.to_string())
+                            .await
+                            .unwrap();
+                        Ok(bundle_uuid.to_string())
+                    }
+                    None => {
+                        // Перевірте чи є error в response
+                        if let Some(error) = response_json["error"].as_object() {
+                            let error_msg = format!("Jito error: {:?}", error);
+                            tracing::error!("{}", error_msg);
+                            Err(error_msg.into())
+                        } else {
+                            let error_msg = format!(
+                                "Failed to get bundle UUID from response JSON: {:?}",
+                                response_json
+                            );
+                            tracing::error!("{}", error_msg);
+                            Err(error_msg.into())
+                        }
+                    }
                 }
-                None => {
-                    let error_msg = "Failed to get bundle UUID from response JSON";
-                    tracing::error!("{}", error_msg);
-                    Err(error_msg.into())
-                }
-            },
+            }
             Err(e) => {
                 tracing::error!("Failed to send bundle: {}", e);
                 Err(e.into())

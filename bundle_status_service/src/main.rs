@@ -26,8 +26,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let addr = "127.0.0.1:3000".parse().unwrap();
     let redis_url = vec![
-        "redis://redis_main:6379".to_string(),
-        "redis://redis_jito:6379".to_string(),
+        "redis://localhost:6379".to_string(),
+        "redis://localhost:6380".to_string(),
     ];
     let trader = Arc::new(
         JupiterTrader::new(
@@ -40,6 +40,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let rpc_client = Arc::new(RpcClient::new(
         "https://mainnet.helius-rpc.com/?api-key=bd7b24dd-d644-4612-a486-a5acb8427920".to_string(),
     ));
+    
     let blockhash_cache = blockhash_data::BlockhashCache::new(rpc_client.clone());
 
     let trader_clone = trader.clone();
