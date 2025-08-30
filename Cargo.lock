@@ -3711,6 +3711,26 @@ dependencies = [
 [[package]]
 name = "service_v1"
 version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "base64 0.21.7",
+ "bincode",
+ "bs58 0.4.0",
+ "rand 0.8.5",
+ "reqwest 0.11.27",
+ "serde",
+ "serde_json",
+ "solana-client",
+ "solana-instruction",
+ "solana-keypair",
+ "solana-program",
+ "solana-pubkey 2.4.0",
+ "solana-signer",
+ "solana-transaction",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
 
 [[package]]
 name = "sha1"
