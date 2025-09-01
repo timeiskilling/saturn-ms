@@ -7,8 +7,7 @@ use core::str;
 use dashmap::DashMap;
 use jito_sdk_rust::JitoJsonRpcSDK;
 use jupiter_trader_data::models::jupiter_models::{
-    Instruction, JupiterQuoteResponse, JupiterSwapInstructionsRsponse, JupiterSwapRequest,
-    JupiterUltraQuoteResponse, PriorityLevel, QuoteOptions, TokenNaming,
+    Instruction, JupiterQuoteResponse, JupiterSwapInstructionsRsponse, JupiterSwapRequest, JupiterSwapResponse, JupiterUltraQuoteResponse, PriorityLevel, QuoteOptions, TokenNaming
 };
 use redis::AsyncCommands;
 use reqwest::Client;
@@ -50,7 +49,7 @@ pub struct JupiterTrader {
     // keypair: Arc<Keypair>,
     jupiter_base_url: String,
     jupiter_ultra_url: String,
-    jito_endpoint: JitoJsonRpcSDK,
+    pub jito_endpoint: JitoJsonRpcSDK,
     // pub shared_price_state: SharedPriceState,
     pub redis: Mutex<redis::aio::MultiplexedConnection>,
     pub config: Config,
@@ -58,7 +57,7 @@ pub struct JupiterTrader {
     alt_redis: redis::aio::MultiplexedConnection,
     // pub atl_pubkey: Pubkey,
     notification_system: Arc<UserStreamNotificationSystem>,
-    bundle_status: Arc<RedisBundleTracker>,
+    pub bundle_status: Arc<RedisBundleTracker>,
     pub coin_naming: Arc<DashMap<String, String>>,
 }
 
@@ -284,53 +283,48 @@ impl JupiterTrader {
         Ok(quote)
     }
 
-    // pub async fn exrcute_swap(
-    //     &self,
-    //     quote: JupiterQuoteResponse,
-    // ) -> Result<Signature, Box<dyn std::error::Error + Send + Sync>> {
-    //     let url = format!("{}/swap", self.jupiter_base_url);
+    pub async fn get_swap(
+        &self,
+        quote: JupiterQuoteResponse,
+        pubkey: &str
+    ) -> Result<Transaction, Box<dyn std::error::Error + Send + Sync>> {
+        let url = format!("{}/swap", self.jupiter_base_url);
 
-    //     let swap = JupiterSwapRequest::new(
-    //         self.keypair.pubkey().to_string(),
-    //         quote,
-    //         10_000_000,
-    //         PriorityLevel::VeryHigh,
-    //         true,
-    //     );
+        let swap = JupiterSwapRequest::new(
+            pubkey.to_string(),
+            quote,
+            10_000_000,
+            PriorityLevel::VeryHigh,
+            true,
+        );
 
-    //     let response = self.http_client.post(&url).json(&swap).send().await?;
+        let response = self.http_client.post(&url).json(&swap).send().await?;
 
-    //     if !response.status().is_success() {
-    //         let error_txt = response.text().await?;
-    //         tracing::error!("Jupiter API err : {}", error_txt);
-    //         return Err("err".into());
-    //     }
+        if !response.status().is_success() {
+            let error_txt = response.text().await?;
+            tracing::error!("Jupiter API err : {}", error_txt);
+            return Err("err".into());
+        }
 
-    //     let swap_response: JupiterSwapResponse = response.json().await?;
+        let swap_response: JupiterSwapResponse = response.json().await?;
 
-    //     if let Some(simulation_error) = &swap_response.simulation_error {
-    //         tracing::error!(
-    //             "Simulation error: {} - {}",
-    //             simulation_error.error_code,
-    //             simulation_error.error
-    //         );
-    //         return Err(format!("Simulation failed: {}", simulation_error.error).into());
-    //     }
+        if let Some(simulation_error) = &swap_response.simulation_error {
+            tracing::error!(
+                "Simulation error: {} - {}",
+                simulation_error.error_code,
+                simulation_error.error
+            );
+            return Err(format!("Simulation failed: {}", simulation_error.error).into());
+        }
 
-    //     let transactions_data =
-    //         general_purpose::STANDARD.decode(&swap_response.swap_transaction)?;
-    //     let mut transaction: Transaction = bincode::deserialize(&transactions_data)?;
+        let mut transactions_data =
+            general_purpose::STANDARD.decode(&swap_response.swap_transaction)?;
 
-    //     let recent_blockhash = self.client.get_latest_blockhash().await?;
-    //     transaction.partial_sign(&[self.keypair.clone()], recent_blockhash);
+        
+        let transaction: Transaction = bincode::deserialize(&transactions_data)?;
 
-    //     let signature = self
-    //         .client
-    //         .send_and_confirm_transaction(&transaction)
-    //         .await?;
-
-    //     Ok(signature)
-    // }
+        Ok(transaction)
+    }
 
     // pub async fn execute_swap_instruction(
     //     &self,
@@ -1118,6 +1112,69 @@ impl JupiterTrader {
 
     //     Ok(())
     // }
+
+
+
+    #[instrument(skip_all, level = "info")]
+    pub async fn create_transactions_test(
+        &self,
+        pubkey: &str,
+        quote: JupiterQuoteResponse,
+        blockhash: Hash,
+    ) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>> {
+        let mut transactions: Vec<String> = Vec::with_capacity(6);
+        // tokio::time::sleep(Duration::from_secs(5)).await;
+
+        // let jito_tip_acc = Pubkey::from_str(&self.jito_endpoint.get_random_tip_account().await?)?;
+        let jito_tip_acc = Pubkey::from_str("96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5")?;
+        let user_pubkey = Pubkey::from_str(pubkey);
+        let user_pubkey = match user_pubkey {
+            Ok(pubk) => pubk,
+            Err(_err) => {
+                tracing::error!("Err in decoding pubkey");
+                panic!("err")
+            }
+        };
+        // let balance = self.client.get_balance(&user_pubkey).await?;
+        // if balance < 1_000_000_000 {
+        //     // Менше 1 SOL
+        //     tracing::info!("Low balance, requesting airdrop...");
+
+        //     // Запитуємо airdrop на 2 SOL
+        //     let airdrop_signature = self
+        //         .client
+        //         .request_airdrop(&user_pubkey, 2_000_000_000)
+        //         .await?;
+
+        //     // Чекаємо підтвердження
+        //     self.client.confirm_transaction(&airdrop_signature).await?;
+
+        //     tracing::info!("Airdrop successful");
+        // }
+
+        let data = *self.tip_cache.read().await;
+        let tip_instruction = transfer(
+            &user_pubkey,
+            &jito_tip_acc,
+            data.unwrap_or(MIN_JITO_TIP_LAMPORTS as f64) as u64,
+        );
+
+        let tip_transaction = Transaction::new_with_payer(&[tip_instruction], Some(&user_pubkey));
+
+        let tip_encoded = bs58::encode(bincode::serialize(&tip_transaction)?).into_string();
+
+        transactions.push(tip_encoded);
+
+        // let blockhash = blockhash.get().await.blockhash;
+
+        let swap_transaction = self
+            .create_swap_transaction(quote, blockhash, &user_pubkey)
+            .await?;
+
+        transactions.push(swap_transaction);
+
+        Ok(transactions)
+    }
 }
 
 // #[instrument(skip_all, level = "info")]
