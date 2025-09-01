@@ -939,8 +939,8 @@ impl JupiterTrader {
         //     transactions,
         //     { "encoding": "base64" }
         // ]);
-        let params = json!([transaction]); 
-        tokio::time::sleep(Duration::from_secs(10)).await;
+        let params = json!([transaction]);
+        // tokio::time::sleep(Duration::from_secs(10)).await;
         let bundle_result = self.jito_endpoint.send_bundle(Some(params), None).await;
 
         match bundle_result {
@@ -950,14 +950,16 @@ impl JupiterTrader {
                 match response_json["result"].as_str() {
                     Some(bundle_uuid) => {
                         tracing::info!("Bundle sent successfully with UUID: {}", bundle_uuid);
-                        self.bundle_status
+                        if let Err(e) = self
+                            .bundle_status
                             .add_bundles(vec![bundle_uuid.to_string()], user_pbk.to_string())
                             .await
-                            .unwrap();
+                        {
+                            tracing::error!("Failed to save bundle {}: {}", bundle_uuid, e);
+                        }
                         Ok(bundle_uuid.to_string())
                     }
                     None => {
-                        // Перевірте чи є error в response
                         if let Some(error) = response_json["error"].as_object() {
                             let error_msg = format!("Jito error: {:?}", error);
                             tracing::error!("{}", error_msg);
