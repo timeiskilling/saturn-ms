@@ -4,6 +4,11 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+axum = { version = "0.8.4", features = ["http2", "tokio","macros","ws"] }
+axum-server = { version = "0.7.2", features = ["tls-rustls"] }
+axum-extra = { version = "0.10.1", features = ["typed-header"] }
+hyper = { version = "1.6.0", features = ["full"] }
+hyper-util = { version = "0.1", features = ["full"] }
 
 common = { path = "../common" }
 config = {path = "../config"}
