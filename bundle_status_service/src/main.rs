@@ -10,7 +10,7 @@ use crate::{proto_service::{service_jupiter_status, TransactionService}, test::b
 
 pub mod blockhash_data;
 pub mod bundle_manager;
-pub mod custom_builder;
+mod custom_builder;
 pub mod constant;
 pub mod proto_service;
 pub mod redis_con;

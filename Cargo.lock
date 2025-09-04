@@ -719,6 +719,7 @@ dependencies = [
  "hyper-util",
  "jito-sdk-rust",
  "jupiter_trader_data",
+ "pin-project",
  "prost",
  "proto_models",
  "redis",

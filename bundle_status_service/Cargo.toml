@@ -10,6 +10,8 @@ axum-extra = { version = "0.10.1", features = ["typed-header"] }
 hyper = { version = "1.6.0", features = ["full"] }
 hyper-util = { version = "0.1", features = ["full"] }
 
+pin-project = "1"
+
 common = { path = "../common" }
 config = {path = "../config"}
 jupiter_trader_data = {path = "../jupiter_trader_data"}
