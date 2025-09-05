@@ -5,11 +5,11 @@ use hyper::Response;
 use pin_project::pin_project;
 use std::task::Poll;
 
-pub fn _hybrid<MakeWeb, Grpc>(web: MakeWeb, grpc: Grpc) -> _HybridMakeService<MakeWeb, Grpc> {
-    _HybridMakeService { web, grpc }
+pub fn hybrid<MakeWeb, Grpc>(web: MakeWeb, grpc: Grpc) -> HybridMakeService<MakeWeb, Grpc> {
+    HybridMakeService { web, grpc }
 }
 
-pub struct _HybridMakeService<Axum, Grpc> {
+pub struct HybridMakeService<Axum, Grpc> {
     web: Axum,
     grpc: Grpc,
 }
@@ -54,7 +54,10 @@ where
     }
 
     fn size_hint(&self) -> hyper::body::SizeHint {
-        hyper::body::SizeHint::default()
+        match self {
+            HybridBody::Web(b) => b.size_hint(),
+            HybridBody::Grpc(b) => b.size_hint(),
+        }
     }
 }
 
@@ -65,7 +68,7 @@ pub struct HybridMakeServiceFuture<FutAxum, Grpc> {
     grpc: Option<Grpc>,
 }
 
-impl<CoonInfo, Axum, Grpc> tower::Service<CoonInfo> for _HybridMakeService<Axum, Grpc>
+impl<CoonInfo, Axum, Grpc> tower::Service<CoonInfo> for HybridMakeService<Axum, Grpc>
 where
     Axum: tower::Service<CoonInfo>,
     Grpc: Clone,
@@ -117,6 +120,7 @@ where
     Grpc: tower::Service<hyper::Request<Body>, Response = Response<GrpcBody>>,
     Web::Error: Into<Box<dyn std::error::Error + Send + Sync + 'static>>,
     Grpc::Error: Into<Box<dyn std::error::Error + Send + Sync + 'static>>,
+
 {
     type Response = hyper::Response<HybridBody<WebBody, GrpcBody>>;
 
