@@ -4,3 +4,25 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+futures = "0.3"
+futures-util = "0.3"
+common = { path = "../common" }
+rustls = "0.22"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+thiserror = "2"
+serde = "1.0.209"
+serde_json = "1.0"
+
+tower = "0.5.2"
+tower-http = { version = "0.6.2", features = ["trace", "cors"] }
+axum = { version = "0.8.4", features = ["http2", "tokio", "macros", "ws"] }
+axum-server = { version = "0.7.2", features = ["tls-rustls"] }
+axum-extra = { version = "0.10.1", features = ["typed-header"] }
+tokio-tungstenite = { version = "0.21", features = [
+    "connect",
+    "rustls-tls-webpki-roots",
+] }
+tokio = { version = "1.45.1", features = ["full", "macros"] }
+tokio-stream = { version = "0.1.17", features = ["sync"] }
+reqwest = { version = "0.12.20", features = ["json"] }

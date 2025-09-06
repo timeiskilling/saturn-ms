@@ -3055,6 +3055,26 @@ dependencies = [
 [[package]]
 name = "price_service"
 version = "0.1.0"
+dependencies = [
+ "axum",
+ "axum-extra",
+ "axum-server",
+ "common",
+ "futures",
+ "futures-util",
+ "reqwest 0.12.22",
+ "rustls 0.22.4",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.12",
+ "tokio",
+ "tokio-stream",
+ "tokio-tungstenite 0.21.0",
+ "tower",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+]
 
 [[package]]
 name = "proc-macro-crate"
