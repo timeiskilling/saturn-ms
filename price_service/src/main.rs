@@ -1,19 +1,50 @@
-#[tokio::main]
-async fn main() {}
-
+pub mod handlers;
 use std::{collections::HashMap, collections::HashSet, sync::Arc, time::Duration};
 
-use axum::extract::ws::WebSocket;
+use axum::{extract::ws::WebSocket, routing::get, Router};
 use common::models::DayTickerEvent;
 use futures::{SinkExt, StreamExt};
 
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 use tokio_tungstenite::{connect_async, tungstenite::Message};
+use tower_http::cors::{self, CorsLayer};
+use tracing_subscriber::fmt::format::FmtSpan;
+
+use crate::handlers::websocket_handler;
 
 type SharedPriceState = Arc<Mutex<HashMap<String, DayTickerEvent>>>;
 
-struct PriceManager {
+#[tokio::main]
+async fn main() {
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::DEBUG)
+        .with_span_events(FmtSpan::CLOSE)
+        .init();
+
+    println!("Starting ant_interface server...");
+    let cors_layer = CorsLayer::new()
+        .allow_origin(cors::Any)
+        .allow_headers(cors::Any)
+        .allow_methods(cors::Any);
+
+    println!("CORS layer configured");
+    let state = Arc::new(PriceManager::new());
+
+    tokio::spawn(run_binance_ws_listener(state.clone()));
+
+    let router = Router::new()
+        .route("/ws/prices_v2", get(websocket_handler))
+        .layer(cors_layer)
+        .with_state(Arc::clone(&state));
+
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
+
+    axum::serve(listener, router).await.unwrap();
+}
+
+
+pub struct PriceManager {
     http_client: reqwest::Client,
     shared_price_state: SharedPriceState,
 }
@@ -86,7 +117,7 @@ async fn get_top_coins_by_market_cap(
 
     tracing::info!("Requesting top coins by market cap from CoinGecko");
 
-    let url = "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=20&page=1&sparkline=false&category=solana-ecosystem&price_change_percentage=1h,6h,24h";
+    let url = "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=20&page=1&sparkline=false&category=solana-ecosystem&price_change_percentage=1h%2C24h%2C7d";
 
     let response = state
         .http_client
@@ -263,7 +294,7 @@ async fn get_filtered_streams(
     Ok((filtered_streams.join("/"), coin_info_map))
 }
 
-pub async fn run_binance_ws_listener(state: Arc<PriceManager>) {
+async fn run_binance_ws_listener(state: Arc<PriceManager>) {
     loop {
         let (filtered_stream, _coin_info_map) = match get_filtered_streams(state.clone()).await {
             Ok((stream, info)) => (stream, info),
@@ -307,7 +338,7 @@ pub async fn run_binance_ws_listener(state: Arc<PriceManager>) {
                             }
                         }
                         Ok(Message::Ping(data)) => {
-                            tracing::debug!("Received Ping, sending Pong back.");
+                            tracing::info!("Received Ping, sending Pong back.");
                             if write.send(Message::Pong(data)).await.is_err() {
                                 break;
                             }
@@ -325,11 +356,11 @@ pub async fn run_binance_ws_listener(state: Arc<PriceManager>) {
                 tracing::error!("Failed to connect to Binance WebSocket: {:?}", e);
             }
         }
-        tokio::time::sleep(Duration::from_secs(10)).await;
+        tokio::time::sleep(Duration::from_secs(2)).await;
     }
 }
 
-pub async fn handle_websocket(mut socket: WebSocket, state: Arc<PriceManager>) {
+async fn handle_websocket(mut socket: WebSocket, state: Arc<PriceManager>) {
     use axum::extract::ws::Message as AxumMessage;
     tracing::info!("new client WebSocket connect");
     let mut interval = tokio::time::interval(Duration::from_secs(2));

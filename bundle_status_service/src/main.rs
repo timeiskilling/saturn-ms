@@ -82,7 +82,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
     
     let grpc_server = tokio::spawn(async move {
-        
         Server::builder()
             .add_service(health_service)
             .add_service(BundleServiceServer::new(transaction_serve))
