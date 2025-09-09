@@ -90,28 +90,23 @@ pub async fn send_bundle(trader: Arc<JupiterTrader>) -> Result<()> {
     for attempt in 1..=max_retries {
         info!("Sending bundle (attempt {}/{})", attempt, max_retries);
         match jito_sdk.send_bundle(Some(params.clone()), None).await {
-            // .clone() params
             Ok(response) => {
-                // Перевіряємо, чи є у відповіді поле 'error', оскільки Jito може повернути 200 OK, але з помилкою в тілі JSON
                 if response.get("error").is_some() {
                     error!(
                         "Jito returned an error in the response body: {:?}",
                         response
                     );
-                    // Розбираємо, чи це помилка 429
-                    // Якщо так - продовжуємо цикл. Якщо інша - можна виходити.
                 } else {
                     info!("Bundle submitted successfully!");
                     bundle_result = Some(response);
-                    break; // Виходимо з циклу при успішній відправці
+                    break;
                 }
             }
             Err(e) => {
-                // Перевіряємо, чи текст помилки містить код 429
+
                 if e.to_string().contains("429 Too Many Requests") {
                     warn!("Rate limited. Retrying in {:?}...", delay);
                 } else {
-                    // Якщо це інша помилка (наприклад, немає з'єднання), виходимо
                     error!("Failed to send bundle with non-retriable error: {}", e);
                     return Err(e);
                 }
@@ -120,7 +115,7 @@ pub async fn send_bundle(trader: Arc<JupiterTrader>) -> Result<()> {
 
         if attempt < max_retries {
             sleep(delay).await;
-            delay = delay.mul_f32(backoff_factor); // Збільшуємо затримку
+            delay = delay.mul_f32(backoff_factor);
         }
     }
     // let bundle_uuid = response["result"]

@@ -112,11 +112,18 @@ impl BundleService for TransactionService {
         request: Request<SignedTransactions>,
     ) -> Result<Response<Self::SendTransactionsStream>, Status> {
         let transactions = request.into_inner();
-        let _continiue = self
+        let continiue = self
             .trader
             .send_transactions(transactions.transactions, &transactions.user_pk)
-            .await
-            .unwrap();
+            .await;
+        
+        match continiue {
+            Ok(uuid) => tracing::info!("Uuid bundle is {}",uuid),
+            Err(e) => {
+                tracing::error!("ERROR in send_transaction {}",e);
+                return Err(Status::internal("Internal in send transaction error"));
+            }
+        }
 
         let user_id_for_stream = transactions.user_pk.clone();
 

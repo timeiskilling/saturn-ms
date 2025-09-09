@@ -7,7 +7,8 @@ use core::str;
 use dashmap::DashMap;
 use jito_sdk_rust::JitoJsonRpcSDK;
 use jupiter_trader_data::models::jupiter_models::{
-    Instruction, JupiterQuoteResponse, JupiterSwapInstructionsRsponse, JupiterSwapRequest, JupiterSwapResponse, JupiterUltraQuoteResponse, PriorityLevel, QuoteOptions, TokenNaming
+    Instruction, JupiterQuoteResponse, JupiterSwapInstructionsRsponse, JupiterSwapRequest,
+    JupiterSwapResponse, JupiterUltraQuoteResponse, PriorityLevel, QuoteOptions, TokenNaming,
 };
 use redis::AsyncCommands;
 use reqwest::Client;
@@ -70,8 +71,10 @@ impl JupiterTrader {
         );
         let jupiter_base_url = "https://lite-api.jup.ag/swap/v1".to_string();
         let jupiter_ultra_url = "https://lite-api.jup.ag/ultra/v1".to_string();
-        let jito_endpoint =
-            JitoJsonRpcSDK::new("https://mainnet.block-engine.jito.wtf/api/v1", None);
+        let jito_endpoint = JitoJsonRpcSDK::new(
+            "https://frankfurt.mainnet.block-engine.jito.wtf/api/v1",
+            None,
+        );
 
         let tracker_config = TrackerConfig::default();
 
@@ -286,7 +289,7 @@ impl JupiterTrader {
     pub async fn get_swap(
         &self,
         quote: JupiterQuoteResponse,
-        pubkey: &str
+        pubkey: &str,
     ) -> Result<Transaction, Box<dyn std::error::Error + Send + Sync>> {
         let url = format!("{}/swap", self.jupiter_base_url);
 
@@ -320,7 +323,6 @@ impl JupiterTrader {
         let mut transactions_data =
             general_purpose::STANDARD.decode(&swap_response.swap_transaction)?;
 
-        
         let transaction: Transaction = bincode::deserialize(&transactions_data)?;
 
         Ok(transaction)
@@ -934,8 +936,48 @@ impl JupiterTrader {
         //     { "encoding": "base64" }
         // ]);
         let params = json!([transaction]);
+
+        let max_retries = 20;
+        let mut delay = Duration::from_millis(150);
+        let backoff_factor = 2.0;
+        let mut bundle_result = None;
+
+        for attempt in 1..=max_retries {
+            tracing::info!("Sending bundle (attempt {}/{})", attempt, max_retries);
+            match self
+                .jito_endpoint
+                .send_bundle(Some(params.clone()), None)
+                .await
+            {
+                Ok(response) => {
+                    if response.get("error").is_some() {
+                        tracing::error!(
+                            "Jito returned an error in the response body: {:?}",
+                            response
+                        );
+                    } else {
+                        tracing::info!("Bundle submitted successfully!");
+                        bundle_result = Some(response);
+                        break;
+                    }
+                }
+                Err(e) => {
+                    if e.to_string().contains("429 Too Many Requests") {
+                        tracing::warn!("Rate limited. Retrying in {:?}...", delay);
+                    } else {
+                        tracing::error!("Failed to send bundle with non-retriable error: {}", e);
+                        return Err(e.into());
+                    }
+                }
+            }
+
+            if attempt < max_retries {
+                tokio::time::sleep(delay).await;
+                delay = delay.mul_f32(backoff_factor);
+            }
+        }
         // tokio::time::sleep(Duration::from_secs(10)).await;
-        let bundle_result = self.jito_endpoint.send_bundle(Some(params), None).await;
+        let bundle_result = bundle_result.ok_or("Invalid request");
 
         match bundle_result {
             Ok(response_json) => {
@@ -969,9 +1011,9 @@ impl JupiterTrader {
                     }
                 }
             }
-            Err(e) => {
-                tracing::error!("Failed to send bundle: {}", e);
-                Err(e.into())
+            Err(_) => {
+                tracing::error!("Failed to send bundle");
+                Err("Failed to send bundle".into())
             }
         }
     }
@@ -1112,8 +1154,6 @@ impl JupiterTrader {
 
     //     Ok(())
     // }
-
-
 
     #[instrument(skip_all, level = "info")]
     pub async fn create_transactions_test(

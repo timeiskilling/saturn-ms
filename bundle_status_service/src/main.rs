@@ -21,12 +21,12 @@ const SEMAPHORE_PERMITS: usize = 5;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::DEBUG)
+        .with_max_level(tracing::Level::INFO)
         .with_span_events(FmtSpan::CLOSE)
         .with_target(false)
         .init();
 
-    // let addr = "127.0.0.1:3000".parse().unwrap();
+    let addr = "127.0.0.1:3000".parse().unwrap();
     let redis_url = vec![
         "redis://localhost:6379".to_string(),
         "redis://localhost:6380".to_string(),
@@ -43,43 +43,43 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "https://mainnet.helius-rpc.com/?api-key=bd7b24dd-d644-4612-a486-a5acb8427920".to_string(),
     ));
     
-    // let blockhash_cache = blockhash_data::BlockhashCache::new(rpc_client.clone());
+    let blockhash_cache = blockhash_data::BlockhashCache::new(rpc_client.clone());
 
     let trader_clone = trader.clone();
 
-    let data = send_bundle(trader_clone).await;
+    // let data = send_bundle(trader_clone).await;
     
     
-    // tokio::spawn(async move {
-    //     trader_clone.jito_tip_listener().await;
-    // });
+    tokio::spawn(async move {
+        trader_clone.jito_tip_listener().await;
+    });
 
-    // let transaction_serve = TransactionService {
-    //     trader,
-    //     rpc_semaphore: Arc::new(Semaphore::new(SEMAPHORE_PERMITS)),
-    //     cashed_blockhash: Arc::new(blockhash_cache),
-    // };
+    let transaction_serve = TransactionService {
+        trader,
+        rpc_semaphore: Arc::new(Semaphore::new(SEMAPHORE_PERMITS)),
+        cashed_blockhash: Arc::new(blockhash_cache),
+    };
 
-    // let transaction_serve = tower::ServiceBuilder::new()
-    //     .layer(tower_http::cors::CorsLayer::new())
-    //     .layer(tonic_web::GrpcWebLayer::new())
-    //     .into_inner()
-    //     .named_layer(BundleServiceServer::new(transaction_serve));
+    let transaction_serve = tower::ServiceBuilder::new()
+        .layer(tower_http::cors::CorsLayer::new())
+        .layer(tonic_web::GrpcWebLayer::new())
+        .into_inner()
+        .named_layer(BundleServiceServer::new(transaction_serve));
 
-    // println!("GreeterServer listening on {addr}");
-    // let (health_reporter, health_service) = tonic_health::server::health_reporter();
-    // health_reporter
-    //     .set_serving::<BundleServiceServer<TransactionService>>()
-    //     .await;
+    println!("GreeterServer listening on {addr}");
+    let (health_reporter, health_service) = tonic_health::server::health_reporter();
+    health_reporter
+        .set_serving::<BundleServiceServer<TransactionService>>()
+        .await;
 
-    // tokio::spawn(service_jupiter_status(health_reporter.clone()));
+    tokio::spawn(service_jupiter_status(health_reporter.clone()));
 
-    // Server::builder()
-    //     .accept_http1(true)
-    //     .add_service(health_service)
-    //     .add_service(transaction_serve)
-    //     .serve(addr)
-    //     .await?;
+    Server::builder()
+        .accept_http1(true)
+        .add_service(health_service)
+        .add_service(transaction_serve)
+        .serve(addr)
+        .await?;
 
     Ok(())
 }
