@@ -112,18 +112,25 @@ impl BundleService for TransactionService {
         request: Request<SignedTransactions>,
     ) -> Result<Response<Self::SendTransactionsStream>, Status> {
         let transactions = request.into_inner();
-        let continiue = self
-            .trader
-            .send_transactions(transactions.transactions, &transactions.user_pk)
-            .await;
-        
-        match continiue {
-            Ok(uuid) => tracing::info!("Uuid bundle is {}",uuid),
-            Err(e) => {
-                tracing::error!("ERROR in send_transaction {}",e);
-                return Err(Status::internal("Internal in send transaction error"));
+        let cloned_transactions = transactions.clone();
+        let trader = self.trader.clone();
+
+        let _ = tokio::spawn(async move {
+            let continiue = trader
+                .send_transactions(cloned_transactions.transactions, &cloned_transactions.user_pk)
+                .await;
+
+            match continiue {
+                Ok(uuid) => {
+                    tracing::info!("Uuid bundle is {}", uuid);
+                    Ok(uuid)
+                },
+                Err(e) => {
+                    tracing::error!("ERROR in send_transaction {}", e);
+                    Err(Status::internal("Internal in send transaction error"))
+                }
             }
-        }
+        }).await;
 
         let user_id_for_stream = transactions.user_pk.clone();
 
@@ -174,9 +181,7 @@ pub async fn service_jupiter_status(reporter: HealthReporter) {
     let mut interval = tokio::time::interval(std::time::Duration::from_secs(
         constant::GRPC_HEALTH_CHECK_INTERVAL,
     ));
-    let params = [
-            ("ids", "So11111111111111111111111111111111111111112"),
-        ];
+    let params = [("ids", "So11111111111111111111111111111111111111112")];
     loop {
         interval.tick().await;
         let mut headers = reqwest::header::HeaderMap::new();
