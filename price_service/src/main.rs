@@ -88,7 +88,6 @@ struct SymbolInfo {
 
 #[derive(Deserialize, Debug)]
 struct CoinGeckoCoin {
-    id: String,
     symbol: String,
     name: String,
     image: String,

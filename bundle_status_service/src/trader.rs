@@ -168,8 +168,8 @@ impl JupiterTrader {
 
         let quote: JupiterUltraQuoteResponse = response.json().await?;
 
-        let input_amount = quote.in_amount.parse::<u64>().unwrap_or(0) as f64;
-        let output_amount = quote.out_amount.parse::<u64>().unwrap_or(0) as f64;
+        // let input_amount = quote.in_amount.parse::<u64>().unwrap_or(0) as f64;
+        // let output_amount = quote.out_amount.parse::<u64>().unwrap_or(0) as f64;
 
         // println!("   Send: {:.6} SOL", input_amount / 1_000_000_000.0);
         // println!("   Take: {:.2} USDC", output_amount / 1_000_000.0);
@@ -218,8 +218,8 @@ impl JupiterTrader {
 
         let quote: JupiterQuoteResponse = response.json().await?;
 
-        let input_amount = quote.in_amount.parse::<u64>().unwrap_or(0) as f64;
-        let output_amount = quote.out_amount.parse::<u64>().unwrap_or(0) as f64;
+        // let input_amount = quote.in_amount.parse::<u64>().unwrap_or(0) as f64;
+        // let output_amount = quote.out_amount.parse::<u64>().unwrap_or(0) as f64;
 
         // println!("   Send: {:.6} SOL", input_amount / 1_000_000_000.0);
         // println!("   Take: {:.2} USDC", output_amount / 1_000_000.0);
@@ -320,7 +320,7 @@ impl JupiterTrader {
             return Err(format!("Simulation failed: {}", simulation_error.error).into());
         }
 
-        let mut transactions_data =
+        let transactions_data =
             general_purpose::STANDARD.decode(&swap_response.swap_transaction)?;
 
         let transaction: Transaction = bincode::deserialize(&transactions_data)?;

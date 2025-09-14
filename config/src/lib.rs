@@ -84,7 +84,7 @@ pub fn load() -> Config {
         tracing::info!("{} file not found, using existing environment", env_file);
     }
 
-    let jwt_secret = env_get("JWT_SECRET");
+    // let jwt_secret = env_get("JWT_SECRET");
 
     // Parse configuration.
     let config = Config {
@@ -121,7 +121,7 @@ impl fmt::Debug for JwtKeys {
 }
 
 impl JwtKeys {
-    fn new(secret: &[u8]) -> Self {
+    fn _new(secret: &[u8]) -> Self {
         Self {
             encoding: EncodingKey::from_secret(secret),
             decoding: DecodingKey::from_secret(secret),
@@ -151,12 +151,9 @@ fn env_get_or(key: &str, default: &str) -> String {
 
 #[inline]
 fn env_parse<T: std::str::FromStr>(key: &str) -> T {
-    env_get(key).parse().map_or_else(
-        |_| {
+    env_get(key).parse().unwrap_or_else(|_| {
             let msg = format!("failed to parse {}", key);
             tracing::error!(msg);
             panic!("{msg}");
-        },
-        |v| v,
-    )
+        })
 }
