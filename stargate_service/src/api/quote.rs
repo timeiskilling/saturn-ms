@@ -151,7 +151,7 @@ pub struct Transaction {
     pub to: String,
     
     /// Value to send with transaction (in wei)
-    pub value: String,
+     pub value: Option<String>,
     
     /// From address
     pub from: String,

@@ -1,7 +1,12 @@
-use crate::{api::{
-    quote::{QuotesRequest, QuotesResponse},
-    tokens::{TokensRequest, TokensResponse},
-}, handlers::ResponseByQuote};
+use base64::Engine;
+
+use crate::{
+    api::{
+        quote::{QuotesRequest, QuotesResponse},
+        tokens::{TokensRequest, TokensResponse},
+    },
+    handlers::ResponseByQuote,
+};
 
 pub struct StargateClient {
     pub client: reqwest::Client,
@@ -62,17 +67,35 @@ impl StargateClient {
             tracing::error!("Invalid parsing into json: {}", err);
             err
         })?;
-        let price = (response_data.quotes[0].src_amount.clone(), response_data.quotes[0].dst_amount.clone());
+        let price = (
+            response_data.quotes[0].src_amount.clone(),
+            response_data.quotes[0].dst_amount.clone(),
+        );
         let steps = response_data.quotes[0].steps.clone();
 
-        let transactions: Vec<String> = steps
+        let transactions = steps
             .into_iter()
-            .map(|step| {
-                let serialized_tx = bincode::serialize(&step.transaction.data).unwrap();
-                bs58::encode(serialized_tx).into_string()
-            })
-            .collect();
+            .map(|step| -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+                let s = step.transaction.data.trim();
 
-        Ok(ResponseByQuote { transactions, price})
+                let bytes = if s.starts_with("0x") {
+                    hex::decode(s.trim_start_matches("0x")).map_err(|e| {
+                        tracing::error!("hex decode error: {} (data: {})", e, s);
+                        Box::<dyn std::error::Error + Send + Sync>::from(format!("hex decode error: {}", e))
+                    })?
+                } else {
+                    base64::engine::general_purpose::STANDARD.decode(s).map_err(|e| {
+                        tracing::error!("base64 decode error: {} (data: {})", e, s);
+                        Box::<dyn std::error::Error + Send + Sync>::from(format!("base64 decode error: {}", e))
+                    })?
+                };
+
+                Ok(bs58::encode(bytes).into_string())
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(ResponseByQuote {
+            transactions,
+            price,
+        })
     }
 }
