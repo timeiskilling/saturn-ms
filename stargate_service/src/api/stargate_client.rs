@@ -2,8 +2,7 @@ use base64::Engine;
 
 use crate::{
     api::{
-        quote::{QuotesRequest, QuotesResponse},
-        tokens::{TokensRequest, TokensResponse},
+        chains::ChainsResponse, quote::{QuotesRequest, QuotesResponse}, tokens::{TokensRequest, TokensResponse}
     },
     handlers::ResponseByQuote,
 };
@@ -97,5 +96,26 @@ impl StargateClient {
             transactions,
             price,
         })
+    }
+
+    pub async fn get_chains_supported(&self) -> Result<ChainsResponse,Box<dyn std::error::Error + Send + Sync>> {
+        let quote_url = format!("{}/chains", self.base_url);
+        
+        let response = self
+            .client
+            .get(quote_url)
+            .send()
+            .await
+            .map_err(|err| {
+                tracing::error!("Invalid send request: {}", err);
+                err
+            })?;
+
+        let response_data = response.json::<ChainsResponse>().await.map_err(|err| {
+            tracing::error!("Invalid parsing into json: {}", err);
+            err
+        })?;
+
+        Ok(response_data)
     }
 }

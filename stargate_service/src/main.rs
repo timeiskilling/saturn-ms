@@ -44,7 +44,7 @@ async fn main() {
     // let tokens_response: TokensResponse = response.json().await.unwrap();
     // println!("Response: {:#?}", tokens_response);
 
-    let str_client = Arc::new(StargateClient::new());
+    let strg_client = Arc::new(StargateClient::new());
 
     // let ethereum_to_solana = QuotesRequest {
     //     src_token: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48".to_string(), // USDC на Ethereum
@@ -62,8 +62,10 @@ async fn main() {
 
     let router = Router::new()
         .route("/api_v1/quote", post(handlers::get_quote))
+        .route("/api_v1/tokens", post(handlers::token_exchange))
+        .route("/api_v1/chains", post(handlers::chains_supported))
         .layer(cors_layer)
-        .with_state(Arc::clone(&str_client));
+        .with_state(Arc::clone(&strg_client));
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
     axum::serve(listener, router).await.unwrap();
