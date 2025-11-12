@@ -11,6 +11,7 @@ members = [
     "price_service",
     "stargate_service",
     "ws_price_service",
+    "encryptions-service"
 ]
 
 

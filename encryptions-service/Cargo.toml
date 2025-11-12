@@ -1,0 +1,18 @@
+[package]
+name = "encryptions-service"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+argon2 = {version =  "0.5.3", features = ["password-hash"]}
+chacha20poly1305 = "0.10.1"
+bip39 = "2.2.0"
+
+tokio = { version = "1.45.1", features = ["full", "macros"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+solana-sdk = "2.3.0"
