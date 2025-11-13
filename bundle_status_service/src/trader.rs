@@ -545,101 +545,70 @@ impl JupiterTrader {
     ) -> Result<Vec<AddressLookupTableAccount>, Box<dyn std::error::Error + Send + Sync>> {
         use constant::TTL_FOR_ATL;
         let mut con = self.alt_redis.clone();
-
         let values: Vec<Option<Vec<u8>>> = con.mget(alt_address).await?;
-
         let vec_pubkeys: Result<Vec<Pubkey>, _> = alt_address
             .iter()
             .map(|address| Pubkey::from_str(address))
             .collect();
 
         let vec_pubkeys = vec_pubkeys?;
-        let mut acc_data = Vec::with_capacity(alt_address.len());
+        let mut acc_data = vec![None; alt_address.len()];
         let mut missing_data = Vec::with_capacity(alt_address.len());
 
-        for (data, pubkey) in values.iter().zip(&vec_pubkeys) {
+        for (idx, (data, pubkey)) in values.iter().zip(&vec_pubkeys).enumerate() {
             match data {
                 Some(data) => {
-                    tracing::info!("SKIPING");
-                    acc_data.push(data.to_owned());
+                    tracing::info!("SKIPPING from cache");
+                    acc_data[idx] = Some(data.to_owned());
                 }
                 None => {
-                    // let atl_data = self.client.get_account_data(pubkey).await?;
-                    // let _ : ()= con.set_ex(pubkey.to_string(),&atl_data,TTL_FOR_ATL).await.unwrap();
-                    missing_data.push(*pubkey);
+                    missing_data.push((idx, *pubkey));
                 }
             }
         }
 
-        let accounts: Result<Vec<Vec<u8>>, Box<dyn std::error::Error + Send + Sync>> =
-            if !missing_data.is_empty() {
-                let data = async move {
-                    let mut extended = Vec::with_capacity(missing_data.len());
-                    let mut pype_line = redis::pipe();
-                    let accounts_data = self.client.get_multiple_accounts(&missing_data).await?;
+        if !missing_data.is_empty() {
+            let missing_pubkeys: Vec<Pubkey> =
+                missing_data.iter().map(|(_, pubkey)| *pubkey).collect();
 
-                    let _accounst = accounts_data.into_iter().zip(missing_data).map(
-                        |(account_data, pubkey)| {
-                            if let Some(acc) = account_data {
-                                pype_line.set_ex(pubkey.to_string(), &acc.data, TTL_FOR_ATL);
-                                extended.push(acc.data);
-                            };
-                        },
-                    );
-                    let _: () = pype_line.query_async(&mut con).await?;
+            let accounts_data = self.client.get_multiple_accounts(&missing_pubkeys).await?;
 
-                    tracing::info!("ADD into Redis ATL");
-                    Ok::<Vec<_>, Box<dyn std::error::Error + Send + Sync>>(extended)
+            let mut pype_line = redis::pipe();
+
+            for ((idx, pubkey), account_data) in missing_data.iter().zip(accounts_data.into_iter())
+            {
+                if let Some(acc) = account_data {
+                    pype_line.set_ex(pubkey.to_string(), &acc.data, TTL_FOR_ATL);
+                    acc_data[*idx] = Some(acc.data);
+                } else {
+                    tracing::warn!("Account not found: {}", pubkey);
+                    return Err("Account data not found".into());
                 }
-                .await?;
-                Ok(data)
-            } else {
-                Err("Errr".into())
-            };
+            }
 
-        acc_data.extend(accounts?);
+            let _: () = pype_line.query_async(&mut con).await?;
+            tracing::info!("Added {} accounts into Redis ATL", missing_data.len());
+        }
+
         let parsed: Result<Vec<_>, Box<dyn std::error::Error + Send + Sync>> = acc_data
             .into_iter()
             .zip(vec_pubkeys.into_iter())
-            .map(|(account_opt, pubkey)| {
-                Ok(AddressLookupTableAccount {
-                    key: pubkey,
-                    addresses: self.parse_lookup_table(&account_opt)?,
+            .filter_map(|(account_opt, pubkey)| {
+                account_opt.map(|data| {
+                    Ok(AddressLookupTableAccount {
+                        key: pubkey,
+                        addresses: self.parse_lookup_table(&data)?,
+                    })
                 })
             })
             .collect();
 
         tracing::info!("End Building ATL");
-        // let futures: Vec<_> = alt_address
-        //     .iter()
-        //     .map(|alt| async move {
-        //         self.client.get_multiple_accounts(&vec_pubkeys);
-        //         let account_data = self.client.get_account_data(&pubkey).await?;
 
-        //         Ok::<AddressLookupTableAccount, Box<dyn std::error::Error + Send + Sync>>(
-        //             AddressLookupTableAccount {
-        //                 key: pubkey,
-        //                 addresses: self.parse_lookup_table(account_data.as_slice())?,
-        //             },
-        //         )
-        //     })
-        //     .collect();
-
-        // let rpc_response = self.client.get_account(&self.atl_pubkey).await?;
-        // let address_lookup_table = AddressLookupTable::deserialize(&rpc_response.data)?;
-
-        // let convertation_alt = AddressLookupTableAccount {
-        //     key: self.atl_pubkey.clone(),
-        //     addresses: address_lookup_table.addresses.to_vec(),
-        // };
-
-        // lookup_table_accounts.push(convertation_alt);
-
-        // let lookup_table_accounts = futures::future::try_join_all(futures).await?;
         match parsed {
             Ok(accounts) => Ok(accounts),
             Err(err) => {
-                tracing::error!("Err parcing fetch_address_lookup_tables");
+                tracing::error!("Error parsing fetch_address_lookup_tables: {:?}", err);
                 Err(err)
             }
         }
@@ -885,16 +854,13 @@ impl JupiterTrader {
         };
         // let balance = self.client.get_balance(&user_pubkey).await?;
         // if balance < 1_000_000_000 {
-        //     // Менше 1 SOL
         //     tracing::info!("Low balance, requesting airdrop...");
 
-        //     // Запитуємо airdrop на 2 SOL
         //     let airdrop_signature = self
         //         .client
         //         .request_airdrop(&user_pubkey, 2_000_000_000)
         //         .await?;
 
-        //     // Чекаємо підтвердження
         //     self.client.confirm_transaction(&airdrop_signature).await?;
 
         //     tracing::info!("Airdrop successful");
@@ -1177,16 +1143,16 @@ impl JupiterTrader {
         };
         // let balance = self.client.get_balance(&user_pubkey).await?;
         // if balance < 1_000_000_000 {
-        //     // Менше 1 SOL
+        //
         //     tracing::info!("Low balance, requesting airdrop...");
 
-        //     // Запитуємо airdrop на 2 SOL
+        //
         //     let airdrop_signature = self
         //         .client
         //         .request_airdrop(&user_pubkey, 2_000_000_000)
         //         .await?;
 
-        //     // Чекаємо підтвердження
+        //
         //     self.client.confirm_transaction(&airdrop_signature).await?;
 
         //     tracing::info!("Airdrop successful");

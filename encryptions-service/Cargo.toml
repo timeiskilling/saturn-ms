@@ -8,7 +8,11 @@ argon2 = {version =  "0.5.3", features = ["password-hash"]}
 chacha20poly1305 = "0.10.1"
 bip39 = "2.2.0"
 
+config = {path = "../config"}
+wallet_models = {path = "../wallet_models"}
+
 tokio = { version = "1.45.1", features = ["full", "macros"] }
+reqwest = { version = "0.12.23", features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
@@ -16,3 +20,6 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 solana-sdk = "2.3.0"
+solana-client = "2.3.7"
+solana-account-decoder = "2.3.7"
+spl-token = "8.0.0"

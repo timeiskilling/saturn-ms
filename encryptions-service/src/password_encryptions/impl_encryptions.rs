@@ -1,11 +1,10 @@
 use std::str::FromStr;
-use argon2::{Argon2, PasswordHasher, password_hash::SaltString};
-use argon2::password_hash::Salt;
+use argon2::{Argon2,password_hash::SaltString};
 use argon2::Params;
 use argon2::password_hash::rand_core::{OsRng as RandOsRng, RngCore};
 use chacha20poly1305::{ChaCha20Poly1305, KeyInit, Nonce, aead::{Aead, OsRng}};
 use solana_sdk::signer::{SeedDerivable, Signer};
-use solana_sdk::{signature::Keypair, pubkey::Pubkey};
+use solana_sdk::{signature::Keypair};
 use bip39::Mnemonic;
 
 #[derive(Debug)]
@@ -14,6 +13,7 @@ pub struct EncryptedData {
     pub nonce: [u8; 12],
     pub salt: String,
 }
+
 
 pub fn seed_from_mnemonic(mnemonic_str: &str, bip39_passphrase: &str) -> [u8; 32] {
     let mnemonic = Mnemonic::from_str(mnemonic_str).expect("invalid mnemonic");
@@ -61,7 +61,7 @@ fn decrypt_seed(ed: &EncryptedData, password: &str) -> Result<[u8; 32], &'static
     if plain.len() != 32 { return Err("unexpected seed length"); }
     let mut seed = [0u8; 32];
     seed.copy_from_slice(&plain);
-    Ok(seed)
+    Ok(seed) 
 }
 
 fn keypair_from_seed(seed: &[u8; 32]) -> Keypair {

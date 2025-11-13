@@ -1,6 +1,14 @@
+use std::str::FromStr;
+
+use solana_sdk::{commitment_config::CommitmentConfig, pubkey::Pubkey};
 use tracing_subscriber::fmt::format::FmtSpan;
 
+use crate::ednpoints::handlers::get_valid_tokens;
+
 mod password_encryptions;
+mod state;
+mod ednpoints;
+
 
 #[tokio::main]
 async fn main() {
@@ -10,5 +18,15 @@ async fn main() {
         .with_target(false)
         .init();
     
-    password_encryptions::impl_encryptions::example_flow();
+    // password_encryptions::impl_encryptions::example_flow();
+
+    let rpc  = "https://mainnet.helius-rpc.com/?api-key=bd7b24dd-d644-4612-a486-a5acb8427920";
+    let client = solana_client::nonblocking::rpc_client::RpcClient::new_with_commitment((&rpc).to_string(), CommitmentConfig::confirmed());
+
+    let pubkey = Pubkey::from_str("FVnv5qH7dsrBzEDwJ8dN2m9PFtKTBAQFtqWF3M9LpwMg").unwrap();
+
+    let response = get_valid_tokens(&client,&pubkey).await.unwrap();
+
+    println!("response : {:#?}",response);
+
 }
