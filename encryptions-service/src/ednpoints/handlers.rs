@@ -1,232 +1,56 @@
-use solana_client::{nonblocking::rpc_client::RpcClient, rpc_request::TokenAccountsFilter};
-use solana_sdk::pubkey::Pubkey;
-use wallet_models::domain::models::token_models::TokenBalance;
+use std::str::FromStr;
 
-use reqwest;
-use serde::Deserialize;
-use std::collections::HashMap;
+use chrono::Utc;
+use solana_client::nonblocking::rpc_client::RpcClient;
+use solana_sdk::{pubkey::Pubkey, signature::Keypair};
+use wallet_models::domain::models::{
+    acc_data::{AccData, Network},
+    token_models::TokenBalance,
+    tx_models::SendedTransactions,
+};
 
-#[derive(Debug, Deserialize)]
-pub struct JupiterTokenInfo {
-    pub id: String,
-    // pub name: String,
-    pub symbol: String,
-    // pub icon: Option<String>,
-    // pub decimals: u8,
-    #[serde(rename = "usdPrice")]
-    pub usd_price: Option<f64>,
-}
+use crate::{
+    ednpoints::token_acc_info::get_valid_tokens,
+    password_encryptions::impl_encryptions::create_encrypt_data,
+    transactions::tokens_transactions::send_mint_token_transactions,
+};
 
-pub async fn get_valid_tokens(
+pub async fn fetch_sol_acc_data(
     rpc: &RpcClient,
-    owner: &Pubkey,
-) -> Result<Vec<TokenBalance>, Box<dyn std::error::Error>> {
-    let mut tokens = get_token_balances_with_metadata(rpc, owner).await?;
+    pubkey: &Pubkey,
+) -> Result<AccData, Box<dyn std::error::Error>> {
+    let account = rpc.get_account(pubkey).await?;
 
-    tokens.retain(|t| {
-        t.symbol != "UNKNOWN" &&
-        t.amount.parse::<f64>().unwrap_or(0.0) > 0.0 &&
-        t.usd_price.is_some()
-    });
-    
-    Ok(tokens)
+    Ok(AccData {
+        pubkey: pubkey.to_string(),
+        native_balance: (account.lamports as f64 / 1_000_000_000.0).to_string(), // in SOL
+        network: Network::Solana,
+        tokens: get_valid_tokens(rpc, pubkey).await?,
+        created_at: Some(Utc::now()),
+        ..Default::default()
+    })
 }
 
-async fn get_token_balances_with_metadata(
+pub async fn create_saturn_account(
+    password: String,
     rpc: &RpcClient,
-    owner: &Pubkey,
-) -> Result<Vec<TokenBalance>, Box<dyn std::error::Error>> {
-
-    let mut balances = get_token_balances(rpc, owner).await?;
-    
-    enrich_token_balances(&mut balances).await?;
-    
-    
-    Ok(balances)
+) -> Result<AccData, Box<dyn std::error::Error>> {
+    let encrypt_data = create_encrypt_data(password);
+    fetch_sol_acc_data(rpc, &encrypt_data.pubkey).await
 }
 
-async fn get_token_balances(
+pub async fn send_tokens(
     rpc: &RpcClient,
-    owner: &Pubkey,
-) -> Result<Vec<TokenBalance>, Box<dyn std::error::Error>> {
-    let token_accounts = rpc
-        .get_token_accounts_by_owner(
-            owner,
-            TokenAccountsFilter::ProgramId(spl_token::id()),
-        )
-        .await?;
+    to: &Pubkey,
+    amount: u64,
+    mint: TokenBalance,
+    source: Keypair,
+) -> Result<SendedTransactions, Box<dyn std::error::Error + Send + Sync>> {
+    let token_program = &Pubkey::from_str(&mint.token_program.clone().unwrap()).unwrap();
+    let response = send_mint_token_transactions(rpc, token_program, source, to, amount, mint).await;
 
-    let mut balances = Vec::new();
-
-    for keyed_account in token_accounts {
-        if let solana_account_decoder::UiAccountData::Json(parsed_account) =
-            &keyed_account.account.data
-        {
-            let info = parsed_account.parsed.get("info");
-            let token_amount = info.and_then(|i| i.get("tokenAmount"));
-
-            if let (Some(info), Some(token_amount)) = (info, token_amount) {
-                let mint = info
-                    .get("mint")
-                    .and_then(|m| m.as_str())
-                    .unwrap_or("")
-                    .to_string();
-
-                let amount = token_amount
-                    .get("uiAmountString")
-                    .and_then(|a| a.as_str())
-                    .unwrap_or("0")
-                    .to_string();
-
-                let raw = token_amount
-                    .get("amount")
-                    .and_then(|a| a.as_str())
-                    .unwrap_or("0")
-                    .to_string();
-
-                let decimals = token_amount
-                    .get("decimals")
-                    .and_then(|d| d.as_u64())
-                    .unwrap_or(0) as u8;
-
-                balances.push(TokenBalance {
-                    mint,
-                    symbol: String::new(), // Will be filled by Jupiter API
-                    amount,
-                    raw,
-                    decimals,
-                    usd_price: None, // Will be filled by Jupiter API
-                });
-            }
-        }
+    match response {
+        Ok(response) => Ok(response),
+        Err(err) => Err(err),
     }
-
-    Ok(balances)
 }
-
-
-async fn fetch_token_info(
-    mint_addresses: &[String],
-) -> Result<HashMap<String, JupiterTokenInfo>, Box<dyn std::error::Error>> {
-    if mint_addresses.is_empty() {
-        return Ok(HashMap::new());
-    }
-
-    let chunks: Vec<&[String]> = mint_addresses.chunks(100).collect();
-    let mut all_info = HashMap::new();
-
-    for chunk in chunks {
-        let query = chunk.join(",");
-        let url = format!("https://lite-api.jup.ag/tokens/v2/search?query={}", query);
-
-        let response = reqwest::get(&url).await?;
-
-        if !response.status().is_success() {
-            eprintln!("Jupiter API error: {}", response.status());
-            continue;
-        }
-
-        let tokens: Vec<JupiterTokenInfo> = response.json().await?;
-
-        for token in tokens {
-            all_info.insert(token.id.clone(), token);
-        }
-    }
-
-    Ok(all_info)
-}
-
-
-async fn enrich_token_balances(
-    balances: &mut [TokenBalance],
-) -> Result<(), Box<dyn std::error::Error>> {
-    if balances.is_empty() {
-        return Ok(());
-    }
-
-    let mint_addresses: Vec<String> = balances.iter().map(|b| b.mint.clone()).collect();
-
-    let token_info = fetch_token_info(&mint_addresses).await?;
-
-    for balance in balances.iter_mut() {
-        if let Some(info) = token_info.get(&balance.mint) {
-            balance.symbol = info.symbol.clone();
-            balance.usd_price = info.usd_price;
-        } else {
-            balance.symbol = "UNKNOWN".to_string();
-        }
-    }
-
-    Ok(())
-}
-
-
-// #[cfg(test)]
-// mod examples {
-//     use super::*;
-
-//     /// Example 1: Simple usage - get all tokens with metadata
-//     pub async fn example_get_all_tokens() -> Result<(), Box<dyn std::error::Error>> {
-//         let rpc = RpcClient::new("https://api.mainnet-beta.solana.com".to_string());
-//         let owner = Pubkey::try_from("YourWalletAddressHere")?;
-
-//         let balances = get_token_balances_with_metadata(&rpc, &owner).await?;
-
-//         for balance in balances {
-//             println!(
-//                 "Token: {} ({}) - Amount: {} - USD: ${:.2}",
-//                 balance.symbol,
-//                 balance.mint,
-//                 balance.amount,
-//                 balance.usd_price.unwrap_or(0.0)
-//             );
-//         }
-
-//         Ok(())
-//     }
-
-//     /// Example 2: Get tokens and filter by USD value
-//     pub async fn example_filter_by_value() -> Result<(), Box<dyn std::error::Error>> {
-//         let rpc = RpcClient::new("https://api.mainnet-beta.solana.com".to_string());
-//         let owner = Pubkey::try_from("YourWalletAddressHere")?;
-
-//         let balances = get_token_balances_with_metadata(&rpc, &owner).await?;
-
-//         // Filter tokens worth more than $1
-//         let valuable_tokens: Vec<_> = balances
-//             .into_iter()
-//             .filter(|b| {
-//                 if let (Ok(amount), Some(price)) = (b.amount.parse::<f64>(), b.usd_price) {
-//                     amount * price > 1.0
-//                 } else {
-//                     false
-//                 }
-//             })
-//             .collect();
-
-//         println!("Found {} tokens worth more than $1", valuable_tokens.len());
-
-//         Ok(())
-//     }
-
-//     /// Example 3: Calculate total portfolio value
-//     pub async fn example_portfolio_value() -> Result<(), Box<dyn std::error::Error>> {
-//         let rpc = RpcClient::new("https://api.mainnet-beta.solana.com".to_string());
-//         let owner = Pubkey::try_from("YourWalletAddressHere")?;
-
-//         let balances = get_token_balances_with_metadata(&rpc, &owner).await?;
-
-//         let total_value: f64 = balances
-//             .iter()
-//             .filter_map(|b| {
-//                 let amount = b.amount.parse::<f64>().ok()?;
-//                 let price = b.usd_price?;
-//                 Some(amount * price)
-//             })
-//             .sum();
-
-//         println!("Total portfolio value: ${:.2}", total_value);
-
-//         Ok(())
-//     }
-// }

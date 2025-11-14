@@ -3,12 +3,13 @@ use std::str::FromStr;
 use solana_sdk::{commitment_config::CommitmentConfig, pubkey::Pubkey};
 use tracing_subscriber::fmt::format::FmtSpan;
 
-use crate::ednpoints::handlers::get_valid_tokens;
+use crate::ednpoints::handlers::fetch_sol_acc_data;
 
 mod password_encryptions;
 mod state;
 mod ednpoints;
-
+mod error_handling;
+mod transactions;
 
 #[tokio::main]
 async fn main() {
@@ -25,7 +26,7 @@ async fn main() {
 
     let pubkey = Pubkey::from_str("FVnv5qH7dsrBzEDwJ8dN2m9PFtKTBAQFtqWF3M9LpwMg").unwrap();
 
-    let response = get_valid_tokens(&client,&pubkey).await.unwrap();
+    let response = fetch_sol_acc_data(&client,&pubkey).await.unwrap();
 
     println!("response : {:#?}",response);
 

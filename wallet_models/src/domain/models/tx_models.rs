@@ -1,7 +1,7 @@
 use serde::{Serialize, Deserialize};
 use chrono::{DateTime, Utc};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize,Debug)]
 pub struct TxSummary {
     pub txid: String,
     pub direction: Directions,    // "in" | "out" | "self"
@@ -12,14 +12,24 @@ pub struct TxSummary {
     pub fee: Option<u64>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize,Deserialize,Debug)]
+pub struct SendedTransactions {
+    pub signature_url : String,
+    pub sendet_at : Option<DateTime<Utc>>,
+    pub from : String, 
+    pub to : String,
+    pub mint : String,
+    pub amount : u64,
+}
+
+#[derive(Serialize, Deserialize,Debug)]
 pub enum Directions {
     In,
     Out,
     ForSelf
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize,Debug)]
 pub enum Status {
     Confirmed,
     Pending,

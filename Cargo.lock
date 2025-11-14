@@ -1489,6 +1489,7 @@ dependencies = [
  "argon2",
  "bip39",
  "chacha20poly1305",
+ "chrono",
  "config",
  "reqwest 0.12.23",
  "serde",
@@ -1497,10 +1498,12 @@ dependencies = [
  "solana-client",
  "solana-sdk",
  "spl-token",
+ "spl-token-interface",
  "tokio",
  "tracing",
  "tracing-subscriber",
  "wallet_models",
+ "zeroize",
 ]
 
 [[package]]
@@ -6850,6 +6853,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "spl-token-interface"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "06e0c2d4e38ef5834cf7fb1b592b8a8c6eab8485f5ac7a04a151b502c63a0aaa"
+dependencies = [
+ "arrayref",
+ "bytemuck",
+ "num-derive",
+ "num-traits",
+ "num_enum",
+ "solana-instruction",
+ "solana-program-error 2.2.2",
+ "solana-program-option",
+ "solana-program-pack",
+ "solana-pubkey 2.4.0",
+ "solana-sdk-ids",
+ "thiserror 2.0.17",
+]
+
+[[package]]
 name = "spl-token-metadata-interface"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8393,9 +8416,9 @@ dependencies = [
 
 [[package]]
 name = "zeroize"
-version = "1.8.1"
+version = "1.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ced3678a2879b30306d323f4542626697a464a97c0a07c9aebf7ebca65cd4dde"
+checksum = "b97154e67e32c85465826e8bcc1c59429aaaf107c1e4a9e53c8d8ccd5eff88d0"
 dependencies = [
  "zeroize_derive",
 ]

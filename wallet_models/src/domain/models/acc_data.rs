@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::domain::models::{token_models::TokenBalance, tx_models::TxSummary};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize,Debug)]
 pub struct AccData {
     pub pubkey: String,
     pub display_name: Option<String>,
@@ -41,7 +41,7 @@ impl Default for AccData {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize,Debug)]
 pub enum Network {
     Solana,
     Ethereum,
