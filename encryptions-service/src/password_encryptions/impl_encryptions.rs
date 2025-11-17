@@ -1,18 +1,21 @@
-use std::str::FromStr;
-use argon2::{Argon2, password_hash::SaltString};
 use argon2::Params;
 use argon2::password_hash::rand_core::{OsRng as RandOsRng, RngCore};
-use chacha20poly1305::{ChaCha20Poly1305, KeyInit, Nonce, aead::{Aead, OsRng}};
-use solana_sdk::pubkey::Pubkey;
-use solana_sdk::signer::{SeedDerivable, Signer};
-use solana_sdk::{signature::Keypair};
+use argon2::{Argon2, password_hash::SaltString};
 use bip39::Mnemonic;
+use chacha20poly1305::{
+    ChaCha20Poly1305, KeyInit, Nonce,
+    aead::{Aead, OsRng},
+};
+use solana_sdk::pubkey::Pubkey;
+use solana_sdk::signature::Keypair;
+use solana_sdk::signer::{SeedDerivable, Signer};
+use std::str::FromStr;
 use zeroize::Zeroize;
 
 #[derive(Debug)]
 pub struct EncryptedData {
-    pub pubkey : Pubkey,
-    pub encrypt : Encrypt
+    pub pubkey: Pubkey,
+    pub encrypt: Encrypt,
 }
 
 #[derive(Debug)]
@@ -25,7 +28,7 @@ pub struct Encrypt {
 pub fn seed_from_mnemonic(mnemonic_str: &str, bip39_passphrase: &str) -> [u8; 32] {
     let mnemonic = Mnemonic::from_str(mnemonic_str).expect("invalid mnemonic");
 
-    let mut seed_bytes = mnemonic.to_seed(bip39_passphrase); 
+    let mut seed_bytes = mnemonic.to_seed(bip39_passphrase);
     let mut seed32 = [0u8; 32];
     seed32.copy_from_slice(&seed_bytes[..32]);
 
@@ -38,13 +41,14 @@ fn derive_key_argon2(password: &str, salt: &SaltString) -> [u8; 32] {
     let argon2 = Argon2::new(argon2::Algorithm::Argon2id, argon2::Version::V0x13, params);
 
     let mut out = [0u8; 32];
-    argon2.hash_password_into(password.as_bytes(), salt.as_ref().as_bytes(), &mut out)
+    argon2
+        .hash_password_into(password.as_bytes(), salt.as_ref().as_bytes(), &mut out)
         .expect("argon2 derive");
 
     out
 }
 
-fn encrypt_seed(seed: &[u8; 32], password: String) -> Encrypt {
+pub fn encrypt_seed(seed: &[u8; 32], password: String) -> Encrypt {
     let salt = SaltString::generate(&mut RandOsRng);
 
     let mut key = derive_key_argon2(&password, &salt);
@@ -55,7 +59,9 @@ fn encrypt_seed(seed: &[u8; 32], password: String) -> Encrypt {
     OsRng.fill_bytes(&mut nonce_bytes);
     let nonce = Nonce::from_slice(&nonce_bytes);
 
-    let ciphertext = cipher.encrypt(nonce, seed.as_ref()).expect("encrypt failed");
+    let ciphertext = cipher
+        .encrypt(nonce, seed.as_ref())
+        .expect("encrypt failed");
 
     Encrypt {
         ciphertext,
@@ -64,17 +70,18 @@ fn encrypt_seed(seed: &[u8; 32], password: String) -> Encrypt {
     }
 }
 
-fn decrypt_seed(ed: &EncryptedData, mut password: String) -> Result<[u8; 32], &'static str> {
-    let salt = SaltString::from_b64(&ed.encrypt.salt).map_err(|_| "bad salt")?;
+pub fn decrypt_seed(ed: &Encrypt, mut password: String) -> Result<[u8; 32], &'static str> {
+    let salt = SaltString::from_b64(&ed.salt).map_err(|_| "bad salt")?;
 
     let mut key = derive_key_argon2(&password, &salt);
     password.zeroize();
     let cipher = ChaCha20Poly1305::new_from_slice(&key).unwrap();
     key.zeroize();
 
-    let nonce = Nonce::from_slice(&ed.encrypt.nonce);
+    let nonce = Nonce::from_slice(&ed.nonce);
 
-    let mut plain = cipher.decrypt(nonce, ed.encrypt.ciphertext.as_ref())
+    let mut plain = cipher
+        .decrypt(nonce, ed.ciphertext.as_ref())
         .map_err(|_| "decrypt failed")?;
 
     if plain.len() != 32 {
@@ -90,7 +97,7 @@ fn decrypt_seed(ed: &EncryptedData, mut password: String) -> Result<[u8; 32], &'
     Ok(seed)
 }
 
-fn keypair_from_seed(seed: &[u8; 32]) -> Keypair {
+pub fn keypair_from_seed(seed: &[u8; 32]) -> Keypair {
     Keypair::from_seed(seed).expect("invalid seed")
 }
 

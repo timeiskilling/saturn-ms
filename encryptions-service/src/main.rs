@@ -3,7 +3,7 @@ use std::str::FromStr;
 use solana_sdk::{commitment_config::CommitmentConfig, pubkey::Pubkey};
 use tracing_subscriber::fmt::format::FmtSpan;
 
-use crate::ednpoints::handlers::fetch_sol_acc_data;
+use crate::{ednpoints::handlers::fetch_sol_acc_data, state::encrypted_state::EncryptedState};
 
 mod password_encryptions;
 mod state;
@@ -20,14 +20,16 @@ async fn main() {
         .init();
     
     // password_encryptions::impl_encryptions::example_flow();
-
     let rpc  = "https://mainnet.helius-rpc.com/?api-key=bd7b24dd-d644-4612-a486-a5acb8427920";
-    let client = solana_client::nonblocking::rpc_client::RpcClient::new_with_commitment((&rpc).to_string(), CommitmentConfig::confirmed());
+    let mut state= EncryptedState::new(rpc).await;
+    let data = state.create_saturn_account("Suchara".to_string(),String::from("Alohadance")).await;
 
-    let pubkey = Pubkey::from_str("FVnv5qH7dsrBzEDwJ8dN2m9PFtKTBAQFtqWF3M9LpwMg").unwrap();
+    // let client = solana_client::nonblocking::rpc_client::RpcClient::new_with_commitment((&rpc).to_string(), CommitmentConfig::confirmed());
 
-    let response = fetch_sol_acc_data(&client,&pubkey).await.unwrap();
+    // let pubkey = Pubkey::from_str("FVnv5qH7dsrBzEDwJ8dN2m9PFtKTBAQFtqWF3M9LpwMg").unwrap();
 
-    println!("response : {:#?}",response);
+    // let response = fetch_sol_acc_data(&client,&pubkey).await.unwrap();
+
+    println!("response : {:#?}",data.unwrap());
 
 }

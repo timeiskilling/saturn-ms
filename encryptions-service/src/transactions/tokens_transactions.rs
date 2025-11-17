@@ -11,7 +11,7 @@ use wallet_models::domain::models::{
 pub async fn send_mint_token_transactions(
     rpc: &RpcClient,
     token_program: &Pubkey,
-    source_keypair: Keypair,
+    source_keypair: &Keypair,
     destination_pubkey: &Pubkey,
     amount: u64,
     mint: TokenBalance,
