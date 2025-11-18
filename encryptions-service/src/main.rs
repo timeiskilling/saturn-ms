@@ -10,6 +10,7 @@ mod state;
 mod ednpoints;
 mod error_handling;
 mod transactions;
+mod traits;
 
 #[tokio::main]
 async fn main() {
