@@ -33,13 +33,13 @@ pub async fn fetch_sol_acc_data(
     })
 }
 
-pub async fn create_saturn_account(
-    password: String,
-    rpc: &RpcClient,
-) -> Result<AccData, Box<dyn std::error::Error>> {
-    let encrypt_data = create_encrypt_data(password);
-    fetch_sol_acc_data(rpc, &encrypt_data.pubkey).await
-}
+// pub async fn create_saturn_account(
+//     password: String,
+//     rpc: &RpcClient,
+// ) -> Result<AccData, Box<dyn std::error::Error>> {
+//     let encrypt_data = create_encrypt_data(password);
+//     fetch_sol_acc_data(rpc, &encrypt_data.pubkey).await
+// }
 
 pub async fn send_tokens(
     rpc: &RpcClient,

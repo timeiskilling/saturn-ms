@@ -5,12 +5,12 @@ use solana_sdk::{
 };
 use tokio::time::Instant;
 
-pub trait Signer {
+pub trait SaturnSigner {
     fn sf_pubkey(&self) -> Pubkey;
     fn sf_sign_message(&self, message: &[u8]) -> Signature;
 }
 
-impl Signer for Keypair {
+impl SaturnSigner for Keypair {
     fn sf_pubkey(&self) -> Pubkey {
         self.pubkey()
     }
@@ -28,7 +28,7 @@ pub struct SecureKeystore {
 impl SecureKeystore {
     pub fn with_signer<F, R>(&self, f: F) -> Result<R, String>
     where
-        F: FnOnce(&dyn Signer) -> R,
+        F: FnOnce(&dyn SaturnSigner) -> R,
     {
         if Instant::now() > self.unlock_expiry {
             return Err("Keystore locked".to_string());

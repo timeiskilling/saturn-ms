@@ -106,6 +106,7 @@ pub fn create_encrypt_data(password: String) -> EncryptedData {
     OsRng.fill_bytes(&mut entropy);
 
     let mnemonic = Mnemonic::from_entropy(&entropy).unwrap();
+
     entropy.zeroize();
 
     let mut mnemonic_string = mnemonic.to_string();
@@ -120,4 +121,18 @@ pub fn create_encrypt_data(password: String) -> EncryptedData {
         pubkey,
         encrypt: encrypted,
     }
+}
+
+struct MnemonicSource{
+    phrase : String,
+}
+
+trait Encryptions {
+    type Error;
+
+    fn converting_bytes<F,Bytes>(&self, bytes : Bytes, convert : F) -> Result<R,Self::Error>
+    where 
+        F : FnOnce(Bytes) -> MnemonicSource,
+        Bytes : Sized;
+
 }

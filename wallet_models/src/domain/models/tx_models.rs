@@ -16,7 +16,6 @@ pub struct TxSummary {
 pub struct SendedTransactions {
     pub signature_url : String,
     pub sendet_at : Option<DateTime<Utc>>,
-    pub from : String, 
     pub to : String,
     pub mint : String,
     pub amount : u64,
