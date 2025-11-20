@@ -1,54 +1,135 @@
+use async_trait::async_trait;
+use reqwest::{self, Url};
+use serde::Deserialize;
 use solana_client::{nonblocking::rpc_client::RpcClient, rpc_request::TokenAccountsFilter};
 use solana_sdk::pubkey::Pubkey;
-use wallet_models::domain::models::{token_models::TokenBalance};
 use std::collections::HashMap;
-use serde::Deserialize;
-use reqwest;
+use std::error::Error;
+use wallet_models::domain::models::token_models::TokenBalance;
+
+pub type AsyncResult<T> = Result<T, Box<dyn Error + Send + Sync>>;
+
 #[derive(Debug, Deserialize)]
-pub struct JupiterTokenInfo {
+pub struct TokenInfo {
     pub id: String,
-    // pub name: String,
     pub symbol: String,
     #[serde(rename = "tokenProgram")]
-    pub token_program : String,
-    // pub icon: Option<String>,
-    // pub decimals: u8,
+    pub token_program: String,
     #[serde(rename = "usdPrice")]
     pub usd_price: Option<f64>,
 }
-pub async fn get_valid_tokens(
+
+#[async_trait]
+pub trait TokenMetaDataProvider: Send + Sync {
+    async fn fetch_metadata(
+        &self,
+        mint_addresses: &[String],
+    ) -> AsyncResult<HashMap<String, TokenInfo>>;
+}
+
+pub struct JupiterClient {
+    client: reqwest::Client,
+    base_url: Url,
+}
+
+impl JupiterClient {
+    pub fn new(base_url_str: &str) -> Result<Self, Box<dyn Error>> {
+        Ok(Self {
+            client: reqwest::Client::new(),
+            base_url: Url::parse(base_url_str)?,
+        })
+    }
+}
+
+#[async_trait]
+impl TokenMetaDataProvider for JupiterClient {
+    async fn fetch_metadata(
+        &self,
+        mint_addresses: &[String],
+    ) -> AsyncResult<HashMap<String, TokenInfo>> {
+        if mint_addresses.is_empty() {
+            return Ok(HashMap::new());
+        }
+
+        let chunks: Vec<&[String]> = mint_addresses.chunks(100).collect();
+        let mut all_info = HashMap::new();
+
+        for chunk in chunks {
+            let query_value = chunk.join(",");
+
+            let request = self
+                .client
+                .get(self.base_url.clone())
+                .query(&[("query", &query_value)])
+                .build()?;
+
+            let response = self.client.execute(request).await?;
+
+            if !response.status().is_success() {
+                eprintln!("Jupiter API error: {}", response.status());
+                continue;
+            }
+
+            let tokens: Vec<TokenInfo> = response.json().await?;
+
+            for token in tokens {
+                all_info.insert(token.id.clone(), token);
+            }
+        }
+
+        Ok(all_info)
+    }
+}
+
+pub async fn get_valid_tokens<P>(
     rpc: &RpcClient,
     owner: &Pubkey,
-) -> Result<Vec<TokenBalance>, Box<dyn std::error::Error>> {
-    let mut tokens = get_token_balances_with_metadata(rpc, owner).await?;
+    provider: &P,
+) -> AsyncResult<Vec<TokenBalance>>
+where
+    P: TokenMetaDataProvider,
+{
+    let mut tokens = get_token_balances(rpc, owner).await?;
+
+    enrich_token_balances(&mut tokens, provider).await?;
 
     tokens.retain(|t| {
-        t.symbol != "UNKNOWN" &&
-        t.amount.parse::<f64>().unwrap_or(0.0) > 0.0 &&
-        t.usd_price.is_some()
+        t.symbol != "UNKNOWN"
+            && t.amount.parse::<f64>().unwrap_or(0.0) > 0.0
+            && t.usd_price.is_some()
     });
-    
+
     Ok(tokens)
 }
 
-async fn get_token_balances_with_metadata(
-    rpc: &RpcClient,
-    owner: &Pubkey,
-) -> Result<Vec<TokenBalance>, Box<dyn std::error::Error>> {
-    let mut balances = get_token_balances(rpc, owner).await?; 
-    enrich_token_balances(&mut balances).await?;
-    Ok(balances)
+async fn enrich_token_balances<P>(balances: &mut [TokenBalance], provider: &P) -> AsyncResult<()>
+where
+    P: TokenMetaDataProvider,
+{
+    if balances.is_empty() {
+        return Ok(());
+    }
+
+    let mint_addresses: Vec<String> = balances.iter().map(|b| b.mint.clone()).collect();
+
+    let token_info = provider.fetch_metadata(&mint_addresses).await?;
+
+    for balance in balances.iter_mut() {
+        if let Some(info) = token_info.get(&balance.mint) {
+            balance.symbol = info.symbol.clone();
+            balance.usd_price = info.usd_price;
+            balance.token_program = Some(info.token_program.clone());
+        } else {
+            balance.symbol = "UNKNOWN".to_string();
+        }
+    }
+
+    Ok(())
 }
 
-async fn get_token_balances(
-    rpc: &RpcClient,
-    owner: &Pubkey,
-) -> Result<Vec<TokenBalance>, Box<dyn std::error::Error>> {
+async fn get_token_balances(rpc: &RpcClient, owner: &Pubkey) -> AsyncResult<Vec<TokenBalance>> {
     let token_accounts = rpc
-        .get_token_accounts_by_owner(
-            owner,
-            TokenAccountsFilter::ProgramId(spl_token::id()),
-        )
+        .get_token_accounts_by_owner(owner, TokenAccountsFilter::ProgramId(spl_token::id()))
         .await?;
 
     let mut balances = Vec::new();
@@ -86,12 +167,12 @@ async fn get_token_balances(
 
                 balances.push(TokenBalance {
                     mint,
-                    symbol: String::new(), // Will be filled by Jupiter API
+                    symbol: String::new(),
                     amount,
                     raw,
                     decimals,
-                    usd_price: None, // Will be filled by Jupiter API
-                    token_program: None, // Will be filled by Jupiter API
+                    usd_price: None,
+                    token_program: None,
                 });
             }
         }
@@ -99,63 +180,6 @@ async fn get_token_balances(
 
     Ok(balances)
 }
-
-async fn fetch_token_info(
-    mint_addresses: &[String],
-) -> Result<HashMap<String, JupiterTokenInfo>, Box<dyn std::error::Error>> {
-    if mint_addresses.is_empty() {
-        return Ok(HashMap::new());
-    }
-
-    let chunks: Vec<&[String]> = mint_addresses.chunks(100).collect();
-    let mut all_info = HashMap::new();
-
-    for chunk in chunks {
-        let query = chunk.join(",");
-        let url = format!("https://lite-api.jup.ag/tokens/v2/search?query={}", query);
-
-        let response = reqwest::get(&url).await?;
-
-        if !response.status().is_success() {
-            eprintln!("Jupiter API error: {}", response.status());
-            continue;
-        }
-
-        let tokens: Vec<JupiterTokenInfo> = response.json().await?;
-
-        for token in tokens {
-            all_info.insert(token.id.clone(), token);
-        }
-    }
-
-    Ok(all_info)
-}
-
-
-async fn enrich_token_balances(
-    balances: &mut [TokenBalance],
-) -> Result<(), Box<dyn std::error::Error>> {
-    if balances.is_empty() {
-        return Ok(());
-    }
-
-    let mint_addresses: Vec<String> = balances.iter().map(|b| b.mint.clone()).collect();
-
-    let token_info = fetch_token_info(&mint_addresses).await?;
-
-    for balance in balances.iter_mut() {
-        if let Some(info) = token_info.get(&balance.mint) {
-            balance.symbol = info.symbol.clone();
-            balance.usd_price = info.usd_price;
-            balance.token_program = Some(info.token_program.clone());
-        } else {
-            balance.symbol = "UNKNOWN".to_string();
-        }
-    }
-
-    Ok(())
-}
-
 
 // #[cfg(test)]
 // mod examples {

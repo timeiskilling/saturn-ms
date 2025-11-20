@@ -1,3 +1,5 @@
+use crate::password_encryptions::encryption_parms::EncryptionParams;
+use crate::password_encryptions::secure_string::SecureString;
 use argon2::Params;
 use argon2::password_hash::rand_core::{OsRng as RandOsRng, RngCore};
 use argon2::{Argon2, password_hash::SaltString};
@@ -6,10 +8,11 @@ use chacha20poly1305::{
     ChaCha20Poly1305, KeyInit, Nonce,
     aead::{Aead, OsRng},
 };
+use hmac::{Hmac, Mac};
+use sha2::Sha256;
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signature::Keypair;
 use solana_sdk::signer::{SeedDerivable, Signer};
-use std::str::FromStr;
 use zeroize::Zeroize;
 
 #[derive(Debug)]
@@ -20,14 +23,49 @@ pub struct EncryptedData {
 
 #[derive(Debug)]
 pub struct Encrypt {
+    pub version: u8,
     pub ciphertext: Vec<u8>,
     pub nonce: [u8; 12],
     pub salt: String,
+    pub argon2_params: EncryptionParams,
+    pub password_verification: [u8; 32],
 }
 
-pub fn seed_from_mnemonic(mnemonic_str: &str, bip39_passphrase: &str) -> [u8; 32] {
-    let mnemonic = Mnemonic::from_str(mnemonic_str).expect("invalid mnemonic");
+impl Encrypt {
+    pub const CURRENT_VERSION: u8 = 1;
 
+    pub fn new(
+        ciphertext: Vec<u8>,
+        nonce: [u8; 12],
+        salt: String,
+        argon2_params: EncryptionParams,
+        password_verification: [u8; 32],
+    ) -> Self {
+        Self {
+            version: Self::CURRENT_VERSION,
+            ciphertext,
+            nonce,
+            salt,
+            argon2_params,
+            password_verification,
+        }
+    }
+}
+
+pub fn decrypt_seed_versioned(
+    ed: &Encrypt,
+    password: SecureString,
+) -> Result<[u8; 32], CryptoError> {
+    match ed.version {
+        1 => decrypt_seed(ed, password),
+        v => Err(CryptoError::DecryptionFailed(format!(
+            "Unsupported encryption version: {}",
+            v
+        ))),
+    }
+}
+
+pub fn seed_from_mnemonic(mnemonic: Mnemonic, bip39_passphrase: &str) -> [u8; 32] {
     let mut seed_bytes = mnemonic.to_seed(bip39_passphrase);
     let mut seed32 = [0u8; 32];
     seed32.copy_from_slice(&seed_bytes[..32]);
@@ -36,103 +74,185 @@ pub fn seed_from_mnemonic(mnemonic_str: &str, bip39_passphrase: &str) -> [u8; 32
     seed32
 }
 
-fn derive_key_argon2(password: &str, salt: &SaltString) -> [u8; 32] {
-    let params = Params::new(65536, 3, 1, None).expect("valid params");
-    let argon2 = Argon2::new(argon2::Algorithm::Argon2id, argon2::Version::V0x13, params);
+fn derive_key_argon2(
+    password: &str,
+    salt: &SaltString,
+    params: &EncryptionParams,
+) -> Result<[u8; 32], CryptoError> {
+    let argon2_params = Params::new(
+        params.argon2_memory_kib,
+        params.argon2_iterations,
+        params.argon2_parallelism,
+        None,
+    )
+    .map_err(|e| CryptoError::InvalidParams(e.to_string()))?;
+    let argon2 = Argon2::new(
+        argon2::Algorithm::Argon2id,
+        argon2::Version::V0x13,
+        argon2_params,
+    );
 
     let mut out = [0u8; 32];
     argon2
         .hash_password_into(password.as_bytes(), salt.as_ref().as_bytes(), &mut out)
         .expect("argon2 derive");
 
-    out
+    Ok(out)
 }
 
-pub fn encrypt_seed(seed: &[u8; 32], password: String) -> Encrypt {
+pub fn encrypt_seed_with_verification(
+    seed: &[u8; 32],
+    password: SecureString,
+    params: EncryptionParams,
+) -> Result<Encrypt, CryptoError> {
     let salt = SaltString::generate(&mut RandOsRng);
 
-    let mut key = derive_key_argon2(&password, &salt);
-    let cipher = ChaCha20Poly1305::new_from_slice(&key).unwrap();
+    let mut key = derive_key_argon2(password.as_str(), &salt, &params)?;
+
+    let mut mac = <Hmac<Sha256> as Mac>::new_from_slice(&key[16..])
+        .map_err(|e| CryptoError::EncryptionFailed(e.to_string()))?;
+    mac.update(b"password_verification");
+
+    let password_verification = mac.finalize().into_bytes();
+
+    let cipher = ChaCha20Poly1305::new_from_slice(&key[..16])
+        .map_err(|e| CryptoError::EncryptionFailed(e.to_string()))?;
     key.zeroize();
 
     let mut nonce_bytes = [0u8; 12];
     OsRng.fill_bytes(&mut nonce_bytes);
     let nonce = Nonce::from_slice(&nonce_bytes);
 
+    if nonce_bytes.iter().all(|&b| b == 0) {
+        return Err(CryptoError::EncryptionFailed(
+            "Generated all-zero nonce, refusing to encrypt".to_string(),
+        ));
+    }
+
     let ciphertext = cipher
         .encrypt(nonce, seed.as_ref())
-        .expect("encrypt failed");
+        .map_err(|e| CryptoError::EncryptionFailed(e.to_string()))?;
 
-    Encrypt {
+    let mut verification_array = [0u8; 32];
+    verification_array.copy_from_slice(&password_verification);
+
+    Ok(Encrypt {
+        version: Encrypt::CURRENT_VERSION,
         ciphertext,
         nonce: nonce_bytes,
         salt: salt.to_string(),
-    }
+        argon2_params: params,
+        password_verification: verification_array,
+    })
 }
 
-pub fn decrypt_seed(ed: &Encrypt, mut password: String) -> Result<[u8; 32], &'static str> {
-    let salt = SaltString::from_b64(&ed.salt).map_err(|_| "bad salt")?;
+pub fn verify_password(ed: &Encrypt, password: SecureString) -> Result<bool, CryptoError> {
+    let salt = SaltString::from_b64(&ed.salt).map_err(|_| CryptoError::InvalidSalt)?;
 
-    let mut key = derive_key_argon2(&password, &salt);
-    password.zeroize();
-    let cipher = ChaCha20Poly1305::new_from_slice(&key).unwrap();
+    let mut key = derive_key_argon2(password.as_str(), &salt, &ed.argon2_params)?;
+
+   let mut mac = <Hmac<Sha256> as Mac>::new_from_slice(&key[16..])
+        .map_err(|e| CryptoError::EncryptionFailed(e.to_string()))?;
+    mac.update(b"password_verification");
+
+    key.zeroize();
+    
+    Ok(mac.verify_slice(&ed.password_verification).is_ok())
+}
+
+pub fn decrypt_seed(ed: &Encrypt, password: SecureString) -> Result<[u8; 32], CryptoError> {
+    let salt = SaltString::from_b64(&ed.salt).map_err(|_| CryptoError::InvalidSalt)?;
+
+    let mut key = derive_key_argon2(password.as_str(), &salt, &ed.argon2_params)?;
+
+    let cipher = ChaCha20Poly1305::new_from_slice(&key)
+        .map_err(|e| CryptoError::EncryptionFailed(e.to_string()))?;
     key.zeroize();
 
     let nonce = Nonce::from_slice(&ed.nonce);
 
-    let mut plain = cipher
-        .decrypt(nonce, ed.ciphertext.as_ref())
-        .map_err(|_| "decrypt failed")?;
+    let mut plain = cipher.decrypt(nonce, ed.ciphertext.as_ref()).map_err(|_| {
+        CryptoError::DecryptionFailed("Invalid password or corrupted data".to_string())
+    })?;
 
     if plain.len() != 32 {
         plain.zeroize();
-        return Err("unexpected seed length");
+        return Err(CryptoError::InvalidSeedLength);
     }
 
     let mut seed = [0u8; 32];
     seed.copy_from_slice(&plain);
-
     plain.zeroize();
 
     Ok(seed)
 }
 
-pub fn keypair_from_seed(seed: &[u8; 32]) -> Keypair {
-    Keypair::from_seed(seed).expect("invalid seed")
+pub fn keypair_from_seed(seed: &[u8; 32]) -> Result<Keypair, CryptoError> {
+    Keypair::from_seed(seed).map_err(|_| CryptoError::InvalidSeedLength)
 }
 
-pub fn create_encrypt_data(password: String) -> EncryptedData {
+pub fn create_encrypt_data(
+    password: SecureString,
+    bip39_passphrase: Option<SecureString>,
+    params: EncryptionParams,
+) -> Result<(EncryptedData, WalletMetadata), CryptoError> {
     let mut entropy = [0u8; 32];
     OsRng.fill_bytes(&mut entropy);
 
-    let mnemonic = Mnemonic::from_entropy(&entropy).unwrap();
-
+    let mnemonic = Mnemonic::from_entropy(&entropy)
+        .map_err(|e| CryptoError::EncryptionFailed(e.to_string()))?;
     entropy.zeroize();
 
-    let mut mnemonic_string = mnemonic.to_string();
-    let mut seed = seed_from_mnemonic(&mnemonic_string, "");
-    mnemonic_string.zeroize();
+    let passphrase_str = bip39_passphrase.as_ref().map(|s| s.as_str()).unwrap_or("");
 
-    let pubkey = keypair_from_seed(&seed).pubkey();
-    let encrypted = encrypt_seed(&seed, password);
+    let mut seed = seed_from_mnemonic(mnemonic, passphrase_str);
+
+    let keypair = keypair_from_seed(&seed)?;
+    let pubkey = keypair.pubkey();
+
+    let encrypted = encrypt_seed_with_verification(&seed, password, params)?;
     seed.zeroize();
 
-    EncryptedData {
-        pubkey,
-        encrypt: encrypted,
+    let metadata = WalletMetadata {
+        uses_bip39_passphrase: bip39_passphrase.is_some(),
+    };
+
+    Ok((
+        EncryptedData {
+            pubkey,
+            encrypt: encrypted,
+        },
+        metadata,
+    ))
+}
+
+#[derive(Debug)]
+pub enum CryptoError {
+    InvalidParams(String),
+    KeyDerivationFailed(String),
+    EncryptionFailed(String),
+    DecryptionFailed(String),
+    InvalidSeedLength,
+    InvalidSalt,
+}
+
+impl std::fmt::Display for CryptoError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::InvalidParams(s) => write!(f, "Invalid crypto parameters: {}", s),
+            Self::KeyDerivationFailed(s) => write!(f, "Key derivation failed: {}", s),
+            Self::EncryptionFailed(s) => write!(f, "Encryption failed: {}", s),
+            Self::DecryptionFailed(s) => write!(f, "Decryption failed: {}", s),
+            Self::InvalidSeedLength => write!(f, "Invalid seed length"),
+            Self::InvalidSalt => write!(f, "Invalid salt format"),
+        }
     }
 }
 
-struct MnemonicSource{
-    phrase : String,
-}
+impl std::error::Error for CryptoError {}
 
-trait Encryptions {
-    type Error;
-
-    fn converting_bytes<F,Bytes>(&self, bytes : Bytes, convert : F) -> Result<R,Self::Error>
-    where 
-        F : FnOnce(Bytes) -> MnemonicSource,
-        Bytes : Sized;
-
+#[derive(Debug, Clone)]
+pub struct WalletMetadata {
+    pub uses_bip39_passphrase: bool,
+    // Інші метадані про гаманець
 }

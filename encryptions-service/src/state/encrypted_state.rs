@@ -4,15 +4,18 @@ use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{commitment_config::CommitmentConfig, pubkey::Pubkey, signature::Keypair};
 use tokio::time::Instant;
 use wallet_models::domain::models::{
-    acc_data::{AccData, Network}, token_models::TokenBalance, tx_models::SendedTransactions,
+    acc_data::{AccData, Network},
+    token_models::TokenBalance,
+    tx_models::SendedTransactions,
 };
 use zeroize::Zeroize;
+use std::error::Error;
 
 use crate::{
-    ednpoints::handlers::fetch_sol_acc_data,
-    password_encryptions::impl_encryptions::{
-        EncryptedData, create_encrypt_data, decrypt_seed, encrypt_seed, keypair_from_seed
-    },
+    ednpoints::{handlers::fetch_sol_acc_data, token_acc_info::TokenMetaDataProvider},
+    password_encryptions::{encryption_parms::EncryptionParams, impl_encryptions::{
+        EncryptedData, create_encrypt_data, decrypt_seed, encrypt_seed_with_verification, keypair_from_seed, verify_password,
+    }, secure_string::SecureString},
     transactions::tokens_transactions::send_mint_token_transactions,
 };
 
@@ -42,10 +45,11 @@ impl EncryptedState {
 
     pub async fn create_saturn_account(
         &mut self,
-        password: String,
-        name : String,
+        password: SecureString,
+        name: String,
+        bip39_passphrase : Option<SecureString>
     ) -> Result<AccData, Box<dyn std::error::Error>> {
-        let encrypt_data = create_encrypt_data(password);
+        let (encrypt_data,wallet_data) = create_encrypt_data(password, bip39_passphrase, EncryptionParams::mobile())?;
         // let data = fetch_sol_acc_data(&self.rpc_node, &encrypt_data.pubkey).await;
         let data = AccData {
             pubkey: encrypt_data.pubkey.to_string(),
@@ -54,22 +58,36 @@ impl EncryptedState {
             ..Default::default()
         };
         self.encrypted_data = Some(encrypt_data);
-        
+
         Ok(data)
     }
 
     pub async fn unclok_wallet(
         &mut self,
-        password: String,
-    ) -> Result<AccData, Box<dyn std::error::Error>> {
+        password: SecureString,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>
+    {
         if let Some(data) = &self.encrypted_data {
             self.lock_timer = Instant::now();
             let mut seed = decrypt_seed(&data.encrypt, password)?;
-            self.unlocked_keypair = Some(keypair_from_seed(&seed));
+            self.unlocked_keypair = Some(keypair_from_seed(&seed)?);
             seed.zeroize();
-            return fetch_sol_acc_data(&self.rpc_node, &data.pubkey).await;
+            return Ok(());
         }
         Err("Invalid Pass".to_string().into())
+    }
+
+    pub async fn refresh_data<P>(
+        &self,
+        provider: &P,
+    ) -> Result<AccData, Box<dyn Error + Send + Sync>>
+    where
+        P: TokenMetaDataProvider,
+    {
+        if let Some(data) = &self.encrypted_data {
+            return fetch_sol_acc_data(&self.rpc_node, &data.pubkey, provider).await;
+        }
+        Err("No wallet data".into())
     }
 
     fn lock(&mut self) {
@@ -105,22 +123,22 @@ impl EncryptedState {
         }
     }
 
-    pub fn change_pass(
-        &mut self,
-        password: String,
-        new_pass : String,
-    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        if self.lock_timer.elapsed() > Duration::from_secs(self.time_to_lock_sec) {
-            self.lock();
-            return Err("Wallet locked due to inactivity".to_string().into());
-        }
-        if let Some(encrypt) = &self.encrypted_data {
-            let mut seeds = decrypt_seed(&encrypt.encrypt, password)?;
-            let new_encrytp = encrypt_seed(&seeds, new_pass);
-            seeds.zeroize();
+    // pub fn change_pass(
+    //     &mut self,
+    //     password: SecureString,
+    //     new_pass: String,
+    // ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    //     if self.lock_timer.elapsed() > Duration::from_secs(self.time_to_lock_sec) {
+    //         self.lock();
+    //         return Err("Wallet locked due to inactivity".to_string().into());
+    //     }
+    //     if let Some(encrypt) = &self.encrypted_data {
+    //         let pass_check = verify_password(&encrypt.encrypt, password)?;
+    //         let new_encrytp = 
+    //         if pass_check {
 
-            self.encrypted_data.as_mut().unwrap().encrypt = new_encrytp;
-        }
-        Ok(())
-    }
+    //         }
+    //     }
+    //     Ok(())
+    // }
 }

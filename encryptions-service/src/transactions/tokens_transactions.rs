@@ -6,7 +6,6 @@ use solana_sdk::{instruction::Instruction, message::Message, pubkey::Pubkey, sig
 use spl_token_interface::instruction::transfer_checked;
 use tokio::sync::Mutex;
 use wallet_models::domain::models::{
-    acc_data::{AccData, Network},
     token_models::TokenBalance,
     tx_models::SendedTransactions,
 };

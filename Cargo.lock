@@ -1487,13 +1487,16 @@ name = "encryptions-service"
 version = "0.1.0"
 dependencies = [
  "argon2",
+ "async-trait",
  "bip39",
  "chacha20poly1305",
  "chrono",
  "config",
+ "hmac 0.12.1",
  "reqwest 0.12.23",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "solana-account-decoder",
  "solana-client",
  "solana-sdk",
@@ -7772,7 +7775,6 @@ name = "wallet_models"
 version = "0.1.0"
 dependencies = [
  "chrono",
- "reqwest 0.12.23",
  "serde",
  "serde_json",
  "thiserror 2.0.17",

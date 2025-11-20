@@ -3,14 +3,17 @@ use std::str::FromStr;
 use solana_sdk::{commitment_config::CommitmentConfig, pubkey::Pubkey};
 use tracing_subscriber::fmt::format::FmtSpan;
 
-use crate::{ednpoints::handlers::fetch_sol_acc_data, state::encrypted_state::EncryptedState};
+use crate::{
+    ednpoints::handlers::fetch_sol_acc_data, password_encryptions::secure_string::SecureString,
+    state::encrypted_state::EncryptedState,
+};
 
-mod password_encryptions;
-mod state;
 mod ednpoints;
 mod error_handling;
-mod transactions;
+mod password_encryptions;
+mod state;
 mod traits;
+mod transactions;
 
 #[tokio::main]
 async fn main() {
@@ -19,11 +22,17 @@ async fn main() {
         .with_span_events(FmtSpan::CLOSE)
         .with_target(false)
         .init();
-    
+
     // password_encryptions::impl_encryptions::example_flow();
-    let rpc  = "https://mainnet.helius-rpc.com/?api-key=bd7b24dd-d644-4612-a486-a5acb8427920";
-    let mut state= EncryptedState::new(rpc).await;
-    let data = state.create_saturn_account("Suchara".to_string(),String::from("Alohadance")).await;
+    let rpc = "https://mainnet.helius-rpc.com/?api-key=bd7b24dd-d644-4612-a486-a5acb8427920";
+    let mut state = EncryptedState::new(rpc).await;
+    let data = state
+        .create_saturn_account(
+            SecureString::new("Suchara".to_string()),
+            String::from("Alohadance"),
+            None,
+        )
+        .await;
 
     // let client = solana_client::nonblocking::rpc_client::RpcClient::new_with_commitment((&rpc).to_string(), CommitmentConfig::confirmed());
 
@@ -31,6 +40,5 @@ async fn main() {
 
     // let response = fetch_sol_acc_data(&client,&pubkey).await.unwrap();
 
-    println!("response : {:#?}",data.unwrap());
-
+    println!("response : {:#?}", data.unwrap());
 }
