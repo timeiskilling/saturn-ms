@@ -7,8 +7,10 @@ use std::collections::HashMap;
 use std::error::Error;
 use wallet_models::domain::models::token_models::TokenBalance;
 
-pub type AsyncResult<T> = Result<T, Box<dyn Error + Send + Sync>>;
+use crate::rpc_layer::rpc_provider::SolanaRpcProvider;
 
+pub type AsyncResult<T> = Result<T, Box<dyn Error + Send + Sync>>;
+const SPL_TOKEN_ID : Pubkey = spl_token::ID;
 #[derive(Debug, Deserialize)]
 pub struct TokenInfo {
     pub id: String,
@@ -82,7 +84,7 @@ impl TokenMetaDataProvider for JupiterClient {
 }
 
 pub async fn get_valid_tokens<P>(
-    rpc: &RpcClient,
+    rpc: &dyn SolanaRpcProvider,
     owner: &Pubkey,
     provider: &P,
 ) -> AsyncResult<Vec<TokenBalance>>
@@ -127,9 +129,9 @@ where
     Ok(())
 }
 
-async fn get_token_balances(rpc: &RpcClient, owner: &Pubkey) -> AsyncResult<Vec<TokenBalance>> {
+async fn get_token_balances(rpc: &dyn SolanaRpcProvider, owner: &Pubkey) -> AsyncResult<Vec<TokenBalance>> {
     let token_accounts = rpc
-        .get_token_accounts_by_owner(owner, TokenAccountsFilter::ProgramId(spl_token::id()))
+        .get_token_accounts_by_owner(owner, &SPL_TOKEN_ID)
         .await?;
 
     let mut balances = Vec::new();

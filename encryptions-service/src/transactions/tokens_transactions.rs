@@ -69,75 +69,77 @@ pub async fn send_mint_token_transactions(
     }
 }
 
-//--------------------------
+//--------------------------------------------------------
 
-pub async fn send_tokens_with_proper_locking(
-    keystore: Arc<Mutex<SecureKeystore>>,
-    rpc: Arc<RpcClient>,
-    recipient: Pubkey,
-    amount: u64,
-    token_mint: TokenBalance
-) -> Result<SendedTransactions, Box<dyn std::error::Error + Send + Sync>> {
+// pub async fn send_tokens_with_proper_locking<S>(
+//     keystore: Arc<Mutex<SecureKeystore<S>>>,
+//     rpc: Arc<RpcClient>,
+//     recipient: Pubkey,
+//     amount: u64,
+//     token_mint: TokenBalance
+// ) 
+// -> Result<SendedTransactions, Box<dyn std::error::Error + Send + Sync>> 
+// where S : SaturnSigner
+// {
     
-    let recent_blockhash = rpc.get_latest_blockhash().await?;
+//     let recent_blockhash = rpc.get_latest_blockhash().await?;
     
-    let signed_transaction = {
-        let keystore_guard = keystore.lock().await;
-        keystore_guard.with_signer(|signer| {
-            sign_transaction(
-                signer,
-                &recipient,
-                amount,
-                &token_mint,
-                recent_blockhash,
-            )
-        })?
-    }?;
+//     let signed_transaction = {
+//         let keystore_guard = keystore.lock().await;
+//         keystore_guard.with_signer(|signer| {
+//             sign_transaction(
+//                 signer,
+//                 &recipient,
+//                 amount,
+//                 &token_mint,
+//                 recent_blockhash,
+//             )
+//         })?
+//     }?;
 
-    let sending = rpc.send_and_confirm_transaction_with_spinner(&signed_transaction).await;
+//     let sending = rpc.send_and_confirm_transaction_with_spinner(&signed_transaction).await;
 
-    match sending {
-        Ok(signature) => {
-            let sig_str = signature.to_string();
-            let solscan_url = format!("https://solscan.io/tx/{}", sig_str);
+//     match sending {
+//         Ok(signature) => {
+//             let sig_str = signature.to_string();
+//             let solscan_url = format!("https://solscan.io/tx/{}", sig_str);
 
-            Ok(SendedTransactions {
-                signature_url: solscan_url,
-                sendet_at: Some(Utc::now()),
-                to: recipient.to_string(),
-                mint: token_mint.mint,
-                amount,
-            })
-        }
-        Err(err) => Err(format!("Rpc: {:?};\nError: {:?}", err.request, err.kind).into()),
-    }
-}
+//             Ok(SendedTransactions {
+//                 signature_url: solscan_url,
+//                 sendet_at: Some(Utc::now()),
+//                 to: recipient.to_string(),
+//                 mint: token_mint.mint,
+//                 amount,
+//             })
+//         }
+//         Err(err) => Err(format!("Rpc: {:?};\nError: {:?}", err.request, err.kind).into()),
+//     }
+// }
 
-pub fn sign_transaction(
-    signer: &dyn SaturnSigner,
+pub fn create_unsign_transaction(
+    signer: &Pubkey,
     recipient: &Pubkey,
     amount: u64,
     token_mint: &TokenBalance,
     recent_blockhash: solana_sdk::hash::Hash,
 ) -> Result<Transaction, Box<dyn std::error::Error + Send + Sync>> {
-    let signer_pubkey = &signer.sf_pubkey();
     let transfer_instruction = create_token_transfer_instruction(
-        signer_pubkey,
+        signer,
         recipient,
         amount,
         token_mint,
     )?;
     let message = Message::new(
         &[transfer_instruction],
-        Some(signer_pubkey), 
+        Some(signer), 
     );
     let mut transaction = Transaction::new_unsigned(message);
     transaction.message.recent_blockhash = recent_blockhash;
     
-    let serialized_message = transaction.message_data();
+    // let serialized_message = transaction.message_data();
     
-    let signature = signer.sf_sign_message(&serialized_message);
-    transaction.signatures = vec![signature];
+    // let signature = signer.sf_sign_message(&serialized_message);
+    // transaction.signatures = vec![signature];
 
     Ok(transaction)
 }

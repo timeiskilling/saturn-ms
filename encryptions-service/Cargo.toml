@@ -10,6 +10,7 @@ bip39 = "2.2.0"
 zeroize = "1.8.2"
 hmac = "0.12.1"
 sha2 = "0.10.9"
+governor = "0.10.2"
 
 config = {path = "../config"}
 wallet_models = {path = "../wallet_models"}

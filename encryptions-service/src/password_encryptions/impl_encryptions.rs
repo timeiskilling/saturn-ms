@@ -151,12 +151,12 @@ pub fn verify_password(ed: &Encrypt, password: SecureString) -> Result<bool, Cry
 
     let mut key = derive_key_argon2(password.as_str(), &salt, &ed.argon2_params)?;
 
-   let mut mac = <Hmac<Sha256> as Mac>::new_from_slice(&key[16..])
+    let mut mac = <Hmac<Sha256> as Mac>::new_from_slice(&key[16..])
         .map_err(|e| CryptoError::EncryptionFailed(e.to_string()))?;
     mac.update(b"password_verification");
 
     key.zeroize();
-    
+
     Ok(mac.verify_slice(&ed.password_verification).is_ok())
 }
 
@@ -195,7 +195,7 @@ pub fn create_encrypt_data(
     password: SecureString,
     bip39_passphrase: Option<SecureString>,
     params: EncryptionParams,
-) -> Result<(EncryptedData, WalletMetadata), CryptoError> {
+) -> Result<EncryptInfo, CryptoError> {
     let mut entropy = [0u8; 32];
     OsRng.fill_bytes(&mut entropy);
 
@@ -217,13 +217,18 @@ pub fn create_encrypt_data(
         uses_bip39_passphrase: bip39_passphrase.is_some(),
     };
 
-    Ok((
-        EncryptedData {
+    Ok(EncryptInfo {
+        encrypted_data: EncryptedData {
             pubkey,
             encrypt: encrypted,
         },
         metadata,
-    ))
+    })
+}
+
+pub struct EncryptInfo {
+    pub encrypted_data: EncryptedData,
+    pub metadata: WalletMetadata,
 }
 
 #[derive(Debug)]
@@ -254,5 +259,4 @@ impl std::error::Error for CryptoError {}
 #[derive(Debug, Clone)]
 pub struct WalletMetadata {
     pub uses_bip39_passphrase: bool,
-    // Інші метадані про гаманець
 }

@@ -1,6 +1,6 @@
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
-#[derive(Zeroize, ZeroizeOnDrop)]
+#[derive(Zeroize, ZeroizeOnDrop,Clone)]
 pub struct SecureString {
     inner: String,
 }

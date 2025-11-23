@@ -1,6 +1,6 @@
 use serde::{Serialize, Deserialize};
 
-#[derive(Serialize, Deserialize,Debug)]
+#[derive(Serialize, Deserialize,Debug,Clone)]
 pub struct TokenBalance {
     pub mint: String,       // token mint or contract address
     pub symbol: String,

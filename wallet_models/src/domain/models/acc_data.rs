@@ -41,7 +41,7 @@ impl Default for AccData {
     }
 }
 
-#[derive(Serialize, Deserialize,Debug)]
+#[derive(Serialize, Deserialize,Debug,Clone, Copy)]
 pub enum Network {
     Solana,
     Ethereum,
