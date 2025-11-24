@@ -1,11 +1,18 @@
-// use solana_client::nonblocking::rpc_client::RpcClient;
+use std::time::Duration;
 
-// pub struct Batch {
-//     rpc : RpcClient
-// }
+#[derive(Clone)]
+pub struct BatchConfig {
+    pub max_batch_size: usize,
+    pub max_wait_time: Duration,
+    pub channel_capacity: usize,
+}
 
-// impl Batch {
-//     fn get_all_onfos_about_accounts(&self) {
-//         self.rpc.get_multiple_accounts_with_config(pubkeys, config);
-//     }
-// }
+impl Default for BatchConfig {
+    fn default() -> Self {
+        Self {
+            max_batch_size: 100,
+            max_wait_time: Duration::from_millis(50),
+            channel_capacity: 10000,
+        }
+    }
+}

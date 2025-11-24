@@ -1,9 +1,12 @@
 use async_trait::async_trait;
+use base64::Engine;
 use governor::{
     Quota, RateLimiter,
     clock::DefaultClock,
     state::{InMemoryState, NotKeyed},
 };
+use serde_json::json;
+use solana_account_decoder::{UiAccount, UiAccountData, parse_account_data::ParsedAccount};
 use solana_client::rpc_request::RpcError as SolanaRpcError;
 use solana_client::{
     client_error::{ClientError, ClientErrorKind},
@@ -11,16 +14,19 @@ use solana_client::{
     rpc_response::RpcKeyedAccount,
 };
 use solana_sdk::{
-    account::Account, commitment_config::CommitmentConfig, hash::Hash, pubkey::Pubkey, signature::Signature, transaction::Transaction
+    account::Account, commitment_config::CommitmentConfig, hash::Hash, pubkey::Pubkey,
+    signature::Signature, transaction::Transaction,
 };
 use std::{
     num::NonZeroU32,
+    str::FromStr,
     sync::{Arc, atomic::Ordering},
     time::Duration,
 };
 use tokio::time::sleep;
 
 use crate::{
+    batching::batching_client::BatchedRpcClient,
     error_handling::error_code::RpcError,
     rpc_layer::{
         retry_config::RetryConfig,
@@ -302,4 +308,184 @@ impl SolanaRpcProvider for ManagedRpcClient {
     //     })
     //     .await
     // }
+}
+
+#[async_trait]
+impl SolanaRpcProvider for BatchedRpcClient {
+    async fn get_latest_blockhash(&self) -> Result<Hash, RpcError> {
+        let result = self
+            .execute_batched_request("getLatestBlockhash", json!([]))
+            .await?;
+
+        let blockhash_str = result
+            .get("value")
+            .and_then(|v| v.get("blockhash"))
+            .and_then(|b| b.as_str())
+            .ok_or_else(|| RpcError::InvalidResponse {
+                expected: "blockhash string".to_string(),
+                got: result.to_string(),
+            })?;
+
+        Hash::from_str(blockhash_str).map_err(|_| RpcError::InvalidResponse {
+            expected: "valid blockhash".to_string(),
+            got: blockhash_str.to_string(),
+        })
+    }
+
+    async fn send_transactions(&self, transaction: &Transaction) -> Result<Signature, RpcError> {
+        let tx_bytes = bincode::serialize(transaction).map_err(|e| RpcError::InvalidResponse {
+            expected: "serializable transaction".to_string(),
+            got: e.to_string(),
+        })?;
+
+        let tx_base64 = base64::engine::general_purpose::STANDARD.encode(&tx_bytes);
+
+        let result = self
+            .execute_batched_request(
+                "sendTransaction",
+                json!([tx_base64, {"encoding": "base64"}]),
+            )
+            .await?;
+
+        let sig_str = result.as_str().ok_or_else(|| RpcError::InvalidResponse {
+            expected: "signature string".to_string(),
+            got: result.to_string(),
+        })?;
+
+        Signature::from_str(sig_str).map_err(|_| RpcError::InvalidResponse {
+            expected: "valid signature".to_string(),
+            got: sig_str.to_string(),
+        })
+    }
+
+    async fn confirm_transaction(
+        &self,
+        signature: &Signature,
+        commitment: CommitmentConfig,
+    ) -> Result<bool, RpcError> {
+        let result = self
+            .execute_batched_request("getSignatureStatuses", json!([[signature.to_string()]]))
+            .await?;
+
+        let confirmed = result
+            .get("value")
+            .and_then(|v| v.get(0))
+            .map(|status| !status.is_null())
+            .unwrap_or(false);
+
+        Ok(confirmed)
+    }
+
+    async fn get_token_accounts_by_owner(
+        &self,
+        owner: &Pubkey,
+        program_id: &Pubkey,
+    ) -> Result<Vec<RpcKeyedAccount>, RpcError> {
+        let result = self
+            .execute_batched_request(
+                "getTokenAccountsByOwnerV2",
+                json!({
+                    "ownerAddress": owner.to_string(),
+                    "page": 1,
+                    "limit": 1000,
+                    "displayOptions": {
+                        "showZeroBalance": false
+                    }
+                }),
+            )
+            .await?;
+        let accounts_array = result
+            .get("items")
+            .or_else(|| result.get("token_accounts"))
+            .and_then(|v| v.as_array())
+            .ok_or_else(|| RpcError::InvalidResponse {
+                expected: "items or token_accounts array".to_string(),
+                got: result.to_string(),
+            })?;
+
+        let mut accounts = Vec::with_capacity(accounts_array.len());
+
+        for account_json in accounts_array {
+            let pubkey_str = account_json
+                .get("address")
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| RpcError::InvalidResponse {
+                    expected: "account address".to_string(),
+                    got: account_json.to_string(),
+                })?;
+
+            let mint = account_json
+                .get("mint")
+                .and_then(|v| v.as_str())
+                .unwrap_or_default();
+
+            let amount = account_json
+                .get("amount")
+                .map(|v| v.to_string().replace("\"", ""))
+                .unwrap_or_else(|| "0".to_string());
+
+            let decimals = account_json
+                .get("decimals")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+
+            let ui_token_amount = json!({
+                "amount": amount,
+                "decimals": decimals,
+                "uiAmount": null,
+                "uiAmountString": null
+            });
+            let parsed_info = json!({
+                "mint": mint,
+                "owner": owner.to_string(),
+                "state": "initialized",
+                "tokenAmount": ui_token_amount,
+                "isNative": false,
+            });
+            let parsed_data_json = json!({
+                "program": "spl-token",
+                "parsed": {
+                    "type": "account",
+                    "info": parsed_info
+                },
+                "space": 165
+            });
+            let parsed_account: ParsedAccount =
+                serde_json::from_value(parsed_data_json).map_err(|e| {
+                    RpcError::InvalidResponse {
+                        expected: "valid ParsedAccount structure".to_string(),
+                        got: e.to_string(),
+                    }
+                })?;
+            accounts.push(RpcKeyedAccount {
+                pubkey: pubkey_str.to_string(),
+                account: UiAccount {
+                    lamports: 0,
+                    data: UiAccountData::Json(parsed_account),
+                    owner: program_id.to_string(),
+                    executable: false,
+                    rent_epoch: 0,
+                    space: Some(165),
+                },
+            });
+        }
+
+        Ok(accounts)
+    }
+
+    async fn get_balance(&self, pubkey: &Pubkey) -> Result<u64, RpcError> {
+        let result = self
+            .execute_batched_request("getBalance", json!([pubkey.to_string()]))
+            .await?;
+
+        let balance = result
+            .get("value")
+            .and_then(|v| v.as_u64())
+            .ok_or_else(|| RpcError::InvalidResponse {
+                expected: "balance value".to_string(),
+                got: result.to_string(),
+            })?;
+
+        Ok(balance)
+    }
 }

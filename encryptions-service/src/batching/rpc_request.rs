@@ -6,12 +6,20 @@ use serde_json::{Value, json};
 
 pub enum HeliusRpcRequest {
     GetTokenAccountsByOwnerV2,
+    GetLatestBlockhash,
+    SendTransaction,
+    GetBalance,
+    GetSignatureStatuses,
 }
 
 impl fmt::Display for HeliusRpcRequest {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let method = match self {
             HeliusRpcRequest::GetTokenAccountsByOwnerV2 => "getTokenAccountsByOwnerV2",
+            HeliusRpcRequest::GetLatestBlockhash => "getLatestBlockhash",
+            HeliusRpcRequest::SendTransaction => "sendTransaction",
+            HeliusRpcRequest::GetBalance => "getBalance",
+            HeliusRpcRequest::GetSignatureStatuses => "getSignatureStatuses",
         };
 
         write!(f, "{method}")
