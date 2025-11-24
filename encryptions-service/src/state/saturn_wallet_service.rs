@@ -120,6 +120,13 @@ where
                     mint: mint.to_string(),
                 }))?;
 
+        if token_balance.amount.parse::<f64>().unwrap_or(0.0) < amount as f64{
+            return Err(WalletError::Validation(ValidationError::InvalidAmount {
+                value: amount.to_string(),
+                reason: "Influence balance".to_string(),
+            }));
+        }
+
         let blockhash = self.rpc_client.get_latest_blockhash().await.map_err(|e| {
             WalletError::Rpc(RpcError::ConnectionFailed {
                 endpoint: "default".to_string(),

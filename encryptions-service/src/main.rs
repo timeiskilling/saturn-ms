@@ -14,6 +14,7 @@ mod state;
 mod traits;
 mod transactions;
 mod rpc_layer;
+mod batching;
 
 #[tokio::main]
 async fn main() {
