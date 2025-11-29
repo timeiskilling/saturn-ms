@@ -78,12 +78,12 @@ fn derive_key_argon2(
     password: &str,
     salt: &SaltString,
     params: &EncryptionParams,
-) -> Result<[u8; 32], CryptoError> {
+) -> Result<[u8; 64], CryptoError> {
     let argon2_params = Params::new(
         params.argon2_memory_kib,
         params.argon2_iterations,
         params.argon2_parallelism,
-        None,
+        Some(64),
     )
     .map_err(|e| CryptoError::InvalidParams(e.to_string()))?;
     let argon2 = Argon2::new(
@@ -92,7 +92,7 @@ fn derive_key_argon2(
         argon2_params,
     );
 
-    let mut out = [0u8; 32];
+    let mut out = [0u8; 64];
     argon2
         .hash_password_into(password.as_bytes(), salt.as_ref().as_bytes(), &mut out)
         .expect("argon2 derive");
@@ -109,13 +109,13 @@ pub fn encrypt_seed_with_verification(
 
     let mut key = derive_key_argon2(password.as_str(), &salt, &params)?;
 
-    let mut mac = <Hmac<Sha256> as Mac>::new_from_slice(&key[16..])
+    let mut mac = <Hmac<Sha256> as Mac>::new_from_slice(&key[32..])
         .map_err(|e| CryptoError::EncryptionFailed(e.to_string()))?;
     mac.update(b"password_verification");
 
     let password_verification = mac.finalize().into_bytes();
 
-    let cipher = ChaCha20Poly1305::new_from_slice(&key[..16])
+    let cipher = ChaCha20Poly1305::new_from_slice(&key[..32])
         .map_err(|e| CryptoError::EncryptionFailed(e.to_string()))?;
     key.zeroize();
 
@@ -151,7 +151,7 @@ pub fn verify_password(ed: &Encrypt, password: SecureString) -> Result<bool, Cry
 
     let mut key = derive_key_argon2(password.as_str(), &salt, &ed.argon2_params)?;
 
-    let mut mac = <Hmac<Sha256> as Mac>::new_from_slice(&key[16..])
+    let mut mac = <Hmac<Sha256> as Mac>::new_from_slice(&key[32..])
         .map_err(|e| CryptoError::EncryptionFailed(e.to_string()))?;
     mac.update(b"password_verification");
 
@@ -165,7 +165,7 @@ pub fn decrypt_seed(ed: &Encrypt, password: SecureString) -> Result<[u8; 32], Cr
 
     let mut key = derive_key_argon2(password.as_str(), &salt, &ed.argon2_params)?;
 
-    let cipher = ChaCha20Poly1305::new_from_slice(&key)
+    let cipher = ChaCha20Poly1305::new_from_slice(&key[..32])
         .map_err(|e| CryptoError::EncryptionFailed(e.to_string()))?;
     key.zeroize();
 

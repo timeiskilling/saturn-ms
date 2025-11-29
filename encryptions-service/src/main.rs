@@ -42,4 +42,20 @@ async fn main() {
     // let response = fetch_sol_acc_data(&client,&pubkey).await.unwrap();
 
     // println!("response : {:#?}", data.unwrap());
+
+    use chacha20poly1305::{ChaCha20Poly1305, KeyInit,aead::Aead}; // Aead trait
+    use chacha20poly1305::aead::OsRng;
+    
+    let key = ChaCha20Poly1305::generate_key(&mut OsRng);
+    let cipher = ChaCha20Poly1305::new(&key);
+    let nonce = chacha20poly1305::Nonce::from_slice(b"unique nonce"); // 12 bytes
+
+    let data_to_encrypt = [0u8; 32]; 
+
+    let ciphertext = cipher.encrypt(nonce, data_to_encrypt.as_ref()).expect("encryption failure");
+
+    println!("Input length: {}", data_to_encrypt.len());
+    println!("Output length: {}", ciphertext.len());
+
+    assert_eq!(ciphertext.len(), 32 + 16, "Ciphertext should include the 16-byte tag!");
 }

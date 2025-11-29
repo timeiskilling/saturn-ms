@@ -5,7 +5,7 @@ use governor::{
     clock::DefaultClock,
     state::{InMemoryState, NotKeyed},
 };
-use serde_json::json;
+use serde_json::{Value, json};
 use solana_account_decoder::{UiAccount, UiAccountData, parse_account_data::ParsedAccount};
 use solana_client::rpc_request::RpcError as SolanaRpcError;
 use solana_client::{
@@ -14,7 +14,7 @@ use solana_client::{
     rpc_response::RpcKeyedAccount,
 };
 use solana_sdk::{
-    account::Account, commitment_config::CommitmentConfig, hash::Hash, pubkey::Pubkey,
+    commitment_config::CommitmentConfig, hash::Hash, pubkey::Pubkey,
     signature::Signature, transaction::Transaction,
 };
 use std::{
@@ -59,6 +59,9 @@ pub trait SolanaRpcProvider: Send + Sync {
 
 pub struct ManagedRpcClient {
     inner: Arc<RpcClient>,
+    http_client: reqwest::Client,
+    endpoint: String,
+    
     rate_limiter: Arc<RateLimiter<NotKeyed, InMemoryState, DefaultClock>>,
     retry_config: RetryConfig,
     metrics: Arc<RpcMetrics>,
@@ -66,22 +69,55 @@ pub struct ManagedRpcClient {
 
 impl ManagedRpcClient {
     pub fn new(endpoint: String, requests_per_second: u32, retry_config: RetryConfig) -> Self {
-        let inner = Arc::new(RpcClient::new(endpoint));
-
+        let solana_client = Arc::new(RpcClient::new(endpoint.clone()));
+        let http_client = reqwest::Client::new();
+        
         let quota = Quota::per_second(NonZeroU32::new(requests_per_second).unwrap())
             .allow_burst(NonZeroU32::new(requests_per_second / 10).unwrap());
-
+        
         let rate_limiter = Arc::new(RateLimiter::direct(quota));
-
         let metrics = Arc::new(RpcMetrics::new());
-
+        
         Self {
-            inner,
+            inner : solana_client,
+            http_client,
+            endpoint,
             rate_limiter,
             retry_config,
             metrics,
         }
     }
+
+    pub async fn execute_raw_json_rpc(
+        &self,
+        request_body: Value,
+    ) -> Result<Value, RpcError> {
+        let http_client = self.http_client.clone();
+        let endpoint = self.endpoint.clone();
+        
+        self.execute_with_retry("raw_json_rpc", || {
+            let client = http_client.clone();
+            let url = endpoint.clone();
+            let body = request_body.clone();
+            
+            async move {
+                let response = client
+                    .post(&url)
+                    .json(&body)
+                    .send()
+                    .await
+                    .map_err(ClientError::from)?;
+                
+                let json_response = response
+                    .json::<Value>()
+                    .await
+                    .map_err(ClientError::from)?;
+                
+                Ok(json_response)
+            }
+        }).await
+    }
+
 
     fn is_retryable_error(&self, error: &ClientError) -> bool {
         match error.kind() {
@@ -94,18 +130,7 @@ impl ManagedRpcClient {
             }
 
             ClientErrorKind::RpcError(rpc_err) => {
-                match rpc_err {
-                    solana_client::rpc_request::RpcError::RpcResponseError { code, .. } => {
-                        match *code {
-                            429 | 503 => true,
-                            // -32005: Node is behind
-                            -32005 => true,
-
-                            _ => false,
-                        }
-                    }
-                    _ => false,
-                }
+                matches!(rpc_err, solana_client::rpc_request::RpcError::RpcResponseError { code, .. } if *code == 429 || *code == 503 || *code == -32005)
             }
             _ => false,
         }
@@ -341,7 +366,7 @@ impl SolanaRpcProvider for BatchedRpcClient {
         let tx_base64 = base64::engine::general_purpose::STANDARD.encode(&tx_bytes);
 
         let result = self
-            .execute_batched_request(
+            .execute_request(
                 "sendTransaction",
                 json!([tx_base64, {"encoding": "base64"}]),
             )
@@ -361,7 +386,7 @@ impl SolanaRpcProvider for BatchedRpcClient {
     async fn confirm_transaction(
         &self,
         signature: &Signature,
-        commitment: CommitmentConfig,
+        _commitment: CommitmentConfig,
     ) -> Result<bool, RpcError> {
         let result = self
             .execute_batched_request("getSignatureStatuses", json!([[signature.to_string()]]))
