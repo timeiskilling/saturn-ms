@@ -1,23 +1,28 @@
-use std::{sync::Arc, time::Duration};
+use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{pubkey::Pubkey, signature::Signature};
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, RwLock};
 use wallet_models::domain::models::{acc_data::Network, token_models::TokenBalance};
 use zeroize::Zeroize;
 
 use crate::{
-    ednpoints::token_acc_info::TokenMetaDataProvider, error_handling::error_code::*, password_encryptions::{
+    ednpoints::token_acc_info::TokenMetaDataProvider,
+    error_handling::error_code::*,
+    password_encryptions::{
         encryption_parms::EncryptionParams,
         impl_encryptions::{
-            CryptoError,create_encrypt_data, encrypt_seed_with_verification,
-            keypair_from_seed,
+            CryptoError, create_encrypt_data, encrypt_seed_with_verification, keypair_from_seed,
         },
         secure_string::SecureString,
-    }, rpc_layer::rpc_provider::SolanaRpcProvider, state::{
+    },
+    rpc_layer::rpc_provider::SolanaRpcProvider,
+    state::{
         crypto_vault::CryptoVault,
         encrypted_state::{SaturnWalletState, WalletSaturnManager},
-    }, traits::signer_wraper::{KeyStoreManager, SaturnSigner, SecureKeystore, SolanaKeypairSigner}, transactions::tokens_transactions::create_unsign_transaction
+    },
+    traits::signer_wraper::{KeyStoreManager, SaturnSigner, SecureKeystore, SolanaKeypairSigner},
+    transactions::tokens_transactions::create_unsign_transaction,
 };
 
 pub struct SaturnWalletService<W>
@@ -120,7 +125,7 @@ where
                     mint: mint.to_string(),
                 }))?;
 
-        if token_balance.amount.parse::<f64>().unwrap_or(0.0) < amount as f64{
+        if token_balance.amount.parse::<f64>().unwrap_or(0.0) < amount as f64 {
             return Err(WalletError::Validation(ValidationError::InvalidAmount {
                 value: amount.to_string(),
                 reason: "Influence balance".to_string(),
@@ -179,7 +184,8 @@ where
     pub async fn unclock(&self, password: SecureString) -> Result<(), WalletError> {
         let is_valid = self
             .crypto_vault
-            .verify_password(&password).await
+            .verify_password(&password)
+            .await
             .map_err(|_| WalletError::Encryption(EncryptionError::InvalidPassword))?;
 
         if !is_valid {
@@ -188,7 +194,8 @@ where
 
         let mut seed = self
             .crypto_vault
-            .decrypt_seed(password).await
+            .decrypt_seed(password)
+            .await
             .map_err(|e| match e {
                 CryptoError::DecryptionFailed(_) => {
                     WalletError::Encryption(EncryptionError::DecryptionFailed {
@@ -244,17 +251,21 @@ where
 
         let mut seed = self
             .crypto_vault
-            .decrypt_seed(old_password).await
+            .decrypt_seed(old_password)
+            .await
             .map_err(|_| WalletError::Encryption(EncryptionError::InvalidPassword))?;
 
-        let new_encrypt =
-            encrypt_seed_with_verification(&seed, new_password, self.crypto_vault.encrypt_params().await)
-                .map_err(|e| {
-                    WalletError::Encryption(EncryptionError::EncryptionFailed {
-                        reason: e.to_string(),
-                    })
-                })?;
-                
+        let new_encrypt = encrypt_seed_with_verification(
+            &seed,
+            new_password,
+            self.crypto_vault.encrypt_params().await,
+        )
+        .map_err(|e| {
+            WalletError::Encryption(EncryptionError::EncryptionFailed {
+                reason: e.to_string(),
+            })
+        })?;
+
         seed.zeroize();
 
         self.crypto_vault.change_encrypt(new_encrypt).await;
@@ -288,4 +299,494 @@ impl SaturnWalletService<SaturnWalletState> {
             rpc_client,
         ))
     }
+}
+
+pub struct WalletManager {
+    rpc_provider: Arc<dyn SolanaRpcProvider>,
+    wallets: Arc<RwLock<HashMap<Pubkey, WalletEntry>>>,
+    active_wallet: Arc<RwLock<Option<Pubkey>>>,
+    config: WalletManagerConfig,
+}
+
+pub struct WalletManagerConfig {
+    default_keystore_timeout: Duration,
+    default_encryption_params: EncryptionParams,
+    default_network: Network,
+}
+
+pub struct WalletEntry {
+    crypto_vault: CryptoVault,
+    wallet_state: SaturnWalletState,
+    keystore: Option<SecureKeystore<SolanaKeypairSigner>>,
+    last_activity: tokio::time::Instant,
+    keystore_timeout: Duration,
+}
+
+impl WalletManager {
+    pub fn new(rpc_provider: Arc<dyn SolanaRpcProvider>, config: WalletManagerConfig) -> Self {
+        Self {
+            rpc_provider,
+            wallets: Arc::new(RwLock::new(HashMap::new())),
+            active_wallet: Arc::new(RwLock::new(None)),
+            config,
+        }
+    }
+
+    pub async fn create_wallet(
+        &self,
+        password: SecureString,
+        bip39_passphrase: Option<SecureString>,
+        display_name: Option<String>,
+        network: Option<Network>,
+        keystore_timeout: Option<Duration>,
+    ) -> Result<Pubkey, WalletError> {
+        let encrypt_info = create_encrypt_data(
+            password,
+            bip39_passphrase,
+            self.config.default_encryption_params.clone(),
+        )
+        .map_err(|e| {
+            WalletError::Encryption(EncryptionError::EncryptionFailed {
+                reason: e.to_string(),
+            })
+        })?;
+
+        let crypto_vault = CryptoVault::new(encrypt_info);
+        let pubkey = *crypto_vault.pubkey();
+
+        let wallet_network = network.unwrap_or(self.config.default_network);
+
+        let wallet_state = SaturnWalletState::new(
+            pubkey,
+            wallet_network,
+            display_name,
+            self.rpc_provider.clone(),
+        );
+
+        let timeout = keystore_timeout.unwrap_or(self.config.default_keystore_timeout);
+
+        let entry = WalletEntry {
+            crypto_vault,
+            wallet_state,
+            keystore: None, // Створюється в заблокованому стані
+            last_activity: tokio::time::Instant::now(),
+            keystore_timeout: timeout,
+        };
+
+        let mut wallets = self.wallets.write().await;
+
+        if wallets.contains_key(&pubkey) {
+            return Err(WalletError::Validation(ValidationError::InvalidPublicKey {
+                input: pubkey.to_string(),
+            }));
+        }
+
+        let mut active = self.active_wallet.write().await;
+        if active.is_none() {
+            *active = Some(pubkey);
+        }
+
+        tracing::info!(
+            wallet = %pubkey,
+            network = ?wallet_network,
+            "New wallet created successfully"
+        );
+
+        Ok(pubkey)
+    }
+
+    pub async fn unclok_wallet(
+        &self,
+        pubkey: &Pubkey,
+        password: SecureString,
+    ) -> Result<(), WalletError> {
+        let mut wallets = self.wallets.write().await;
+
+        let entry = wallets.get_mut(pubkey).ok_or_else(|| {
+            WalletError::Validation(ValidationError::WalletNotFound {
+                pubkey: pubkey.to_string(),
+            })
+        })?;
+
+        let is_valid = entry
+            .crypto_vault
+            .verify_password(&password)
+            .await
+            .map_err(|_| WalletError::Encryption(EncryptionError::InvalidPassword))?;
+
+        if !is_valid {
+            tracing::warn!(
+                wallet = %pubkey,
+                "Failed unlock attempt - invalid password"
+            );
+            return Err(WalletError::Keystore(KeystoreError::InvalidPassword));
+        }
+
+        let mut seed = entry
+            .crypto_vault
+            .decrypt_seed(password)
+            .await
+            .map_err(|e| match e {
+                CryptoError::DecryptionFailed(_) => {
+                    WalletError::Encryption(EncryptionError::DecryptionFailed {
+                        reason: "Invalid password".to_string(),
+                    })
+                }
+                _ => WalletError::Encryption(EncryptionError::DecryptionFailed {
+                    reason: e.to_string(),
+                }),
+            })?;
+
+        let keypair = keypair_from_seed(&seed).map_err(|_| {
+            WalletError::Encryption(EncryptionError::InvalidSeedLength {
+                expected: 32,
+                got: 32,
+            })
+        })?;
+        seed.zeroize();
+
+        let signer = SolanaKeypairSigner::new(keypair);
+        let mut keystore = SecureKeystore::new(entry.keystore_timeout);
+        keystore.unlock_with_signer(signer);
+
+        entry.keystore = Some(keystore);
+        entry.last_activity = tokio::time::Instant::now();
+
+        tracing::info!(
+            wallet = %pubkey,
+            timeout_secs = entry.keystore_timeout.as_secs(),
+            "Wallet unlocked successfully"
+        );
+
+        Ok(())
+    }
+
+    pub async fn get_balance(
+        &self,
+        pubkey: &Pubkey,
+        mint: &Pubkey,
+    ) -> Result<Option<TokenBalance>, WalletError> {
+        let wallets = self.wallets.read().await;
+
+        let entry = wallets.get(pubkey).ok_or_else(|| {
+            WalletError::Validation(ValidationError::WalletNotFound {
+                pubkey: pubkey.to_string(),
+            })
+        })?;
+
+        Ok(entry.wallet_state.get_token_balance(mint).await)
+    }
+
+    pub async fn refresh_balances<P>(
+        &self,
+        pubkey: &Pubkey,
+        provider: &P,
+    ) -> Result<(), WalletError>
+    where
+        P: TokenMetaDataProvider,
+    {
+        let wallets = self.wallets.read().await;
+
+        let entry = wallets.get(pubkey).ok_or_else(|| {
+            WalletError::Validation(ValidationError::WalletNotFound {
+                pubkey: pubkey.to_string(),
+            })
+        })?;
+
+        entry.wallet_state.refresh_balances(provider).await?;
+
+        tracing::debug!(
+            wallet = %pubkey,
+            "Balances refreshed successfully"
+        );
+
+        Ok(())
+    }
+
+    pub async fn refresh_active_wallet_balances<P>(&self, provider: &P) -> Result<(), WalletError>
+    where
+        P: TokenMetaDataProvider,
+    {
+        let active = self.active_wallet.read().await;
+
+        if let Some(pubkey) = *active {
+            drop(active);
+            self.refresh_balances(&pubkey, provider).await
+        } else {
+            Err(WalletError::Validation(ValidationError::NoActiveWallet))
+        }
+    }
+
+    pub async fn send_tokens<P>(
+        &self,
+        from: &Pubkey,
+        to: &Pubkey,
+        amount: u64,
+        mint: &Pubkey,
+        provider: &P,
+    ) -> Result<Signature, WalletError>
+    where
+        P: TokenMetaDataProvider,
+    {
+        if amount == 0 {
+            return Err(WalletError::Validation(ValidationError::InvalidAmount {
+                value: amount.to_string(),
+                reason: "Amount must be greater than zero".to_string(),
+            }));
+        }
+
+        let mut wallets = self.wallets.write().await;
+
+        let entry = wallets.get_mut(from).ok_or_else(|| {
+            WalletError::Validation(ValidationError::WalletNotFound {
+                pubkey: from.to_string(),
+            })
+        })?;
+
+        let keystore = entry
+            .keystore
+            .as_ref()
+            .ok_or(WalletError::Keystore(KeystoreError::Locked))?;
+
+        if !keystore.is_unlocked() {
+            return Err(WalletError::Keystore(KeystoreError::Locked));
+        }
+
+        entry.last_activity = tokio::time::Instant::now();
+
+        let token_balance =
+            entry
+                .wallet_state
+                .get_token_balance(mint)
+                .await
+                .ok_or(WalletError::Token(TokenError::TokenNotFound {
+                    mint: mint.to_string(),
+                }))?;
+
+        let balance_amount = token_balance.amount.parse::<f64>().unwrap_or(0.0);
+
+        if balance_amount < amount as f64 {
+            return Err(WalletError::Validation(ValidationError::InvalidAmount {
+                value: amount.to_string(),
+                reason: format!(
+                    "Insufficient balance. Available: {}, Required: {}",
+                    balance_amount, amount
+                ),
+            }));
+        }
+
+        let blockhash = self
+            .rpc_provider
+            .get_latest_blockhash()
+            .await
+            .map_err(|e| {
+                WalletError::Rpc(RpcError::ConnectionFailed {
+                    endpoint: "blockchain".to_string(),
+                    reason: e.to_string(),
+                })
+            })?;
+
+        tracing::debug!(
+            from = %from,
+            to = %to,
+            amount = amount,
+            mint = %mint,
+            blockhash = %blockhash,
+            "Creating transaction"
+        );
+        
+        let mut transaction =
+            create_unsign_transaction(from, to, amount, &token_balance, blockhash).map_err(
+                |e| {
+                    WalletError::Transaction(TransactionError::CreationFailed {
+                        reason: e.to_string(),
+                    })
+                },
+            )?;
+
+        let signature = keystore
+            .with_signer(|signer| {
+                let message = transaction.message_data();
+                let sig = signer.sf_sign_message(&message);
+                transaction.signatures = vec![sig];
+                sig
+            })
+            .map_err(WalletError::Keystore)?;
+
+        tracing::info!(
+            from = %from,
+            to = %to,
+            amount = amount,
+            mint = %mint,
+            signature = %signature,
+            "Transaction signed, sending to blockchain"
+        );
+
+        let final_signature = self
+            .rpc_provider
+            .send_transactions(&transaction)
+            .await
+            .map_err(|e| {
+                WalletError::Transaction(TransactionError::SendFailed {
+                    signature: Some(signature.to_string()),
+                    reason: e.to_string(),
+                })
+            })?;
+
+        let _ = entry.wallet_state.refresh_balances(provider).await;
+
+        tracing::info!(
+            from = %from,
+            to = %to,
+            amount = amount,
+            mint = %mint,
+            signature = %final_signature,
+            "Transaction sent successfully"
+        );
+
+        Ok(final_signature)
+    }
+
+    pub async fn change_password(
+        &self,
+        pubkey: &Pubkey,
+        old_password: SecureString,
+        new_password: SecureString,
+    ) -> Result<(), WalletError> {
+        let mut wallets = self.wallets.write().await;
+
+        let entry = wallets.get_mut(pubkey).ok_or_else(|| {
+            WalletError::Validation(ValidationError::WalletNotFound {
+                pubkey: pubkey.to_string(),
+            })
+        })?;
+
+        {
+            let keystore = entry
+                .keystore
+                .as_ref()
+                .ok_or(WalletError::Keystore(KeystoreError::Locked))?;
+
+            if !keystore.is_unlocked() {
+                return Err(WalletError::Keystore(KeystoreError::Locked));
+            }
+        }
+
+        let mut seed = entry
+            .crypto_vault
+            .decrypt_seed(old_password)
+            .await
+            .map_err(|_| WalletError::Encryption(EncryptionError::InvalidPassword))?;
+        let encryption_params = entry.crypto_vault.encrypt_params().await;
+
+        let new_encrypt = encrypt_seed_with_verification(&seed, new_password, encryption_params)
+            .map_err(|e| {
+                WalletError::Encryption(EncryptionError::EncryptionFailed {
+                    reason: e.to_string(),
+                })
+            })?;
+
+        seed.zeroize();
+
+        entry.crypto_vault.change_encrypt(new_encrypt).await;
+
+        entry.last_activity = tokio::time::Instant::now();
+
+        tracing::info!(
+            wallet = %pubkey,
+            "Password changed successfully"
+        );
+
+        Ok(())
+    }
+
+    pub async fn set_active_wallet(&self, pubkey: Pubkey) -> Result<(), WalletError> {
+        {
+            let wallets = self.wallets.read().await;
+            if !wallets.contains_key(&pubkey) {
+                return Err(WalletError::Validation(ValidationError::WalletNotFound {
+                    pubkey: pubkey.to_string(),
+                }));
+            }
+        }
+
+        let mut active = self.active_wallet.write().await;
+        *active = Some(pubkey);
+
+        tracing::info!(
+            wallet = %pubkey,
+            "Active wallet changed"
+        );
+
+        Ok(())
+    }
+
+    pub async fn get_active_wallet(&self) -> Option<Pubkey> {
+        let active = self.active_wallet.read().await;
+        *active
+    }
+
+    pub async fn list_wallets(&self) -> Vec<WalletInfo> {
+        let wallets = self.wallets.read().await;
+
+        wallets
+            .iter()
+            .map(|(pubkey, entry)| WalletInfo {
+                pubkey: *pubkey,
+                display_name: entry.wallet_state.get_display_name().map(|s| s.to_string()),
+                network: entry.wallet_state.get_network(),
+                is_unlocked: entry
+                    .keystore
+                    .as_ref()
+                    .map(|ks| ks.is_unlocked())
+                    .unwrap_or(false),
+            })
+            .collect()
+    }
+
+    pub async fn cleanup_inactive_wallets(&self) {
+        let mut wallets = self.wallets.write().await;
+        let now = tokio::time::Instant::now();
+
+        let mut locked_count = 0;
+
+        for (pubkey, entry) in wallets.iter_mut() {
+            if entry.keystore.is_some() {
+                let elapsed = now.duration_since(entry.last_activity);
+
+                if elapsed > entry.keystore_timeout {
+                    entry.keystore = None;
+                    locked_count += 1;
+
+                    tracing::info!(
+                        wallet = %pubkey,
+                        inactive_for_secs = elapsed.as_secs(),
+                        "Wallet locked due to inactivity"
+                    );
+                }
+            }
+        }
+
+        if locked_count > 0 {
+            tracing::debug!(locked_count = locked_count, "Cleanup completed");
+        }
+    }
+
+    pub fn start_cleanup_task(self: Arc<Self>) {
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(Duration::from_secs(60));
+            loop {
+                interval.tick().await;
+                self.cleanup_inactive_wallets().await;
+            }
+        });
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct WalletInfo {
+    pub pubkey: Pubkey,
+    pub display_name: Option<String>,
+    pub network: Network,
+    pub is_unlocked: bool,
 }

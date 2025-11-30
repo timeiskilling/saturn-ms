@@ -228,6 +228,12 @@ pub enum ValidationError {
         max: String,
         got: String,
     },
+
+    WalletNotFound {
+        pubkey : String,
+    },
+
+    NoActiveWallet,
 }
 
 #[derive(Debug, Clone)]
@@ -532,6 +538,8 @@ impl fmt::Display for ValidationError {
                     length, max_length
                 )
             }
+            Self::NoActiveWallet => write!(f, "No active wallets"),
+            Self::WalletNotFound { pubkey } =>  write!(f, "Nit found wallets with pubkey: {}", pubkey),
             Self::InvalidMnemonic { reason } => write!(f, "Invalid mnemonic: {}", reason),
             Self::EmptyField { field_name } => write!(f, "Field '{}' cannot be empty", field_name),
             Self::OutOfRange {
