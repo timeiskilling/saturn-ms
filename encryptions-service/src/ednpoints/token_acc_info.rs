@@ -55,7 +55,7 @@ impl TokenMetaDataProvider for JupiterClient {
 
         let mut headers = reqwest::header::HeaderMap::new();
         headers.insert("Accept", "application/json".parse()?);
-        headers.insert("x-api-key", "02aaffb2-fd16-4030-9b4f-f9dd7e178a2c");
+        headers.insert("x-api-key", "02aaffb2-fd16-4030-9b4f-f9dd7e178a2c".parse()?);
 
         let chunks: Vec<&[String]> = mint_addresses.chunks(100).collect();
         let mut all_info = HashMap::new();
@@ -67,7 +67,7 @@ impl TokenMetaDataProvider for JupiterClient {
                 .client
                 .get(self.base_url.clone())
                 .query(&[("query", &query_value)])
-                .headers(headers)
+                .headers(headers.clone())
                 .build()?;
 
             let response = self.client.execute(request).await?;

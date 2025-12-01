@@ -1,6 +1,5 @@
 use std::{str::FromStr, sync::Arc};
 
-use axum::extract::State;
 use chrono::Utc;
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{pubkey::Pubkey, signature::Keypair};
@@ -43,9 +42,9 @@ type AsyncResult<T> = Result<T, Box<dyn Error + Send + Sync>>;
 //     fetch_sol_acc_data(rpc, &encrypt_data.pubkey).await
 // }
 
-pub async fn create_wallet_account(State(state) : State<Arc<WalletManager>>) {
-    state.create_wallet(password, bip39_passphrase, display_name, network, keystore_timeout)
-}
+// pub async fn create_wallet_account(State(state) : State<Arc<WalletManager>>) {
+//     state.create_wallet(password, bip39_passphrase, display_name, network, keystore_timeout)
+// }
 
 
 pub async fn send_tokens<T: SaturnSigner>(

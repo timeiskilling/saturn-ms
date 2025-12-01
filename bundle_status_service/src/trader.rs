@@ -120,7 +120,10 @@ impl JupiterTrader {
         tracing::info!("set naming of toporganicscore");
         let mut headers = reqwest::header::HeaderMap::new();
         headers.insert("Accept", "application/json".parse().unwrap());
-        headers.insert("x-api-key","02aaffb2-fd16-4030-9b4f-f9dd7e178a2c");
+        headers.insert(
+            "x-api-key",
+            "02aaffb2-fd16-4030-9b4f-f9dd7e178a2c".parse().unwrap(),
+        );
 
         let response = self
             .http_client
@@ -153,7 +156,10 @@ impl JupiterTrader {
 
         let mut headers = reqwest::header::HeaderMap::new();
         headers.insert("Accept", "application/json".parse()?);
-        headers.insert("x-api-key","02aaffb2-fd16-4030-9b4f-f9dd7e178a2c");
+        headers.insert(
+            "x-api-key",
+            "02aaffb2-fd16-4030-9b4f-f9dd7e178a2c".parse().unwrap(),
+        );
         let response = self
             .http_client
             .get(&url)
@@ -203,7 +209,7 @@ impl JupiterTrader {
 
         let mut headers = reqwest::header::HeaderMap::new();
         headers.insert("Accept", "application/json".parse()?);
-        headers.insert("x-api-key","02aaffb2-fd16-4030-9b4f-f9dd7e178a2c");
+        headers.insert("x-api-key", "02aaffb2-fd16-4030-9b4f-f9dd7e178a2c".parse()?);
 
         let response = self
             .http_client
@@ -258,6 +264,10 @@ impl JupiterTrader {
         let cleaned_options = options.cleaned();
         let additional_params = cleaned_options.to_params();
 
+        let mut headers = reqwest::header::HeaderMap::new();
+        headers.insert("Accept", "application/json".parse()?);
+        headers.insert("x-api-key", "02aaffb2-fd16-4030-9b4f-f9dd7e178a2c".parse()?);
+
         let response = self
             .http_client
             .get(&url)
@@ -269,7 +279,7 @@ impl JupiterTrader {
                 ("platformFeeBps", "20"),
             ])
             .query(&additional_params)
-            .header("Accept", "application/json")
+            .headers(headers)
             .send()
             .await?;
 
