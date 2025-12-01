@@ -407,12 +407,50 @@ dependencies = [
 
 [[package]]
 name = "axum"
+version = "0.7.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "edca88bc138befd0323b20752846e6587272d3b03b0343c8ea28a6f819e6e71f"
+dependencies = [
+ "async-trait",
+ "axum-core 0.4.5",
+ "axum-macros 0.4.2",
+ "base64 0.22.1",
+ "bytes",
+ "futures-util",
+ "http 1.3.1",
+ "http-body 1.0.1",
+ "http-body-util",
+ "hyper 1.8.1",
+ "hyper-util",
+ "itoa",
+ "matchit 0.7.3",
+ "memchr",
+ "mime",
+ "percent-encoding",
+ "pin-project-lite",
+ "rustversion",
+ "serde",
+ "serde_json",
+ "serde_path_to_error",
+ "serde_urlencoded",
+ "sha1",
+ "sync_wrapper 1.0.2",
+ "tokio",
+ "tokio-tungstenite 0.24.0",
+ "tower",
+ "tower-layer",
+ "tower-service",
+ "tracing",
+]
+
+[[package]]
+name = "axum"
 version = "0.8.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5b098575ebe77cb6d14fc7f32749631a6e44edbef6b796f89b020e99ba20d425"
 dependencies = [
- "axum-core",
- "axum-macros",
+ "axum-core 0.5.5",
+ "axum-macros 0.5.0",
  "base64 0.22.1",
  "bytes",
  "form_urlencoded",
@@ -423,7 +461,7 @@ dependencies = [
  "hyper 1.8.1",
  "hyper-util",
  "itoa",
- "matchit",
+ "matchit 0.8.4",
  "memchr",
  "mime",
  "percent-encoding",
@@ -437,6 +475,27 @@ dependencies = [
  "tokio",
  "tokio-tungstenite 0.28.0",
  "tower",
+ "tower-layer",
+ "tower-service",
+ "tracing",
+]
+
+[[package]]
+name = "axum-core"
+version = "0.4.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "09f2bd6146b97ae3359fa0cc6d6b376d9539582c7b4220f041a33ec24c226199"
+dependencies = [
+ "async-trait",
+ "bytes",
+ "futures-util",
+ "http 1.3.1",
+ "http-body 1.0.1",
+ "http-body-util",
+ "mime",
+ "pin-project-lite",
+ "rustversion",
+ "sync_wrapper 1.0.2",
  "tower-layer",
  "tower-service",
  "tracing",
@@ -467,8 +526,8 @@ version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "45bf463831f5131b7d3c756525b305d40f1185b688565648a92e1392ca35713d"
 dependencies = [
- "axum",
- "axum-core",
+ "axum 0.8.7",
+ "axum-core 0.5.5",
  "bytes",
  "futures-util",
  "headers",
@@ -485,6 +544,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "axum-extra"
+version = "0.12.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dbfe9f610fe4e99cf0cfcd03ccf8c63c28c616fe714d80475ef731f3b13dd21b"
+dependencies = [
+ "axum 0.8.7",
+ "axum-core 0.5.5",
+ "bytes",
+ "futures-core",
+ "futures-util",
+ "headers",
+ "http 1.3.1",
+ "http-body 1.0.1",
+ "http-body-util",
+ "mime",
+ "pin-project-lite",
+ "tower-layer",
+ "tower-service",
+ "tracing",
+]
+
+[[package]]
+name = "axum-macros"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "57d123550fa8d071b7255cb0cc04dc302baa6c8c4a79f55701552684d8399bce"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.104",
+]
+
+[[package]]
 name = "axum-macros"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -497,9 +589,9 @@ dependencies = [
 
 [[package]]
 name = "axum-server"
-version = "0.7.2"
+version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "495c05f60d6df0093e8fb6e74aa5846a0ad06abaf96d76166283720bf740f8ab"
+checksum = "c1ab4a3ec9ea8a657c72d99a03a824af695bd0fb5ec639ccbd9cd3543b41a5f9"
 dependencies = [
  "arc-swap",
  "bytes",
@@ -777,9 +869,6 @@ name = "bundle_status_service"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "axum",
- "axum-extra",
- "axum-server",
  "base64 0.22.1",
  "bincode",
  "borsh 1.5.7",
@@ -790,15 +879,13 @@ dependencies = [
  "config",
  "dashmap 6.1.0",
  "futures",
- "hyper 1.8.1",
- "hyper-util",
  "jito-sdk-rust",
  "jupiter_trader_data",
  "pin-project",
  "prost",
  "proto_models",
  "redis",
- "reqwest 0.12.23",
+ "reqwest 0.12.24",
  "serde",
  "serde_json",
  "solana-client",
@@ -1477,7 +1564,7 @@ dependencies = [
  "governor 0.10.2",
  "helius_data",
  "hmac 0.12.1",
- "reqwest 0.12.23",
+ "reqwest 0.12.24",
  "serde",
  "serde_json",
  "sha2 0.10.9",
@@ -2237,9 +2324,9 @@ dependencies = [
 
 [[package]]
 name = "hyper-util"
-version = "0.1.16"
+version = "0.1.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8d9b05277c7e8da2c93a568989bb6207bef0112e8d17df7a6eda4a3cf143bc5e"
+checksum = "52e9a2a24dc5c6821e71a7030e1e14b7b632acac55c40e9d2e082c621261bb56"
 dependencies = [
  "base64 0.22.1",
  "bytes",
@@ -2597,7 +2684,7 @@ dependencies = [
  "jupiter_trader_data",
  "rand 0.9.2",
  "redis",
- "reqwest 0.12.23",
+ "reqwest 0.12.24",
  "serde",
  "serde_json",
  "solana-sdk",
@@ -2749,6 +2836,12 @@ checksum = "8263075bb86c5a1b1427b5ae862e8889656f126e9f77c484496e8b47cf5c5558"
 dependencies = [
  "regex-automata 0.1.10",
 ]
+
+[[package]]
+name = "matchit"
+version = "0.7.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0e7465ac9959cc2b1404e8e2367b43684a6d13790fe23056cc8c6c5a6b7bcb94"
 
 [[package]]
 name = "matchit"
@@ -3308,13 +3401,13 @@ dependencies = [
 name = "price_service"
 version = "0.1.0"
 dependencies = [
- "axum",
- "axum-extra",
+ "axum 0.8.7",
+ "axum-extra 0.10.1",
  "axum-server",
  "common",
  "futures",
  "futures-util",
- "reqwest 0.12.23",
+ "reqwest 0.12.24",
  "rustls 0.22.4",
  "serde",
  "serde_json",
@@ -3789,9 +3882,9 @@ dependencies = [
 
 [[package]]
 name = "reqwest"
-version = "0.12.23"
+version = "0.12.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d429f34c8092b2d42c7c93cec323bb4adeb7c67698f70839adec842ec10c7ceb"
+checksum = "9d0946410b9f7b082a427e4ef5c8ff541a88b357bc6c637c40db3a68ac70a36f"
 dependencies = [
  "async-compression",
  "base64 0.22.1",
@@ -3844,7 +3937,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "http 1.3.1",
- "reqwest 0.12.23",
+ "reqwest 0.12.24",
  "serde",
  "thiserror 1.0.69",
  "tower-service",
@@ -5212,7 +5305,7 @@ dependencies = [
  "crossbeam-channel",
  "gethostname",
  "log",
- "reqwest 0.12.23",
+ "reqwest 0.12.24",
  "solana-cluster-type",
  "solana-sha256-hasher 2.3.0",
  "solana-time-utils",
@@ -5724,7 +5817,7 @@ dependencies = [
  "futures",
  "indicatif",
  "log",
- "reqwest 0.12.23",
+ "reqwest 0.12.24",
  "reqwest-middleware",
  "semver",
  "serde",
@@ -5759,7 +5852,7 @@ checksum = "5a1be31922f97505007ccf969828b34e8dc43ce434a17f970b0edea8f0e66777"
 dependencies = [
  "anyhow",
  "jsonrpc-core",
- "reqwest 0.12.23",
+ "reqwest 0.12.24",
  "reqwest-middleware",
  "serde",
  "serde_derive",
@@ -6951,8 +7044,8 @@ checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
 name = "stargate_service"
 version = "0.1.0"
 dependencies = [
- "axum",
- "axum-extra",
+ "axum 0.7.9",
+ "axum-extra 0.12.2",
  "axum-server",
  "base64 0.22.1",
  "bincode",
@@ -6962,7 +7055,7 @@ dependencies = [
  "hyper 1.8.1",
  "hyper-util",
  "redis",
- "reqwest 0.12.23",
+ "reqwest 0.12.24",
  "serde",
  "serde_json",
  "thiserror 2.0.17",
@@ -7328,6 +7421,18 @@ dependencies = [
 
 [[package]]
 name = "tokio-tungstenite"
+version = "0.24.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "edc5f74e248dc973e0dbb7b74c7e0d6fcc301c694ff50049504004ef4d0cdcd9"
+dependencies = [
+ "futures-util",
+ "log",
+ "tokio",
+ "tungstenite 0.24.0",
+]
+
+[[package]]
+name = "tokio-tungstenite"
 version = "0.28.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d25a406cddcc431a75d3d9afc6a7c0f7428d4891dd973e4d54c56b46127bf857"
@@ -7384,7 +7489,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "67ac5a8627ada0968acec063a4746bf79588aa03ccb66db2f75d7dce26722a40"
 dependencies = [
  "async-trait",
- "axum",
+ "axum 0.8.7",
  "base64 0.22.1",
  "bytes",
  "h2 0.4.12",
@@ -7633,6 +7738,24 @@ dependencies = [
  "sha1",
  "thiserror 1.0.69",
  "url",
+ "utf-8",
+]
+
+[[package]]
+name = "tungstenite"
+version = "0.24.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "18e5b8366ee7a95b16d32197d0b2604b43a0be89dc5fac9f8e96ccafbaedda8a"
+dependencies = [
+ "byteorder",
+ "bytes",
+ "data-encoding",
+ "http 1.3.1",
+ "httparse",
+ "log",
+ "rand 0.8.5",
+ "sha1",
+ "thiserror 1.0.69",
  "utf-8",
 ]
 
