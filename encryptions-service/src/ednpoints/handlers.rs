@@ -1,5 +1,6 @@
-use std::str::FromStr;
+use std::{str::FromStr, sync::Arc};
 
+use axum::extract::State;
 use chrono::Utc;
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{pubkey::Pubkey, signature::Keypair};
@@ -10,7 +11,7 @@ use wallet_models::domain::models::{
 };
 use std::error::Error;
 use crate::{
-    ednpoints::token_acc_info::{JupiterClient, TokenMetaDataProvider, get_valid_tokens}, password_encryptions::impl_encryptions::create_encrypt_data, traits::signer_wraper::SaturnSigner, transactions::tokens_transactions::send_mint_token_transactions
+    ednpoints::token_acc_info::{JupiterClient, TokenMetaDataProvider, get_valid_tokens}, password_encryptions::impl_encryptions::create_encrypt_data, state::saturn_wallet_service::WalletManager, traits::signer_wraper::SaturnSigner, transactions::tokens_transactions::send_mint_token_transactions
 };
 
 
@@ -41,6 +42,11 @@ type AsyncResult<T> = Result<T, Box<dyn Error + Send + Sync>>;
 //     let encrypt_data = create_encrypt_data(password);
 //     fetch_sol_acc_data(rpc, &encrypt_data.pubkey).await
 // }
+
+pub async fn create_wallet_account(State(state) : State<Arc<WalletManager>>) {
+    state.create_wallet(password, bip39_passphrase, display_name, network, keystore_timeout)
+}
+
 
 pub async fn send_tokens<T: SaturnSigner>(
     rpc: &RpcClient,

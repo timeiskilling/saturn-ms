@@ -10,7 +10,7 @@ use wallet_models::domain::models::token_models::TokenBalance;
 use crate::rpc_layer::rpc_provider::SolanaRpcProvider;
 
 pub type AsyncResult<T> = Result<T, Box<dyn Error + Send + Sync>>;
-const SPL_TOKEN_ID : Pubkey = spl_token::ID;
+const SPL_TOKEN_ID: Pubkey = spl_token::ID;
 #[derive(Debug, Deserialize)]
 pub struct TokenInfo {
     pub id: String,
@@ -53,6 +53,10 @@ impl TokenMetaDataProvider for JupiterClient {
             return Ok(HashMap::new());
         }
 
+        let mut headers = reqwest::header::HeaderMap::new();
+        headers.insert("Accept", "application/json".parse()?);
+        headers.insert("x-api-key", "02aaffb2-fd16-4030-9b4f-f9dd7e178a2c");
+
         let chunks: Vec<&[String]> = mint_addresses.chunks(100).collect();
         let mut all_info = HashMap::new();
 
@@ -63,6 +67,7 @@ impl TokenMetaDataProvider for JupiterClient {
                 .client
                 .get(self.base_url.clone())
                 .query(&[("query", &query_value)])
+                .headers(headers)
                 .build()?;
 
             let response = self.client.execute(request).await?;
@@ -129,7 +134,10 @@ where
     Ok(())
 }
 
-async fn get_token_balances(rpc: &dyn SolanaRpcProvider, owner: &Pubkey) -> AsyncResult<Vec<TokenBalance>> {
+async fn get_token_balances(
+    rpc: &dyn SolanaRpcProvider,
+    owner: &Pubkey,
+) -> AsyncResult<Vec<TokenBalance>> {
     let token_accounts = rpc
         .get_token_accounts_by_owner(owner, &SPL_TOKEN_ID)
         .await?;

@@ -36,7 +36,6 @@ impl RpcManager {
     ) -> Self {
         let endpoint = Self::build_endpoint(&api_key, dev_net);
         
-        // Спочатку створюємо managed client
         let managed_client = Arc::new(ManagedRpcClient::new(
             endpoint,
             requests_per_second,

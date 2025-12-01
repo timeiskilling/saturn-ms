@@ -11,6 +11,20 @@ struct HeliusJsonRpcRequest {
 
 #[derive(Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
+pub struct LatestBlockhash {
+    commitment : CommitmentConfig
+}
+
+#[derive(Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
+enum CommitmentConfig{
+    Confirmed,
+    Finalized,
+    Processed,
+}
+
+#[derive(Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct TokenAccountsParamsV2 {
     pub owner_address: String,
     pub filter: Filter,

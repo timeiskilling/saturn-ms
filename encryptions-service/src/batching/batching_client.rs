@@ -214,6 +214,7 @@ impl BatchedRpcClient {
             reason: "Response channel closed".to_string(),
         })?
     }
+    
     pub async fn execute_request(
         &self,
         method: &str,

@@ -69,8 +69,8 @@ impl JupiterTrader {
             rpc_url.to_string(),
             CommitmentConfig::confirmed(),
         );
-        let jupiter_base_url = "https://lite-api.jup.ag/swap/v1".to_string();
-        let jupiter_ultra_url = "https://lite-api.jup.ag/ultra/v1".to_string();
+        let jupiter_base_url = "https://api.jup.ag//swap/v1".to_string();
+        let jupiter_ultra_url = "https://api.jup.ag//ultra/v1".to_string();
         let jito_endpoint = JitoJsonRpcSDK::new(
             "https://frankfurt.mainnet.block-engine.jito.wtf/api/v1",
             None,
@@ -120,10 +120,11 @@ impl JupiterTrader {
         tracing::info!("set naming of toporganicscore");
         let mut headers = reqwest::header::HeaderMap::new();
         headers.insert("Accept", "application/json".parse().unwrap());
+        headers.insert("x-api-key","02aaffb2-fd16-4030-9b4f-f9dd7e178a2c");
 
         let response = self
             .http_client
-            .get("https://lite-api.jup.ag/tokens/v2/toporganicscore/24h")
+            .get("https://api.jup.ag//tokens/v2/toporganicscore/24h")
             .headers(headers)
             .send()
             .await
@@ -152,6 +153,7 @@ impl JupiterTrader {
 
         let mut headers = reqwest::header::HeaderMap::new();
         headers.insert("Accept", "application/json".parse()?);
+        headers.insert("x-api-key","02aaffb2-fd16-4030-9b4f-f9dd7e178a2c");
         let response = self
             .http_client
             .get(&url)
@@ -201,6 +203,7 @@ impl JupiterTrader {
 
         let mut headers = reqwest::header::HeaderMap::new();
         headers.insert("Accept", "application/json".parse()?);
+        headers.insert("x-api-key","02aaffb2-fd16-4030-9b4f-f9dd7e178a2c");
 
         let response = self
             .http_client
