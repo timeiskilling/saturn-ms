@@ -35,6 +35,20 @@ solana-account-decoder = "2.3.7"
 spl-token = "8.0.0"
 spl-token-interface = "1.0.0"
 
+# webAssembly 
+wasm-bindgen = "0.2.106"
+wasm-bindgen-futures = "0.4.56"
+js-sys = "0.3.83"
+web-sys = { version = "0.3.83", features = [
+    "Window",
+    "Request",
+    "RequestInit",
+    "RequestMode",
+    "Response",
+    "Headers",
+] }
+serde-wasm-bindgen = "0.6.5"
+
 
 # axum = { version = "0.8.7", features = ["http2", "tokio","macros","ws"] }
 # axum-server = { version = "0.7.2", features = ["tls-rustls"] }

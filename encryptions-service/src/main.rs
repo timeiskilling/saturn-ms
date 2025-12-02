@@ -14,6 +14,7 @@ mod state;
 mod traits;
 mod transactions;
 mod rpc_layer;
+mod wasm;
 mod batching;
 
 #[tokio::main]
@@ -58,4 +59,4 @@ async fn main() {
     println!("Output length: {}", ciphertext.len());
 
     assert_eq!(ciphertext.len(), 32 + 16, "Ciphertext should include the 16-byte tag!");
-}
+}   
