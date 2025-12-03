@@ -1,5 +1,6 @@
 use std::{collections::HashMap, sync::Arc, time::Duration};
 
+use serde::{Deserialize, Serialize};
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{pubkey::Pubkey, signature::Signature};
 use tokio::sync::{Mutex, RwLock};
@@ -368,7 +369,7 @@ impl WalletManager {
         let entry = WalletEntry {
             crypto_vault,
             wallet_state,
-            keystore: None, // Створюється в заблокованому стані
+            keystore: None, 
             last_activity: tokio::time::Instant::now(),
             keystore_timeout: timeout,
         };
@@ -783,7 +784,7 @@ impl WalletManager {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone,Serialize,Deserialize)]
 pub struct WalletInfo {
     pub pubkey: Pubkey,
     pub display_name: Option<String>,
