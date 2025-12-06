@@ -1,7 +1,6 @@
 use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use serde::{Deserialize, Serialize};
-use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{pubkey::Pubkey, signature::Signature};
 use tokio::sync::{Mutex, RwLock};
 use wallet_models::domain::models::{acc_data::Network, token_models::TokenBalance};
@@ -22,7 +21,7 @@ use crate::{
         crypto_vault::CryptoVault,
         encrypted_state::{SaturnWalletState, WalletSaturnManager},
     },
-    traits::signer_wraper::{KeyStoreManager, SaturnSigner, SecureKeystore, SolanaKeypairSigner},
+    traits::signer_wraper::{SaturnSigner, SecureKeystore, SolanaKeypairSigner},
     transactions::tokens_transactions::create_unsign_transaction,
 };
 
@@ -307,6 +306,7 @@ pub struct WalletManager {
     wallets: Arc<RwLock<HashMap<Pubkey, WalletEntry>>>,
     active_wallet: Arc<RwLock<Option<Pubkey>>>,
     config: WalletManagerConfig,
+    metadata_provider : Arc<dyn TokenMetaDataProvider>
 }
 
 pub struct WalletManagerConfig {
@@ -315,24 +315,42 @@ pub struct WalletManagerConfig {
     default_network: Network,
 }
 
+impl Default for WalletManagerConfig {
+    fn default() -> Self {
+        Self { default_keystore_timeout: Duration::from_secs(360), default_encryption_params: EncryptionParams::default(), default_network: Network::Solana }
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+use web_time::Instant;
+
+#[cfg(not(target_arch = "wasm32"))]
+use tokio::time::Instant;
+
 pub struct WalletEntry {
     crypto_vault: CryptoVault,
     wallet_state: SaturnWalletState,
     keystore: Option<SecureKeystore<SolanaKeypairSigner>>,
-    last_activity: tokio::time::Instant,
+    last_activity: Instant,
     keystore_timeout: Duration,
 }
 
 impl WalletManager {
-    pub fn new(rpc_provider: Arc<dyn SolanaRpcProvider>, config: WalletManagerConfig) -> Self {
+    pub fn new<P>(rpc_provider: Arc<dyn SolanaRpcProvider>, config: WalletManagerConfig, metadata_provider : P) -> Self 
+    where P: TokenMetaDataProvider + 'static,
+    {
         Self {
             rpc_provider,
             wallets: Arc::new(RwLock::new(HashMap::new())),
             active_wallet: Arc::new(RwLock::new(None)),
             config,
+            metadata_provider : Arc::new(metadata_provider),
         }
     }
 
+    pub fn get_metadata_provider(&self) -> Arc<dyn TokenMetaDataProvider> {
+        self.metadata_provider.clone()
+    }
     pub async fn create_wallet(
         &self,
         password: SecureString,
@@ -370,7 +388,7 @@ impl WalletManager {
             crypto_vault,
             wallet_state,
             keystore: None, 
-            last_activity: tokio::time::Instant::now(),
+            last_activity: Instant::now(),
             keystore_timeout: timeout,
         };
 
@@ -381,6 +399,8 @@ impl WalletManager {
                 input: pubkey.to_string(),
             }));
         }
+
+        wallets.insert(pubkey, entry);
 
         let mut active = self.active_wallet.write().await;
         if active.is_none() {
@@ -451,7 +471,7 @@ impl WalletManager {
         keystore.unlock_with_signer(signer);
 
         entry.keystore = Some(keystore);
-        entry.last_activity = tokio::time::Instant::now();
+        entry.last_activity = Instant::now();
 
         tracing::info!(
             wallet = %pubkey,
@@ -478,13 +498,10 @@ impl WalletManager {
         Ok(entry.wallet_state.get_token_balance(mint).await)
     }
 
-    pub async fn refresh_balances<P>(
+    pub async fn refresh_balances(
         &self,
         pubkey: &Pubkey,
-        provider: &P,
     ) -> Result<(), WalletError>
-    where
-        P: TokenMetaDataProvider,
     {
         let wallets = self.wallets.read().await;
 
@@ -494,7 +511,7 @@ impl WalletManager {
             })
         })?;
 
-        entry.wallet_state.refresh_balances(provider).await?;
+        entry.wallet_state.refresh_balances(self.metadata_provider.as_ref()).await?;
 
         tracing::debug!(
             wallet = %pubkey,
@@ -504,30 +521,25 @@ impl WalletManager {
         Ok(())
     }
 
-    pub async fn refresh_active_wallet_balances<P>(&self, provider: &P) -> Result<(), WalletError>
-    where
-        P: TokenMetaDataProvider,
+    pub async fn refresh_active_wallet_balances(&self) -> Result<(), WalletError>
     {
         let active = self.active_wallet.read().await;
 
         if let Some(pubkey) = *active {
             drop(active);
-            self.refresh_balances(&pubkey, provider).await
+            self.refresh_balances(&pubkey).await
         } else {
             Err(WalletError::Validation(ValidationError::NoActiveWallet))
         }
     }
 
-    pub async fn send_tokens<P>(
+    pub async fn send_tokens(
         &self,
         from: &Pubkey,
         to: &Pubkey,
         amount: u64,
         mint: &Pubkey,
-        provider: &P,
     ) -> Result<Signature, WalletError>
-    where
-        P: TokenMetaDataProvider,
     {
         if amount == 0 {
             return Err(WalletError::Validation(ValidationError::InvalidAmount {
@@ -553,7 +565,7 @@ impl WalletManager {
             return Err(WalletError::Keystore(KeystoreError::Locked));
         }
 
-        entry.last_activity = tokio::time::Instant::now();
+        entry.last_activity = Instant::now();
 
         let token_balance =
             entry
@@ -634,7 +646,7 @@ impl WalletManager {
                 })
             })?;
 
-        let _ = entry.wallet_state.refresh_balances(provider).await;
+        let _ = entry.wallet_state.refresh_balances(self.metadata_provider.as_ref()).await;
 
         tracing::info!(
             from = %from,
@@ -691,7 +703,7 @@ impl WalletManager {
 
         entry.crypto_vault.change_encrypt(new_encrypt).await;
 
-        entry.last_activity = tokio::time::Instant::now();
+        entry.last_activity = Instant::now();
 
         tracing::info!(
             wallet = %pubkey,
@@ -747,7 +759,7 @@ impl WalletManager {
 
     pub async fn cleanup_inactive_wallets(&self) {
         let mut wallets = self.wallets.write().await;
-        let now = tokio::time::Instant::now();
+        let now = Instant::now();
 
         let mut locked_count = 0;
 

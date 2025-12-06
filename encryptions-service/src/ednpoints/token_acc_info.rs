@@ -1,7 +1,6 @@
 use async_trait::async_trait;
 use reqwest::{self, Url};
 use serde::Deserialize;
-use solana_client::{nonblocking::rpc_client::RpcClient, rpc_request::TokenAccountsFilter};
 use solana_sdk::pubkey::Pubkey;
 use std::collections::HashMap;
 use std::error::Error;
@@ -94,7 +93,7 @@ pub async fn get_valid_tokens<P>(
     provider: &P,
 ) -> AsyncResult<Vec<TokenBalance>>
 where
-    P: TokenMetaDataProvider,
+    P: TokenMetaDataProvider + ?Sized,
 {
     let mut tokens = get_token_balances(rpc, owner).await?;
 
@@ -111,7 +110,7 @@ where
 
 async fn enrich_token_balances<P>(balances: &mut [TokenBalance], provider: &P) -> AsyncResult<()>
 where
-    P: TokenMetaDataProvider,
+    P: TokenMetaDataProvider + ?Sized,
 {
     if balances.is_empty() {
         return Ok(());

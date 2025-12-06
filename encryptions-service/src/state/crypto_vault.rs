@@ -1,11 +1,10 @@
-use crate::error_handling::error_code::{KeystoreError};
+
 use crate::password_encryptions::encryption_parms::EncryptionParams;
 use crate::password_encryptions::impl_encryptions::{
     CryptoError, Encrypt, EncryptInfo, WalletMetadata, decrypt_seed_versioned, verify_password
 };
 use crate::password_encryptions::secure_string::SecureString;
 use solana_sdk::pubkey::Pubkey;
-use std::sync::Arc;
 use tokio::sync::RwLock;
 
 pub struct CryptoVault {

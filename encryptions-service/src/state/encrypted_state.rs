@@ -5,7 +5,6 @@ use solana_sdk::{commitment_config::CommitmentConfig, pubkey::Pubkey, signature:
 use std::error::Error;
 use tokio::{
     sync::{Mutex, RwLock},
-    time::Instant,
 };
 use wallet_models::domain::models::{
     acc_data::{AccData, Network},
@@ -34,14 +33,14 @@ use crate::{
 
 pub trait WalletSaturnManager: Send + Sync {
     fn get_pubkey(&self) -> &Pubkey;
+
     fn get_network(&self) -> Network;
+    
     fn get_display_name(&self) -> Option<&str>;
 
-    async fn refresh_balances<P>(&self, provider: &P) -> Result<(), WalletError>
-    where
-        P: TokenMetaDataProvider;
+    fn refresh_balances(&self, provider: &dyn TokenMetaDataProvider) -> impl std::future::Future<Output = Result<(), WalletError>> + Send;
 
-    async fn get_token_balance(&self, mint: &Pubkey) -> Option<TokenBalance>;
+    fn get_token_balance(&self, mint: &Pubkey) -> impl std::future::Future<Output = Option<TokenBalance>> + Send;
 }
 
 pub struct SaturnWalletState {
@@ -86,9 +85,7 @@ impl WalletSaturnManager for SaturnWalletState {
         self.display_name.as_deref()
     }
 
-    async fn refresh_balances<P>(&self, provider: &P) -> Result<(), WalletError>
-    where
-        P: TokenMetaDataProvider,
+    async fn refresh_balances(&self, provider: &dyn TokenMetaDataProvider) -> Result<(), WalletError>
     {
         let new_balances = get_valid_tokens(self.rpc_client.as_ref(), &self.pubkey, provider)
             .await

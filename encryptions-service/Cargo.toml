@@ -3,6 +3,23 @@ name = "encryptions-service"
 version = "0.1.0"
 edition = "2024"
 
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "encryptions-service"
+path = "src/main.rs"
+
+
+[profile.release]
+opt-level = "z"     
+lto = true          
+codegen-units = 1   
+panic = "abort"     
+
+[profile.dev]
+opt-level = 0
+
 [dependencies]
 argon2 = { version = "0.5.3", features = ["password-hash"] }
 chacha20poly1305 = "0.10.1"
@@ -12,12 +29,14 @@ hmac = "0.12.1"
 sha2 = "0.10.9"
 governor = "0.10.2"
 
-config = { path = "../config" }
+# futures = "0.3.31"
+
+# config = { path = "../config" }
 helius_data = { path = "../helius_data" }
 wallet_models = { path = "../wallet_models" }
 chrono = { version = "0.4", features = ["serde"] }
 
-tokio = { version = "1.48.0", features = ["full", "macros"] }
+tokio = { version = "1.48.0"}
 async-trait = "0.1.89"
 reqwest = { version = "0.12.23", features = ["json"] }
 
@@ -35,10 +54,14 @@ solana-account-decoder = "2.3.7"
 spl-token = "8.0.0"
 spl-token-interface = "1.0.0"
 
-# webAssembly 
+# webAssembly
+[target.'cfg(target_arch = "wasm32")'.dependencies] 
+web-time = "1.1.0"
 wasm-bindgen = "0.2.106"
 wasm-bindgen-futures = "0.4.56"
 js-sys = "0.3.83"
+tracing-wasm = "0.2.1"
+getrandom = { version = "0.3.4",features = ["wasm_js"]}
 web-sys = { version = "0.3.83", features = [
     "Window",
     "Request",
@@ -48,6 +71,7 @@ web-sys = { version = "0.3.83", features = [
     "Headers",
 ] }
 serde-wasm-bindgen = "0.6.5"
+console_error_panic_hook = "0.1.7"
 
 
 # axum = { version = "0.8.7", features = ["http2", "tokio","macros","ws"] }

@@ -1,16 +1,14 @@
-use std::sync::Arc;
 
 use chrono::Utc;
 use solana_client::nonblocking::rpc_client::RpcClient;
-use solana_sdk::{instruction::Instruction, message::Message, pubkey::Pubkey, signature::{Keypair, Signature}, signer::Signer, transaction::Transaction};
+use solana_sdk::{instruction::Instruction, message::Message, pubkey::Pubkey, transaction::Transaction};
 use spl_token_interface::instruction::transfer_checked;
-use tokio::sync::Mutex;
 use wallet_models::domain::models::{
     token_models::TokenBalance,
     tx_models::SendedTransactions,
 };
 
-use crate::traits::signer_wraper::{SaturnSigner, SecureKeystore};
+use crate::traits::signer_wraper::{SaturnSigner};
 
 pub async fn send_mint_token_transactions(
     rpc: &RpcClient,

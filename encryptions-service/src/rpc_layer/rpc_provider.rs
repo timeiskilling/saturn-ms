@@ -34,27 +34,24 @@ use crate::{
     },
 };
 
-#[async_trait]
+#[cfg(not(target_arch = "wasm32"))]
+#[async_trait] 
 pub trait SolanaRpcProvider: Send + Sync {
     async fn get_latest_blockhash(&self) -> Result<Hash, RpcError>;
-
     async fn send_transactions(&self, transaction: &Transaction) -> Result<Signature, RpcError>;
-
-    async fn confirm_transaction(
-        &self,
-        signature: &Signature,
-        commitment: CommitmentConfig,
-    ) -> Result<bool, RpcError>;
-
-    async fn get_token_accounts_by_owner(
-        &self,
-        owner: &Pubkey,
-        program_id: &Pubkey,
-    ) -> Result<Vec<RpcKeyedAccount>, RpcError>;
-
+    async fn confirm_transaction(&self, signature: &Signature, commitment: CommitmentConfig) -> Result<bool, RpcError>;
+    async fn get_token_accounts_by_owner(&self, owner: &Pubkey, program_id: &Pubkey) -> Result<Vec<RpcKeyedAccount>, RpcError>;
     async fn get_balance(&self, pubkey: &Pubkey) -> Result<u64, RpcError>;
+}
 
-    // async fn get_account(&self, pubkey: &Pubkey) -> Result<Account, RpcError>;
+#[cfg(target_arch = "wasm32")]
+#[async_trait(?Send)]  
+pub trait SolanaRpcProvider {
+    async fn get_latest_blockhash(&self) -> Result<Hash, RpcError>;
+    async fn send_transactions(&self, transaction: &Transaction) -> Result<Signature, RpcError>;
+    async fn confirm_transaction(&self, signature: &Signature, commitment: CommitmentConfig) -> Result<bool, RpcError>;
+    async fn get_token_accounts_by_owner(&self, owner: &Pubkey, program_id: &Pubkey) -> Result<Vec<RpcKeyedAccount>, RpcError>;
+    async fn get_balance(&self, pubkey: &Pubkey) -> Result<u64, RpcError>;
 }
 
 pub struct ManagedRpcClient {

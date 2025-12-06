@@ -1,3 +1,5 @@
+#![cfg(target_arch = "wasm32")]
+
 use solana_sdk::pubkey::Pubkey;
 use std::time::Duration;
 use std::{str::FromStr, sync::Arc};
@@ -6,8 +8,9 @@ use wasm_bindgen::prelude::*;
 
 use crate::wasm::models::*;
 
+use tokio::sync::RwLock;
+
 use crate::{
-    ednpoints::token_acc_info::JupiterClient,
     error_handling::error_code::{KeystoreError, RpcError, ValidationError, WalletError},
     password_encryptions::secure_string::SecureString,
     state::saturn_wallet_service::WalletManager,
@@ -15,7 +18,14 @@ use crate::{
 
 #[wasm_bindgen]
 pub struct WasmWalletManager {
-    inner: Arc<tokio::sync::RwLock<WalletManager>>,
+    inner: Arc<RwLock<WalletManager>>,
+}
+
+impl WasmWalletManager {
+      pub fn new(manager : WalletManager) -> Self {
+        Self { inner: Arc::new(RwLock::new(manager)) }
+    }
+    
 }
 
 #[wasm_bindgen]
@@ -95,13 +105,10 @@ impl WasmWalletManager {
             .parse::<u64>()
             .map_err(|e| JsValue::from_str(&format!("Invalid amount: {}", e)))?;
 
-        let provider = JupiterClient::new("https://api.jup.ag")
-            .map_err(|e| JsValue::from_str(&format!("Invalid provider: {}", e)))?;
-
         let manager = self.inner.write().await;
 
         let signature = manager
-            .send_tokens(&from_pubkey, &to_pubkey, amount, &mint_pubkey, &provider)
+            .send_tokens(&from_pubkey, &to_pubkey, amount, &mint_pubkey)
             .await
             .map_err(|e| match e {
                 WalletError::Keystore(KeystoreError::Locked) => {
@@ -151,13 +158,10 @@ impl WasmWalletManager {
         let pubkey = Pubkey::from_str(&pubkey)
             .map_err(|e| JsValue::from_str(&format!("Invalid sender address: {}", e)))?;
 
-        let provider = JupiterClient::new("https://api.jup.ag")
-            .map_err(|e| JsValue::from_str(&format!("Invalid provider: {}", e)))?;
-
         let manager = self.inner.read().await;
 
         manager
-                .refresh_balances(&pubkey, &provider)
+                .refresh_balances(&pubkey)
                 .await
                 .map_err(|err| match err {
                     WalletError::Validation(ValidationError::WalletNotFound { pubkey }) => {
@@ -171,13 +175,10 @@ impl WasmWalletManager {
 
     #[wasm_bindgen(js_name = refreshActiveWalletBalance)]
     pub async fn refresh_active_wallet_balances(&self) -> Result<JsValue, JsValue> {
-         let provider = JupiterClient::new("https://api.jup.ag")
-            .map_err(|e| JsValue::from_str(&format!("Invalid provider: {}", e)))?;
-
         let manager = self.inner.read().await;
 
         manager
-                .refresh_active_wallet_balances(&provider)
+                .refresh_active_wallet_balances()
                 .await
                 .map_err(|err| match err {
                     WalletError::Validation(ValidationError::WalletNotFound { pubkey }) => {
