@@ -1,6 +1,9 @@
 
+
 use async_trait::async_trait;
+use base64::Engine;
 use serde_json::{json, Value};
+use solana_client::rpc_response::RpcKeyedAccount;
 use solana_sdk::{
     commitment_config::CommitmentConfig,
     hash::Hash,
@@ -14,7 +17,15 @@ use wasm_bindgen::JsCast;
 use web_sys::{Request, RequestInit, RequestMode, Response};
 
 use crate::error_handling::error_code::RpcError;
-use crate::rpc_layer::rpc_provider::SolanaRpcProvider;
+
+#[async_trait(?Send)]  
+pub trait SolanaRpcProvider {
+    async fn get_latest_blockhash(&self) -> Result<Hash, RpcError>;
+    async fn send_transactions(&self, transaction: &Transaction) -> Result<Signature, RpcError>;
+    async fn confirm_transaction(&self, signature: &Signature, commitment: CommitmentConfig) -> Result<bool, RpcError>;
+    async fn get_token_accounts_by_owner(&self, owner: &Pubkey, program_id: &Pubkey) -> Result<Vec<RpcKeyedAccount>, RpcError>;
+    async fn get_balance(&self, pubkey: &Pubkey) -> Result<u64, RpcError>;
+}
 
 pub struct WasmRpcClient {
     endpoint: String,
@@ -47,10 +58,10 @@ impl WasmRpcClient {
 
         let request_body = rpc_request.to_string();
 
-        let mut opts = RequestInit::new();
-        opts.method("POST");
-        opts.mode(RequestMode::Cors);
-        opts.body(Some(&JsValue::from_str(&request_body)));
+        let opts = RequestInit::new();
+        opts.set_method("POST");
+        opts.set_mode(RequestMode::Cors);
+        opts.set_body(&JsValue::from_str(&request_body));
 
         let request = Request::new_with_str_and_init(&self.endpoint, &opts)
             .map_err(|e| RpcError::ConnectionFailed {

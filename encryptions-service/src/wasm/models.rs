@@ -14,6 +14,8 @@ pub struct CreateWalletRequest {
     pub keystore_timeout_secs: Option<u64>,
 }
 
+
+
 #[derive(Deserialize)]
 pub struct SendTokensRequest {
     pub from: String,

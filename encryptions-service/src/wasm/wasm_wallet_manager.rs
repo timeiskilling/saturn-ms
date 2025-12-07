@@ -1,4 +1,4 @@
-#![cfg(target_arch = "wasm32")]
+// #![cfg(target_arch = "wasm32")]
 
 use solana_sdk::pubkey::Pubkey;
 use std::time::Duration;

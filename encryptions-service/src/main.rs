@@ -7,7 +7,7 @@ use crate::{
     password_encryptions::secure_string::SecureString,
 };
 
-mod ednpoints;
+mod endpoints;
 mod error_handling;
 mod password_encryptions;
 mod state;

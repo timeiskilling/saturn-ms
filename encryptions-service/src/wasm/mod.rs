@@ -1,4 +1,4 @@
-#![cfg(target_arch = "wasm32")]
+// #![cfg(target_arch = "wasm32")]
 
 pub mod models;
 pub mod wasm_wallet_manager;
@@ -14,12 +14,14 @@ use crate::{
     batching::{
         batching_client::BatchedRpcClient, 
         batching_config::BatchConfig
-    }, ednpoints::token_acc_info::JupiterClient, rpc_layer::{retry_config::RetryConfig, rpc_provider::ManagedRpcClient}, state::saturn_wallet_service::{WalletManager, WalletManagerConfig}
+    }, endpoints::token_acc_info::JupiterClient, rpc_layer::{retry_config::RetryConfig, rpc_provider::ManagedRpcClient}, state::saturn_wallet_service::{WalletManager, WalletManagerConfig}
 };
 
 #[wasm_bindgen(start)]
-pub fn init_panic_hook() {
+pub fn init_panic_hook() -> Result<(), JsValue> {
     console_error_panic_hook::set_once();
+    tracing_wasm::set_as_global_default();
+    Ok(())
 }
 
 #[wasm_bindgen]

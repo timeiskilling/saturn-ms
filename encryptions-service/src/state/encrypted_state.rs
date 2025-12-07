@@ -14,7 +14,7 @@ use wallet_models::domain::models::{
 use zeroize::Zeroize;
 
 use crate::{
-    ednpoints::{
+    endpoints::{
         // handlers::fetch_sol_acc_data,
         token_acc_info::{TokenMetaDataProvider, get_valid_tokens},
     },

@@ -1,9 +1,6 @@
 use std::sync::Arc;
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::collections::HashMap;
 use async_trait::async_trait;
-use tokio::sync::{mpsc, oneshot};
-use serde_json::{Value, json};
+use serde_json::{Value};
 
 use crate::error_handling::error_code::RpcError;
 use crate::rpc_layer::rpc_provider::ManagedRpcClient;

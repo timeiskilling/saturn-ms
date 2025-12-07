@@ -1,4 +1,4 @@
-pub mod ednpoints;
+pub mod endpoints;
 pub mod error_handling;
 pub mod password_encryptions;
 pub mod rpc_layer;

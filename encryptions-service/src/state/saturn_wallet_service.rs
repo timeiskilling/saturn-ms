@@ -7,7 +7,7 @@ use wallet_models::domain::models::{acc_data::Network, token_models::TokenBalanc
 use zeroize::Zeroize;
 
 use crate::{
-    ednpoints::token_acc_info::TokenMetaDataProvider,
+    endpoints::token_acc_info::TokenMetaDataProvider,
     error_handling::error_code::*,
     password_encryptions::{
         encryption_parms::EncryptionParams,
