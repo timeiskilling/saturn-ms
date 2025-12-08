@@ -1,10 +1,8 @@
 use std::{collections::HashMap, str::FromStr, sync::Arc, time::Duration};
 
-use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{commitment_config::CommitmentConfig, pubkey::Pubkey, signature::Keypair};
-use std::error::Error;
 use tokio::{
-    sync::{Mutex, RwLock},
+    sync::{RwLock},
 };
 use wallet_models::domain::models::{
     acc_data::{AccData, Network},

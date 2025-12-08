@@ -2,28 +2,28 @@
 
 use solana_sdk::pubkey::Pubkey;
 use std::time::Duration;
-use std::{str::FromStr, sync::Arc};
+use std::{str::FromStr};
 use wallet_models::domain::models::acc_data::Network;
 use wasm_bindgen::prelude::*;
 
 use crate::wasm::models::*;
+use crate::wasm::wasm_encryptions::SecureString;
+use crate::wasm::wasm_wallet_service::WalletManager;
 
-use tokio::sync::RwLock;
+use async_lock::RwLock;
 
 use crate::{
     error_handling::error_code::{KeystoreError, RpcError, ValidationError, WalletError},
-    password_encryptions::secure_string::SecureString,
-    state::saturn_wallet_service::WalletManager,
 };
 
 #[wasm_bindgen]
 pub struct WasmWalletManager {
-    inner: Arc<RwLock<WalletManager>>,
+    inner: RwLock<WalletManager>,
 }
 
 impl WasmWalletManager {
       pub fn new(manager : WalletManager) -> Self {
-        Self { inner: Arc::new(RwLock::new(manager)) }
+        Self { inner: RwLock::new(manager)}
     }
     
 }

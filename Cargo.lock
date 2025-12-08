@@ -1554,10 +1554,12 @@ name = "encryptions-service"
 version = "0.1.0"
 dependencies = [
  "argon2",
+ "async-lock",
  "async-trait",
  "base64 0.22.1",
  "bincode",
  "bip39",
+ "bs58 0.5.1",
  "chacha20poly1305",
  "chrono",
  "console_error_panic_hook",

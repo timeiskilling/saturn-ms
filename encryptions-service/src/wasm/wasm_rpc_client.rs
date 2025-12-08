@@ -3,7 +3,6 @@
 use async_trait::async_trait;
 use base64::Engine;
 use serde_json::{json, Value};
-use solana_client::rpc_response::RpcKeyedAccount;
 use solana_sdk::{
     commitment_config::CommitmentConfig,
     hash::Hash,
@@ -17,6 +16,7 @@ use wasm_bindgen::JsCast;
 use web_sys::{Request, RequestInit, RequestMode, Response};
 
 use crate::error_handling::error_code::RpcError;
+use crate::wasm::wasm_types::RpcKeyedAccount;
 
 #[async_trait(?Send)]  
 pub trait SolanaRpcProvider {
@@ -222,7 +222,7 @@ impl SolanaRpcProvider for WasmRpcClient {
         &self,
         owner: &Pubkey,
         program_id: &Pubkey,
-    ) -> Result<Vec<solana_client::rpc_response::RpcKeyedAccount>, RpcError> {
+    ) -> Result<Vec<RpcKeyedAccount>, RpcError> {
         let result = self
             .call_rpc_method(
                 "getTokenAccountsByOwner",
@@ -245,7 +245,7 @@ impl SolanaRpcProvider for WasmRpcClient {
         })?;
 
         
-        let accounts: Vec<solana_client::rpc_response::RpcKeyedAccount> =
+        let accounts: Vec<RpcKeyedAccount> =
             serde_json::from_value(accounts_value.clone()).map_err(|e| {
                 RpcError::InvalidResponse {
                     expected: "valid RpcKeyedAccount array".to_string(),
