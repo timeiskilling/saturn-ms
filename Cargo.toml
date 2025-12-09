@@ -15,3 +15,7 @@ members = [
     "wallet_models",
     "helius_data",
 ]
+
+exclude = [
+    "saturn-wallet"
+]

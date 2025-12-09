@@ -6,3 +6,7 @@ target/
 .env
 
 **/*.rs.bk
+
+node_modules/
+dist/
+.bun/
