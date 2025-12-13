@@ -29,3 +29,5 @@ TS
 Wrote Interface with React + Next.Js also Web3.js We3Sol.js
 --
 Realese
+
+Build docker for grpc testings
