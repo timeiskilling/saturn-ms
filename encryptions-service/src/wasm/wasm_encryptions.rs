@@ -121,7 +121,7 @@ pub fn decrypt_seed_versioned(
     }
 }
 
-pub fn seed_from_mnemonic(mnemonic: Mnemonic, bip39_passphrase: &str) -> [u8; 32] {
+pub fn seed_from_mnemonic(mnemonic: &Mnemonic, bip39_passphrase: &str) -> [u8; 32] {
     let mut seed_bytes = mnemonic.to_seed(bip39_passphrase);
     let mut seed32 = [0u8; 32];
     seed32.copy_from_slice(&seed_bytes[..32]);
@@ -251,7 +251,7 @@ pub fn create_encrypt_data(
     password: SecureString,
     bip39_passphrase: Option<SecureString>,
     params: EncryptionParams,
-) -> Result<EncryptInfo, CryptoError> {
+) -> Result<(EncryptInfo, Mnemonic), CryptoError> {
     let mut entropy = [0u8; 32];
     OsRng.fill_bytes(&mut entropy);
 
@@ -261,7 +261,7 @@ pub fn create_encrypt_data(
 
     let passphrase_str = bip39_passphrase.as_ref().map(|s| s.as_str()).unwrap_or("");
 
-    let mut seed = seed_from_mnemonic(mnemonic, passphrase_str);
+    let mut seed = seed_from_mnemonic(&mnemonic, passphrase_str);
 
     let keypair = keypair_from_seed(&seed)?;
     let pubkey = keypair.pubkey();
@@ -273,13 +273,15 @@ pub fn create_encrypt_data(
         uses_bip39_passphrase: bip39_passphrase.is_some(),
     };
 
-    Ok(EncryptInfo {
+    let encrypt_info = EncryptInfo {
         encrypted_data: EncryptedData {
             pubkey,
             encrypt: encrypted,
         },
         metadata,
-    })
+    };
+
+    Ok((encrypt_info, mnemonic))
 }
 
 pub struct EncryptInfo {

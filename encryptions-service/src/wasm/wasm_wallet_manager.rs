@@ -16,6 +16,15 @@ use crate::{
     error_handling::error_code::{KeystoreError, RpcError, ValidationError, WalletError},
 };
 
+#[wasm_bindgen(typescript_custom_section)]
+const TS_INTERFACES: &'static str = r#"
+export interface WalletBalance {
+    amount: string;
+    decimals: number;
+    uiAmount: number | null;
+}
+"#;
+
 #[wasm_bindgen]
 pub struct WasmWalletManager {
     inner: RwLock<WalletManager>,
@@ -36,50 +45,49 @@ impl WasmWalletManager {
             .map_err(|e| JsValue::from_str(&format!("Invalid request format: {}", e)))?;
 
         let password = SecureString::new(request.password);
-
         let secure_bip39 = request.bip39_passphrase.map(SecureString::from);
-        let network = if let Some(network_str) = request.network {
-            Some(
-                Network::from_str(&network_str)
-                    .map_err(|_| JsValue::from_str(&format!("Invalid network: {}", network_str)))?,
-            )
-        } else {
-            None
-        };
-
+        let network = parse_network(request.network)?;
         let keystore_timeout = request.keystore_timeout_secs.map(Duration::from_secs);
 
         let manager = self.inner.write().await;
-        let pubkey = manager
+
+        let result = manager
             .create_wallet(
                 password,
-                secure_bip39,
+                secure_bip39,   
                 request.display_name,
                 network,
                 keystore_timeout,
             )
             .await
             .map_err(|e| JsValue::from_str(&format!("Failed to create wallet: {}", e)))?;
+        
+        let js_result = JsWalletCreationResult {
+            pubkey: result.pubkey.to_string(),
+            recovery_phrase: result.mnemonic_phrase.as_str().to_string(),
+        };
+        
+        let result_value = serde_wasm_bindgen::to_value(&js_result)
+             .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))?;
 
-        let pubkey_str = pubkey.to_string();
-        Ok(JsValue::from_str(&pubkey_str))
+        Ok(result_value)
     }
 
     #[wasm_bindgen(js_name = unlockWallet)]
     pub async fn unlock_wallet(
         &self,
-        pubkey: String,
-        password: String,
+        request_js: JsValue
     ) -> Result<JsValue, JsValue> {
-        let secure_pass = SecureString::new(password);
 
-        let pubkey = Pubkey::from_str(&pubkey)
-            .map_err(|e| JsValue::from_str(&format!("Invalid pubkey format: {}", e)))?;
+        let request: UnlockWalletRequest = serde_wasm_bindgen::from_value(request_js)
+            .map_err(|e| JsValue::from_str(&format!("Invalid request format: {}", e)))?;
+              
+        let secure_pass = request.get_secure_data()?;
 
         let manager = self.inner.read().await;
 
         manager
-            .unclok_wallet(&pubkey, secure_pass)
+            .unclok_wallet(&secure_pass.pubkey, secure_pass.password)
             .await
             .map_err(|e| JsValue::from_str(&format!("Failed to unlock wallet: {}", e)))?;
 
@@ -231,12 +239,10 @@ impl WasmWalletManager {
     pub async fn get_active_wallet(&self) -> Result<JsValue, JsValue> {
         let manager = self.inner.read().await;
 
-        let active_opt = manager.get_active_wallet().await;
+        let wallet_info = manager.get_active_wallet().await;
 
-        match active_opt {
-            Some(pubkey) => Ok(JsValue::from_str(&pubkey.to_string())),
-            None => Ok(JsValue::NULL),
-        }
+        serde_wasm_bindgen::to_value(&wallet_info)
+            .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
     }
 
     #[wasm_bindgen(js_name = listWallets)]
@@ -257,4 +263,18 @@ impl WasmWalletManager {
         manager.cleanup_inactive_wallets().await;
         Ok(())
     }
+}
+
+
+fn parse_network(network_str: Option<String>) -> Result<Option<Network>, JsValue> {
+    network_str
+        .map(|s| {
+            Network::from_str(&s).map_err(|_| {
+                JsValue::from_str(&format!(
+                    "Invalid network '{}'. Expected: 'mainnet', 'devnet', or 'testnet'",
+                    s
+                ))
+            })
+        })
+        .transpose()
 }

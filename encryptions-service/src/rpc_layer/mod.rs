@@ -9,7 +9,3 @@ pub mod rpc_manager;
 pub mod managed_rpc_client;
 
 // #[cfg(target_arch = "wasm32")]
-
-
-// #[cfg(target_arch = "wasm32")]
-// pub use wasm_rpc_client::WasmRpcClient;

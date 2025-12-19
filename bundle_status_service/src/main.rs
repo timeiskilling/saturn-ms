@@ -6,7 +6,7 @@ use tokio::sync::Semaphore;
 use tonic::{service::LayerExt, transport::Server};
 use tracing_subscriber::fmt::format::FmtSpan;
 
-use crate::{proto_service::{service_jupiter_status, TransactionService}, test::bundle_tracking_test::send_bundle, trader::JupiterTrader};
+use crate::{proto_service::{service_jupiter_status, TransactionService}, trader::JupiterTrader};
 
 pub mod blockhash_data;
 pub mod bundle_manager;

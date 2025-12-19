@@ -17,9 +17,9 @@ export interface CreateWalletResponse {
 }
 
 export interface UnlockWalletRequest {
-  publicKey: string;
+  pubkey: string;
   password: string;
-}
+} 
 
 export interface SendTokensRequest {
   fromPubkey: string;

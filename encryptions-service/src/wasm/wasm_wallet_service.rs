@@ -1,8 +1,9 @@
-use std::{collections::HashMap, rc::Rc, sync::Arc, time::Duration};
-use serde::{Serialize,Deserialize};
-use solana_sdk::{pubkey::Pubkey, signature::Signature};
 use async_lock::RwLock;
+use serde::{Deserialize, Serialize};
+use solana_sdk::{pubkey::Pubkey, signature::Signature};
+use std::{collections::HashMap, rc::Rc, sync::Arc, time::Duration};
 use wallet_models::domain::models::{acc_data::Network, token_models::TokenBalance};
+use zeroize::Zeroizing;
 
 // #[cfg(target_arch = "wasm32")]
 use web_time::Instant;
@@ -18,7 +19,14 @@ use crate::{
     },
     traits::signer_wraper::{SaturnSigner, SecureKeystore, SolanaKeypairSigner},
     wasm::{
-        wasm_encryptions::{CryptoError, CryptoVault, EncryptionParams, SecureString, create_encrypt_data, encrypt_seed_with_verification, keypair_from_seed}, wasm_rpc_client::{SolanaRpcProvider, WasmRpcClient}, wasm_solana_methods::create_unsign_transaction, wasm_state::{WalletSaturnManager, WasmSaturnWalletState}, wasm_token_acc_info::TokenMetaDataProvider
+        models::WalletCreationResult,
+        wasm_encryptions::{
+            CryptoError, CryptoVault, EncryptionParams, SecureString, create_encrypt_data, encrypt_seed_with_verification, keypair_from_seed
+        },
+        wasm_rpc_client::{SolanaRpcProvider, WasmRpcClient},
+        wasm_solana_methods::create_unsign_transaction,
+        wasm_state::{WalletSaturnManager, WasmSaturnWalletState},
+        wasm_token_acc_info::TokenMetaDataProvider,
     },
 };
 
@@ -69,7 +77,6 @@ impl WalletManager {
             active_wallet: Arc::new(RwLock::new(None)),
             config,
             metadata_provider: Arc::new(metadata_provider),
-            
         }
     }
 
@@ -83,8 +90,8 @@ impl WalletManager {
         display_name: Option<String>,
         network: Option<Network>,
         keystore_timeout: Option<Duration>,
-    ) -> Result<Pubkey, WalletError> {
-        let encrypt_info = create_encrypt_data(
+    ) -> Result<WalletCreationResult, WalletError> {
+        let (encrypt_info, mnemonic) = create_encrypt_data(
             password,
             bip39_passphrase,
             self.config.default_encryption_params.clone(),
@@ -96,6 +103,7 @@ impl WalletManager {
         })?;
 
         let crypto_vault = CryptoVault::new(encrypt_info);
+
         let pubkey = *crypto_vault.pubkey();
 
         let wallet_network = network.unwrap_or(self.config.default_network);
@@ -138,7 +146,13 @@ impl WalletManager {
             "New wallet created successfully"
         );
 
-        Ok(pubkey)
+        let mnemonic_string = Zeroizing::new(mnemonic.to_string());
+        let mnemonic_phrase = SecureString::new(mnemonic_string.to_string());
+
+        Ok(WalletCreationResult {
+            pubkey,
+            mnemonic_phrase,
+        })
     }
 
     pub async fn unclok_wallet(
@@ -459,9 +473,26 @@ impl WalletManager {
         Ok(())
     }
 
-    pub async fn get_active_wallet(&self) -> Option<Pubkey> {
-        let active = self.active_wallet.read().await;
-        *active
+    pub async fn get_active_wallet(&self) -> Option<WalletInfo> {
+        let active_pubkey = {
+            let active = self.active_wallet.read().await;
+            *active
+        }?;
+
+        let wallets = self.wallets.read().await;
+
+        wallets.get(&active_pubkey).map(|entry| {
+        WalletInfo {
+            pubkey: active_pubkey,
+            display_name: entry.wallet_state.get_display_name().map(|s| s.to_string()),
+            network: entry.wallet_state.get_network(),
+            is_unlocked: entry
+                .keystore
+                .as_ref()
+                .map(|ks| ks.is_unlocked())
+                .unwrap_or(false),
+        }
+    })
     }
 
     pub async fn list_wallets(&self) -> Vec<WalletInfo> {

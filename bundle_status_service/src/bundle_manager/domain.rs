@@ -186,7 +186,6 @@ impl LuaScripts {
 #[derive(Debug, Default)]
 struct TrackerMetrics {
     total_bundles: std::sync::atomic::AtomicU64,
-    active_bundles: std::sync::atomic::AtomicU64,
     redis_operations: std::sync::atomic::AtomicU64,
     api_calls: std::sync::atomic::AtomicU64,
     errors: std::sync::atomic::AtomicU64,
@@ -254,47 +253,45 @@ impl RedisBundleTracker {
             let response: InflightBundleStatusResponse =
                 serde_json::from_value(status_response).unwrap();
 
-            for (_idx, status_opt) in response.value.iter().enumerate() {
-                if let Some(status) = status_opt {
-                    let bundle_data = BundleStatusUpdate {
-                        bundle_id: status.bundle_id.clone(),
-                        status: status.status.clone(),
-                        timestamp: chrono::Utc::now().timestamp() as u64,
-                        slot: None,
-                        stage: BundleStage::InFlight,
-                        version: 1,
-                        user_id: Some(user_id.clone()),
-                    };
+            for status in response.value.iter().flatten() {
+                let bundle_data = BundleStatusUpdate {
+                    bundle_id: status.bundle_id.clone(),
+                    status: status.status.clone(),
+                    timestamp: chrono::Utc::now().timestamp() as u64,
+                    slot: None,
+                    stage: BundleStage::InFlight,
+                    version: 1,
+                    user_id: Some(user_id.clone()),
+                };
 
-                    let serialized = serde_json::to_string(&bundle_data)?;
+                let serialized = serde_json::to_string(&bundle_data)?;
 
-                    let result: i32 = self
-                        .lua_scripts
-                        .update_bundle_with_transition
-                        .arg(&status.bundle_id)
-                        .arg(&serialized)
-                        .arg(bundle_data.stage.to_string())
-                        .arg(1)
-                        .arg(self.config.completion_ttl.as_secs())
-                        .invoke_async(&mut *conn)
-                        .await?;
+                let result: i32 = self
+                    .lua_scripts
+                    .update_bundle_with_transition
+                    .arg(&status.bundle_id)
+                    .arg(&serialized)
+                    .arg(bundle_data.stage.to_string())
+                    .arg(1)
+                    .arg(self.config.completion_ttl.as_secs())
+                    .invoke_async(&mut *conn)
+                    .await?;
 
-                    if result == 1 {
-                        self.local_cache.insert(
-                            status.bundle_id.clone(),
-                            CachedBundle {
-                                bundle_id: status.bundle_id.clone(),
-                                status: bundle_data.status,
-                                stage: BundleStage::InFlight,
-                                last_updated: Instant::now(),
-                                last_checked: Instant::now(),
-                                version: 1,
-                                slot: None,
-                            },
-                        );
-                    }
-                    self.store_ownership(&status.bundle_id, &user_id).await;
+                if result == 1 {
+                    self.local_cache.insert(
+                        status.bundle_id.clone(),
+                        CachedBundle {
+                            bundle_id: status.bundle_id.clone(),
+                            status: bundle_data.status,
+                            stage: BundleStage::InFlight,
+                            last_updated: Instant::now(),
+                            last_checked: Instant::now(),
+                            version: 1,
+                            slot: None,
+                        },
+                    );
                 }
+                self.store_ownership(&status.bundle_id, &user_id).await;
             }
         }
 
@@ -410,7 +407,7 @@ impl RedisBundleTracker {
             Ok(result)
         } else {
             let bundle_ids: Vec<String> = conn
-                .smembers(&format!("bundles_stage:{}", stage_str))
+                .smembers(format!("bundles_stage:{}", stage_str))
                 .await?;
             let mut result = Vec::new();
 
@@ -584,14 +581,14 @@ impl RedisBundleTracker {
             slot,
             stage: new_stage.clone(),
             version: new_version,
-            user_id: user_id,
+            user_id,
         };
 
-        if let Some(cached) = self.local_cache.get(bundle_id) {
-            if !cached.stage.can_transition_to(&new_stage) {
+        if let Some(cached) = self.local_cache.get(bundle_id)
+            && !cached.stage.can_transition_to(&new_stage) {
             &&  return Ok(());
-            }
         }
+        
         let serialized = serde_json::to_string(&bundle_update)?;
 
         let redis = self.get_redis_connection(0);

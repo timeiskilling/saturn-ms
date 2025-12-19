@@ -121,13 +121,13 @@ impl UserStreamNotificationSystem {
         let update = UserBundleUpdate {
             bundle_id: bundle_id.to_string(),
             old_status,
-            new_status: new_status,
+            new_status,
             timestamp: chrono::Utc::now().timestamp_millis() as u64,
             slot,
         };
 
         if let Some(sender) = self.user_streams.get(&user_id) {
-            if let Err(_) = sender.send(update) {
+            if sender.send(update).is_err() {
                 tracing::debug!("No active listeners for user {}", user_id);
             } else {
                 self.active_users
@@ -168,11 +168,10 @@ impl UserStreamNotificationSystem {
     }
 
     pub fn cleanup_bundle(&self, bundle_id: &str) {
-        if let Some((_, user_id)) = self.bundle_ownership.remove(bundle_id) {
-            if let Some(mut user_bundles) = self.user_bundles.get_mut(&user_id) {
+        if let Some((_, user_id)) = self.bundle_ownership.remove(bundle_id)
+            && let Some(mut user_bundles) = self.user_bundles.get_mut(&user_id) {
                 user_bundles.remove(bundle_id);
             }
-        }
     }
 
     pub fn get_stats(&self) -> HashMap<String, usize> {

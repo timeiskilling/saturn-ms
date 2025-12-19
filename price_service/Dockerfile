@@ -8,13 +8,9 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-COPY Cargo.toml Cargo.lock ./
-COPY price_service/Cargo.toml price_service/
-COPY common/Cargo.toml common/
+COPY . .
 
 RUN cargo fetch
-
-COPY . .
 
 RUN cargo build -p price_service --release
 

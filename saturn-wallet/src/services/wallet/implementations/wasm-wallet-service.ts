@@ -66,7 +66,9 @@ export class WasmWalletService implements IWalletService {
     return this.walletManager;
   }
 
-  async createWallet(request: CreateWalletRequest): Promise<CreateWalletResponse> {
+  async createWallet(
+    request: CreateWalletRequest
+  ): Promise<CreateWalletResponse> {
     const manager = this.ensureInitialized();
 
     try {
@@ -96,10 +98,10 @@ export class WasmWalletService implements IWalletService {
     const manager = this.ensureInitialized();
 
     try {
-        const wallets = await manager.listWallets();
+      const wallets = await manager.listWallets();
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return wallets.map((w: any) => ({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return wallets.map((w: any) => ({
         publicKey: w.public_key,
         name: w.name,
         balance: w.balance || "0",
@@ -114,28 +116,157 @@ export class WasmWalletService implements IWalletService {
       );
     }
   }
-  unlockWallet(request: UnlockWalletRequest): Promise<void> {
-    throw new Error("Method not implemented.");
+
+  async unlockWallet(request: UnlockWalletRequest): Promise<void> {
+    const manager = this.ensureInitialized();
+
+    try {
+      await manager.unlockWallet(request.pubkey, request.password);
+    } catch (error) {
+      console.error("Failed to unlock wallet:", error);
+      throw new WalletServiceError(
+        "Failed to unlock wallet. Check your password.",
+        WalletErrorCodes.INVALID_PASSWORD,
+        error
+      );
+    }
   }
-  getBalance(publicKey: string, mint?: string): Promise<WalletBalance> {
-    throw new Error("Method not implemented.");
+
+  async getBalance(
+    publicKey: string,
+    mint: string = "SOL"
+  ): Promise<WalletBalance> {
+    const manager = this.ensureInitialized();
+
+    try {
+      const balance = manager.getBalance(publicKey, mint);
+
+      return {
+        publicKey,
+        balance: balance.toString(),
+        mint,
+      };
+    } catch (error) {
+      console.error("Failed to get balance:", error);
+      throw new WalletServiceError(
+        "Failed to get balance",
+        WalletErrorCodes.NETWORK_ERROR,
+        error
+      );
+    }
   }
-  sendTokens(request: SendTokensRequest): Promise<string> {
-    throw new Error("Method not implemented.");
+
+  async sendTokens(request: SendTokensRequest): Promise<string> {
+    const manager = this.ensureInitialized();
+
+    try {
+      const wasmRequest = {
+        from_pubkey: request.fromPubkey,
+        to_pubkey: request.toPubkey,
+        amount: request.amount,
+        mint: request.mint || "SOL",
+      };
+
+      const signature = await manager.sendTokens(wasmRequest);
+      return signature;
+    } catch (error) {
+      console.error("Failed to send tokens:", error);
+      throw new WalletServiceError(
+        "Failed to send tokens",
+        WalletErrorCodes.UNKNOWN_ERROR,
+        error
+      );
+    }
   }
-  changePassword(request: ChangePasswordRequest): Promise<void> {
-    throw new Error("Method not implemented.");
+
+  async changePassword(request: ChangePasswordRequest): Promise<void> {
+    const manager = this.ensureInitialized();
+
+    try {
+      await manager.changePassword(
+        request.publicKey,
+        request.oldPassword,
+        request.newPassword
+      );
+    } catch (error) {
+      console.error("Failed to change password:", error);
+      throw new WalletServiceError(
+        "Failed to change password",
+        WalletErrorCodes.INVALID_PASSWORD,
+        error
+      );
+    }
   }
-  getActiveWallet(): Promise<WalletInfo | null> {
-    throw new Error("Method not implemented.");
+
+  async getActiveWallet(): Promise<WalletInfo | null> {
+    const manager = this.ensureInitialized();
+
+    try {
+      const wallet = await manager.getActiveWallet();
+
+      if (!wallet) {
+        return null;
+      }
+      return {
+        publicKey: wallet.public_key,
+        name: wallet.name,
+        balance: wallet.balance || "0",
+        isActive: true,
+      };
+    } catch (error) {
+      console.error("Failed to get active wallet:", error);
+      throw new WalletServiceError(
+        "Failed to get active wallet",
+        WalletErrorCodes.UNKNOWN_ERROR,
+        error
+      );
+    }
   }
-  setActiveWallet(publicKey: string): Promise<void> {
-    throw new Error("Method not implemented.");
+
+  async setActiveWallet(publicKey: string): Promise<void> {
+    const manager = this.ensureInitialized();
+
+    try {
+      await manager.setActiveWallet(publicKey);
+    } catch (error) {
+      console.error("Failed to set active wallet:", error);
+      throw new WalletServiceError(
+        "Failed to set active wallet",
+        WalletErrorCodes.WALLET_NOT_FOUND,
+        error
+      );
+    }
   }
-  refreshActiveWalletBalance(): Promise<WalletBalance> {
-    throw new Error("Method not implemented.");
+
+  async refreshActiveWalletBalance(): Promise<WalletBalance> {
+    const manager = this.ensureInitialized();
+
+    try {
+      const result = await manager.refreshActiveWalletBalance();
+
+      return {
+        publicKey: result.public_key,
+        balance: result.balance,
+        mint: result.mint || "SOL",
+      };
+    } catch (error) {
+      console.error("Failed to refresh balance:", error);
+      throw new WalletServiceError(
+        "Failed to refresh balance",
+        WalletErrorCodes.NETWORK_ERROR,
+        error
+      );
+    }
   }
-  cleanupInactiveWallets(): Promise<void> {
-    throw new Error("Method not implemented.");
+
+  async cleanupInactiveWallets(): Promise<void> {
+    const manager = this.ensureInitialized();
+
+    try {
+      await manager.cleanupInactiveWallets();
+    } catch (error) {
+      console.error("Failed to cleanup wallets:", error);
+      console.warn("Cleanup failed, but continuing...");
+    }
   }
 }
