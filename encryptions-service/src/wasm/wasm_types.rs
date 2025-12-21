@@ -64,12 +64,12 @@ pub struct ParsedAccount {
     pub space: u64,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct UiDataSliceConfig {
-    pub offset: usize,
-    pub length: usize,
-}
+// #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+// #[serde(rename_all = "camelCase")]
+// pub struct UiDataSliceConfig {
+//     pub offset: usize,
+//     pub length: usize,
+// }
 
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]

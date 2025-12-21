@@ -1,8 +1,7 @@
 use std::error::Error;
 
 use solana_sdk::pubkey::Pubkey;
-use wallet_models::domain::models::token_models::TokenBalance;
-use crate::{wasm::{wasm_rpc_client::SolanaRpcProvider, wasm_types::UiAccountData}};
+use crate::wasm::{models::TokenBalance, wasm_rpc_client::SolanaRpcProvider, wasm_types::UiAccountData};
 use async_trait::async_trait;
 use reqwest::{self, Url};
 use serde::Deserialize;

@@ -1,14 +1,14 @@
 use std::str::FromStr;
-
+use wallet_models::domain::models::acc_data::Network;
+use wasm_bindgen::prelude::*;
 use crate::wasm::wasm_encryptions::SecureString;
 use serde::{Deserialize, Serialize};
-use serde_json::to_string;
 use solana_sdk::pubkey::Pubkey;
 use tsify::Tsify;
 use wasm_bindgen::{JsValue};
 
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Serialize, Deserialize, Tsify)]
+#[tsify(from_wasm_abi)]
 pub struct CreateWalletRequest {
     pub password: String,
     #[serde(default)]
@@ -21,7 +21,8 @@ pub struct CreateWalletRequest {
     pub keystore_timeout_secs: Option<u64>,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize, Tsify)]
+#[tsify(from_wasm_abi)]
 pub struct SendTokensRequest {
     pub from: String,
     pub to: String,
@@ -29,7 +30,8 @@ pub struct SendTokensRequest {
     pub mint: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize, Tsify)]
+#[tsify(from_wasm_abi)]
 pub struct UnlockWalletRequest {
     pub pubkey: String,
     password: String,
@@ -63,9 +65,34 @@ pub struct WalletCreationResult {
     pub mnemonic_phrase: SecureString,
 }
 
-#[derive(Tsify, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi)]
 pub struct JsWalletCreationResult {
     pub pubkey: String,
     pub recovery_phrase: String,
+}
+
+
+#[derive(Serialize, Deserialize, Debug, Clone, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub struct TokenBalance {
+    pub mint: String,
+    pub symbol: String,
+    pub amount: String,
+    pub raw: String,
+    pub decimals: u8,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub usd_price: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub token_program: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize,Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub struct WalletInfo {
+    pub pubkey: Pubkey,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub display_name: Option<String>,
+    pub network: Network,
+    pub is_unlocked: bool,
 }

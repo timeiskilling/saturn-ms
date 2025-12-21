@@ -2,7 +2,7 @@ use async_lock::RwLock;
 use serde::{Deserialize, Serialize};
 use solana_sdk::{pubkey::Pubkey, signature::Signature};
 use std::{collections::HashMap, rc::Rc, sync::Arc, time::Duration};
-use wallet_models::domain::models::{acc_data::Network, token_models::TokenBalance};
+use wallet_models::domain::models::{acc_data::Network};
 use zeroize::Zeroizing;
 
 // #[cfg(target_arch = "wasm32")]
@@ -19,7 +19,7 @@ use crate::{
     },
     traits::signer_wraper::{SaturnSigner, SecureKeystore, SolanaKeypairSigner},
     wasm::{
-        models::WalletCreationResult,
+        models::{TokenBalance, WalletCreationResult, WalletInfo},
         wasm_encryptions::{
             CryptoError, CryptoVault, EncryptionParams, SecureString, create_encrypt_data, encrypt_seed_with_verification, keypair_from_seed
         },
@@ -155,7 +155,7 @@ impl WalletManager {
         })
     }
 
-    pub async fn unclok_wallet(
+    pub async fn unlock_wallet(
         &self,
         pubkey: &Pubkey,
         password: SecureString,
@@ -550,12 +550,4 @@ impl WalletManager {
     //         }
     //     });
     // }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct WalletInfo {
-    pub pubkey: Pubkey,
-    pub display_name: Option<String>,
-    pub network: Network,
-    pub is_unlocked: bool,
 }

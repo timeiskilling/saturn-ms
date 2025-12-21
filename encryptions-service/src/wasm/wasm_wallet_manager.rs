@@ -16,14 +16,7 @@ use crate::{
     error_handling::error_code::{KeystoreError, RpcError, ValidationError, WalletError},
 };
 
-#[wasm_bindgen(typescript_custom_section)]
-const TS_INTERFACES: &'static str = r#"
-export interface WalletBalance {
-    amount: string;
-    decimals: number;
-    uiAmount: number | null;
-}
-"#;
+
 
 #[wasm_bindgen]
 pub struct WasmWalletManager {
@@ -40,10 +33,7 @@ impl WasmWalletManager {
 #[wasm_bindgen]
 impl WasmWalletManager {
     #[wasm_bindgen(js_name = createWallet)]
-    pub async fn create_wallet(&self, request_js: JsValue) -> Result<JsValue, JsValue> {
-        let request: CreateWalletRequest = serde_wasm_bindgen::from_value(request_js)
-            .map_err(|e| JsValue::from_str(&format!("Invalid request format: {}", e)))?;
-
+    pub async fn create_wallet(&self, request: CreateWalletRequest) -> Result<JsWalletCreationResult, JsValue> {
         let password = SecureString::new(request.password);
         let secure_bip39 = request.bip39_passphrase.map(SecureString::from);
         let network = parse_network(request.network)?;
@@ -66,39 +56,29 @@ impl WasmWalletManager {
             pubkey: result.pubkey.to_string(),
             recovery_phrase: result.mnemonic_phrase.as_str().to_string(),
         };
-        
-        let result_value = serde_wasm_bindgen::to_value(&js_result)
-             .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))?;
 
-        Ok(result_value)
+        Ok(js_result)
     }
 
     #[wasm_bindgen(js_name = unlockWallet)]
     pub async fn unlock_wallet(
         &self,
-        request_js: JsValue
-    ) -> Result<JsValue, JsValue> {
-
-        let request: UnlockWalletRequest = serde_wasm_bindgen::from_value(request_js)
-            .map_err(|e| JsValue::from_str(&format!("Invalid request format: {}", e)))?;
-              
+        request: UnlockWalletRequest
+    ) -> Result<bool, JsValue> {
         let secure_pass = request.get_secure_data()?;
 
         let manager = self.inner.read().await;
 
         manager
-            .unclok_wallet(&secure_pass.pubkey, secure_pass.password)
+            .unlock_wallet(&secure_pass.pubkey, secure_pass.password)
             .await
             .map_err(|e| JsValue::from_str(&format!("Failed to unlock wallet: {}", e)))?;
 
-        Ok(JsValue::from_bool(true))
+        Ok(true)
     }
 
     #[wasm_bindgen(js_name = sendTokens)]
-    pub async fn send_tokens(&self, request_js: JsValue) -> Result<JsValue, JsValue> {
-        let request: SendTokensRequest = serde_wasm_bindgen::from_value(request_js)
-            .map_err(|e| JsValue::from_str(&format!("Invalid request format: {}", e)))?;
-
+    pub async fn send_tokens(&self, request: SendTokensRequest) -> Result<String, JsValue> {
         let from_pubkey = Pubkey::from_str(&request.from)
             .map_err(|e| JsValue::from_str(&format!("Invalid sender address: {}", e)))?;
 
@@ -131,12 +111,11 @@ impl WasmWalletManager {
                 _ => JsValue::from_str(&format!("Transaction failed: {}", e)),
             })?;
 
-        let signature_str = signature.to_string();
-        Ok(JsValue::from_str(&signature_str))
+        Ok(signature.to_string())
     }
 
     #[wasm_bindgen(js_name = getBalance)]
-    pub async fn get_balance(&self, pubkey: String, mint: String) -> Result<JsValue, JsValue> {
+    pub async fn get_balance(&self, pubkey: String, mint: String) -> Result<Option<TokenBalance>, JsValue> {
         let pubkey = Pubkey::from_str(&pubkey)
             .map_err(|e| JsValue::from_str(&format!("Invalid sender address: {}", e)))?;
 
@@ -155,14 +134,11 @@ impl WasmWalletManager {
                 e => JsValue::from_str(&format!("Failed to fetch balance: {:?}", e)),
             })?;
 
-        let result_js = serde_wasm_bindgen::to_value(&balance)
-            .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))?;
-
-        Ok(result_js)
+        Ok(balance)
     }
 
     #[wasm_bindgen(js_name = refreshBalance)]
-    pub async fn refresh_balances(&self, pubkey: String) -> Result<JsValue, JsValue> {
+    pub async fn refresh_balances(&self, pubkey: String) -> Result<bool, JsValue> {
         let pubkey = Pubkey::from_str(&pubkey)
             .map_err(|e| JsValue::from_str(&format!("Invalid sender address: {}", e)))?;
 
@@ -178,11 +154,11 @@ impl WasmWalletManager {
                     e => JsValue::from_str(&format!("Failed to fetch balance: {:?}", e)),
                 })?;
                 
-        Ok(JsValue::from_bool(true))
+        Ok(true)
     }
 
     #[wasm_bindgen(js_name = refreshActiveWalletBalance)]
-    pub async fn refresh_active_wallet_balances(&self) -> Result<JsValue, JsValue> {
+    pub async fn refresh_active_wallet_balances(&self) -> Result<bool, JsValue> {
         let manager = self.inner.read().await;
 
         manager
@@ -195,7 +171,7 @@ impl WasmWalletManager {
                     e => JsValue::from_str(&format!("Failed to fetch balance: {:?}", e)),
                 })?;
                 
-        Ok(JsValue::TRUE)
+        Ok(true)
     }
 
     #[wasm_bindgen(js_name = changePassword)]
@@ -204,7 +180,7 @@ impl WasmWalletManager {
         pubkey_str: String,
         old_password: String,
         new_password: String,
-    ) -> Result<JsValue, JsValue> {
+    ) -> Result<bool, JsValue> {
 
         let pubkey = Pubkey::from_str(&pubkey_str)
             .map_err(|e| JsValue::from_str(&format!("Invalid pubkey: {}", e)))?;
@@ -218,11 +194,11 @@ impl WasmWalletManager {
             .await
             .map_err(|e| JsValue::from_str(&format!("Change password failed: {:?}", e)))?;
 
-        Ok(JsValue::TRUE)
+        Ok(true)
     }
 
     #[wasm_bindgen(js_name = setActiveWallet)]
-    pub async fn set_active_wallet(&self, pubkey_str: String) -> Result<JsValue, JsValue> {
+    pub async fn set_active_wallet(&self, pubkey_str: String) -> Result<bool, JsValue> {
         let pubkey = Pubkey::from_str(&pubkey_str)
             .map_err(|e| JsValue::from_str(&format!("Invalid pubkey: {}", e)))?;
 
@@ -232,29 +208,25 @@ impl WasmWalletManager {
             .await
             .map_err(|e| JsValue::from_str(&format!("Failed to set active wallet: {:?}", e)))?;
 
-        Ok(JsValue::TRUE)
+        Ok(true)
     }
 
     #[wasm_bindgen(js_name = getActiveWallet)]
-    pub async fn get_active_wallet(&self) -> Result<JsValue, JsValue> {
+    pub async fn get_active_wallet(&self) -> Result<Option<WalletInfo>, JsValue> {
         let manager = self.inner.read().await;
 
         let wallet_info = manager.get_active_wallet().await;
 
-        serde_wasm_bindgen::to_value(&wallet_info)
-            .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
+        Ok(wallet_info)
     }
 
     #[wasm_bindgen(js_name = listWallets)]
-    pub async fn list_wallets(&self) -> Result<JsValue, JsValue> {
+    pub async fn list_wallets(&self) -> Result<Vec<WalletInfo>, JsValue> {
         let manager = self.inner.read().await;
 
         let wallets = manager.list_wallets().await;
 
-        let js_value = serde_wasm_bindgen::to_value(&wallets)
-            .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))?;
-
-        Ok(js_value)
+        Ok(wallets)
     }
 
     #[wasm_bindgen(js_name = cleanupInactiveWallets)]

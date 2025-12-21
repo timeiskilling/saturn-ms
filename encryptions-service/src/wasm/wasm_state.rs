@@ -2,9 +2,9 @@ use std::{collections::HashMap, rc::Rc, str::FromStr, sync::Arc};
 
 use solana_sdk::pubkey::Pubkey;
 use async_lock::RwLock;
-use wallet_models::domain::models::{acc_data::Network, token_models::TokenBalance};
+use wallet_models::domain::models::{acc_data::Network};
 
-use crate::{error_handling::error_code::{TokenError, WalletError}, wasm::{wasm_rpc_client::SolanaRpcProvider, wasm_token_acc_info::{TokenMetaDataProvider, get_valid_tokens}}};
+use crate::{error_handling::error_code::{TokenError, WalletError}, wasm::{models::TokenBalance, wasm_rpc_client::SolanaRpcProvider, wasm_token_acc_info::{TokenMetaDataProvider, get_valid_tokens}}};
 
 
 // #[cfg(target_arch = "wasm32")]
