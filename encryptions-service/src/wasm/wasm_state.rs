@@ -1,23 +1,36 @@
 use std::{collections::HashMap, rc::Rc, str::FromStr, sync::Arc};
 
-use solana_sdk::pubkey::Pubkey;
 use async_lock::RwLock;
-use wallet_models::domain::models::{acc_data::Network};
+use solana_sdk::pubkey::Pubkey;
+use wallet_models::domain::models::acc_data::Network;
 
-use crate::{error_handling::error_code::{TokenError, WalletError}, wasm::{models::TokenBalance, wasm_rpc_client::SolanaRpcProvider, wasm_token_acc_info::{TokenMetaDataProvider, get_valid_tokens}}};
-
+use crate::{
+    error_handling::error_code::{TokenError, WalletError},
+    wasm::{
+        models::TokenBalance,
+        wasm_rpc_client::SolanaRpcProvider,
+        wasm_token_acc_info::{TokenMetaDataProvider, get_valid_tokens},
+    },
+};
 
 // #[cfg(target_arch = "wasm32")]
 pub trait WalletSaturnManager {
     fn get_pubkey(&self) -> &Pubkey;
     fn get_network(&self) -> Network;
     fn get_display_name(&self) -> Option<&str>;
-    
-    fn refresh_balances(&self, provider: &dyn TokenMetaDataProvider) 
-        -> impl std::future::Future<Output = Result<(), WalletError>>;
-    
-    fn get_token_balance(&self, mint: &Pubkey) 
-        -> impl std::future::Future<Output = Option<TokenBalance>>;
+
+    fn refresh_balances(
+        &self,
+        provider: &dyn TokenMetaDataProvider,
+    ) -> impl std::future::Future<Output = Result<(), WalletError>>;
+
+    fn get_token_balance(
+        &self,
+        mint: &Pubkey,
+    ) -> impl std::future::Future<Output = Option<TokenBalance>>;
+
+    fn get_all_token_balances(&self) 
+        -> impl std::future::Future<Output = Vec<TokenBalance>>;
 }
 
 // #[cfg(target_arch = "wasm32")]
@@ -65,11 +78,14 @@ impl WalletSaturnManager for WasmSaturnWalletState {
         self.display_name.as_deref()
     }
 
-    async fn refresh_balances(&self, provider: &dyn TokenMetaDataProvider) -> Result<(), WalletError> {
+    async fn refresh_balances(
+        &self,
+        provider: &dyn TokenMetaDataProvider,
+    ) -> Result<(), WalletError> {
         let new_balances = get_valid_tokens(self.rpc_client.as_ref(), &self.pubkey, provider)
             .await
             .map_err(|e| WalletError::Io(e.to_string()))?;
-        
+
         let mut balances = self.token_balances.write().await;
         balances.clear();
 
@@ -88,5 +104,10 @@ impl WalletSaturnManager for WasmSaturnWalletState {
     async fn get_token_balance(&self, mint: &Pubkey) -> Option<TokenBalance> {
         let balances = self.token_balances.read().await;
         balances.get(mint).cloned()
+    }
+
+    async fn get_all_token_balances(&self) -> Vec<TokenBalance> {
+        let balances = self.token_balances.read().await;
+        balances.values().cloned().collect()
     }
 }

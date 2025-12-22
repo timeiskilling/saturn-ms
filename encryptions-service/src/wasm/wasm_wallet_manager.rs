@@ -138,13 +138,13 @@ impl WasmWalletManager {
     }
 
     #[wasm_bindgen(js_name = refreshBalance)]
-    pub async fn refresh_balances(&self, pubkey: String) -> Result<bool, JsValue> {
+    pub async fn refresh_balances(&self, pubkey: String) -> Result<Vec<TokenBalance>, JsValue> {
         let pubkey = Pubkey::from_str(&pubkey)
             .map_err(|e| JsValue::from_str(&format!("Invalid sender address: {}", e)))?;
 
         let manager = self.inner.read().await;
 
-        manager
+        let balance = manager
                 .refresh_balances(&pubkey)
                 .await
                 .map_err(|err| match err {
@@ -154,14 +154,14 @@ impl WasmWalletManager {
                     e => JsValue::from_str(&format!("Failed to fetch balance: {:?}", e)),
                 })?;
                 
-        Ok(true)
+        Ok(balance)
     }
 
     #[wasm_bindgen(js_name = refreshActiveWalletBalance)]
-    pub async fn refresh_active_wallet_balances(&self) -> Result<bool, JsValue> {
+    pub async fn refresh_active_wallet_balances(&self) -> Result<Vec<TokenBalance>, JsValue> {
         let manager = self.inner.read().await;
 
-        manager
+        let balance = manager
                 .refresh_active_wallet_balances()
                 .await
                 .map_err(|err| match err {
@@ -171,7 +171,7 @@ impl WasmWalletManager {
                     e => JsValue::from_str(&format!("Failed to fetch balance: {:?}", e)),
                 })?;
                 
-        Ok(true)
+        Ok(balance)
     }
 
     #[wasm_bindgen(js_name = changePassword)]

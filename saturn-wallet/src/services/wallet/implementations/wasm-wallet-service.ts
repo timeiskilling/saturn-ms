@@ -208,7 +208,7 @@ export class WasmWalletService implements IWalletService {
         return null;
       }
       return {
-        publicKey: wallet.public_key,
+        publicKey: wallet.publickey,
         name: wallet.name,
         balance: wallet.balance || "0",
         isActive: true,

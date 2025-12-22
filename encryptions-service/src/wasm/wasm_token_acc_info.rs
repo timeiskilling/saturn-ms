@@ -1,15 +1,17 @@
 use std::error::Error;
 
-use solana_sdk::pubkey::Pubkey;
-use crate::wasm::{models::TokenBalance, wasm_rpc_client::SolanaRpcProvider, wasm_types::UiAccountData};
+use solana_sdk::pubkey::{Pubkey};
+use crate::wasm::{models::TokenBalance, wasm_rpc_client::SolanaRpcProvider, wasm_types::{RpcKeyedAccount, UiAccountData}};
 use async_trait::async_trait;
 use reqwest::{self, Url};
 use serde::Deserialize;
 use std::collections::HashMap;
-
+use futures::future::join;
 
 type AsyncResult<T> = Result<T, Box<dyn Error + Send + Sync>>;
 const SPL_TOKEN_ID: Pubkey = spl_token::ID;
+const SPL_TOKEN_2022_ID: Pubkey = Pubkey::from_str_const("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb");
+
 #[derive(Debug, Deserialize)]
 pub struct TokenInfo {
     pub id: String,
@@ -138,16 +140,35 @@ async fn get_token_balances(
     rpc: &dyn SolanaRpcProvider,
     owner: &Pubkey,
 ) -> AsyncResult<Vec<TokenBalance>> {
-    let token_accounts = rpc
-        .get_token_accounts_by_owner(owner, &SPL_TOKEN_ID)
-        .await?;
+    let legacy_future = rpc.get_token_accounts_by_owner(owner, &SPL_TOKEN_ID);
+    let token22_future = rpc.get_token_accounts_by_owner(owner, &SPL_TOKEN_2022_ID);
 
-    let mut balances = Vec::new();
 
-    for keyed_account in token_accounts {
-        if let UiAccountData::Json(parsed_account) =
-            &keyed_account.account.data
-        {
+    let (legacy_res, token22_res) = join(legacy_future, token22_future).await;
+
+    let legacy_accounts = legacy_res.unwrap_or_else(|e| {
+        web_sys::console::error_1(&format!("Legacy fetch error: {:?}", e).into());
+        vec![]
+    });
+
+    let token22_accounts = token22_res.unwrap_or_else(|e| {
+        web_sys::console::error_1(&format!("Token22 fetch error: {:?}", e).into());
+        vec![]
+    });
+
+    let mut all_balances = Vec::with_capacity(legacy_accounts.len() + token22_accounts.len());
+   
+    all_balances.extend(parse_token_accounts(legacy_accounts, &SPL_TOKEN_ID.to_string()));
+    all_balances.extend(parse_token_accounts(token22_accounts, &SPL_TOKEN_2022_ID.to_string()));
+
+    Ok(all_balances)
+}
+
+fn parse_token_accounts(accounts: Vec<RpcKeyedAccount>, program_id: &str) -> Vec<TokenBalance> {
+    let mut parsed_balances = Vec::new();
+
+    for keyed_account in accounts {
+        if let UiAccountData::Json(parsed_account) = &keyed_account.account.data {
             let info = parsed_account.parsed.get("info");
             let token_amount = info.and_then(|i| i.get("tokenAmount"));
 
@@ -175,18 +196,22 @@ async fn get_token_balances(
                     .and_then(|d| d.as_u64())
                     .unwrap_or(0) as u8;
 
-                balances.push(TokenBalance {
+                if raw == "0" {
+                    continue;
+                }
+
+                parsed_balances.push(TokenBalance {
                     mint,
                     symbol: String::new(),
                     amount,
                     raw,
                     decimals,
-                    usd_price: None,
-                    token_program: None,
+                    usd_price: None, 
+                    token_program: Some(program_id.to_string()), 
                 });
             }
         }
     }
 
-    Ok(balances)
+    parsed_balances
 }

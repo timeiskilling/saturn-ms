@@ -237,7 +237,7 @@ impl WalletManager {
         Ok(entry.wallet_state.get_token_balance(mint).await)
     }
 
-    pub async fn refresh_balances(&self, pubkey: &Pubkey) -> Result<(), WalletError> {
+    pub async fn refresh_balances(&self, pubkey: &Pubkey) -> Result<Vec<TokenBalance>, WalletError> {
         let wallets = self.wallets.read().await;
 
         let entry = wallets.get(pubkey).ok_or_else(|| {
@@ -255,11 +255,11 @@ impl WalletManager {
             wallet = %pubkey,
             "Balances refreshed successfully"
         );
-
-        Ok(())
+        
+        Ok(entry.wallet_state.get_all_token_balances().await)
     }
 
-    pub async fn refresh_active_wallet_balances(&self) -> Result<(), WalletError> {
+    pub async fn refresh_active_wallet_balances(&self) -> Result<Vec<TokenBalance>, WalletError> {
         let active = self.active_wallet.read().await;
 
         if let Some(pubkey) = *active {
