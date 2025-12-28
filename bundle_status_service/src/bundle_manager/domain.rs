@@ -250,6 +250,7 @@ impl RedisBundleTracker {
                 //1
                 .await
                 .unwrap();
+            
             let response: InflightBundleStatusResponse =
                 serde_json::from_value(status_response).unwrap();
 

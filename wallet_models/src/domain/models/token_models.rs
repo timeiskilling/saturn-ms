@@ -10,3 +10,4 @@ pub struct TokenBalance {
     pub usd_price: Option<f64>,
     pub token_program : Option<String>,
 }
+

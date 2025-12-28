@@ -23,7 +23,7 @@ struct BatchTask {
 
 pub struct BatchedRpcClient {
     queue_sender: mpsc::Sender<BatchTask>,
-    transport: Arc<dyn HttpTransport>,
+    transport: Arc<dyn HttpTransport>,  
     config: BatchConfig,
     request_counter: AtomicU64,
 }

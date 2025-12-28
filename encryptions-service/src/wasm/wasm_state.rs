@@ -1,3 +1,5 @@
+#![cfg(target_arch = "wasm32")]
+
 use std::{collections::HashMap, rc::Rc, str::FromStr, sync::Arc};
 
 use async_lock::RwLock;

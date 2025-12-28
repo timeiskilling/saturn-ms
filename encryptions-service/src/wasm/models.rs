@@ -1,3 +1,5 @@
+#![cfg(target_arch = "wasm32")]
+
 use std::str::FromStr;
 use wallet_models::domain::models::acc_data::Network;
 use wasm_bindgen::prelude::*;

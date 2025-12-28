@@ -48,7 +48,7 @@ spl-token-interface = "1.0.0"
 web-time = "1.1.0"
 
 
-# [target.'cfg(target_arch = "wasm32")'.dependencies]
+[target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2.106"
 wasm-bindgen-futures = "0.4.56"
 js-sys = "0.3.83"
@@ -64,8 +64,8 @@ futures = "0.3"
 reqwest = { version = "0.12.23", features = ["json", "default-tls"] }
 tsify = "0.5.6"
 
-# [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 tokio = { version = "1.48.0", features = ["full"] }
-# reqwest = { version = "0.12.26", features = ["json"] }
+reqwest = { version = "0.12.26", features = ["json"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 solana-client = "2.3.7"

@@ -1,3 +1,5 @@
+#![cfg(target_arch = "wasm32")]
+
 use async_lock::RwLock;
 use serde::{Deserialize, Serialize};
 use solana_sdk::{pubkey::Pubkey, signature::Signature};

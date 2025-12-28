@@ -83,12 +83,10 @@ impl JupiterTrader {
             // atl_pubkey: create_atl(&keypair, &client).await,
             client,
             http_client,
-            // keypair: Arc::new(keypair),
             jupiter_base_url,
             jito_endpoint,
             jupiter_ultra_url,
             redis: Mutex::new(redis_con::connection::redis_conn(&config).await),
-            // shared_price_state: Arc::new(Mutex::new(HashMap::new())),
             jito_tip_redis: Arc::new(Mutex::new(
                 redis_con::connection::jito_tip_redis_conn(&config).await,
             )),

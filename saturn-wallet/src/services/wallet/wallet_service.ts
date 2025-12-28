@@ -1,3 +1,5 @@
+import type { TokenBalance } from "encryptions-service";
+
 export interface WalletInfo {
   publicKey: string;
   name: string;
@@ -51,7 +53,7 @@ export interface IWalletService {
   changePassword(request: ChangePasswordRequest): Promise<void>;
   getActiveWallet(): Promise<WalletInfo | null>;
   setActiveWallet(publicKey: string): Promise<void>;
-  refreshActiveWalletBalance(): Promise<WalletBalance>;
+  refreshActiveWalletBalance(): Promise<TokenBalance[]>;
   cleanupInactiveWallets(): Promise<void>;
 }
 

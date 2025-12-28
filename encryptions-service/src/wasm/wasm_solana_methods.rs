@@ -1,3 +1,5 @@
+#![cfg(target_arch = "wasm32")]
+
 use solana_sdk::{instruction::Instruction, message::Message, pubkey::Pubkey, transaction::Transaction};
 use spl_token_interface::instruction::transfer_checked;
 

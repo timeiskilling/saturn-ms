@@ -1,3 +1,5 @@
+#![cfg(target_arch = "wasm32")]
+
 use std::error::Error;
 
 use solana_sdk::pubkey::{Pubkey};

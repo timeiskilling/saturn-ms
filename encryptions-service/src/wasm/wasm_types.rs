@@ -1,3 +1,5 @@
+#![cfg(target_arch = "wasm32")]
+
 use base64::{Engine, prelude::BASE64_STANDARD};
 use serde::{Deserialize,Serialize};
 use serde_json::Value;

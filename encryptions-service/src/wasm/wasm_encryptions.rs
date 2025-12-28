@@ -1,3 +1,5 @@
+#![cfg(target_arch = "wasm32")]
+
 use argon2::Params;
 use argon2::password_hash::rand_core::{OsRng as RandOsRng, RngCore};
 use argon2::{Argon2, password_hash::SaltString};
