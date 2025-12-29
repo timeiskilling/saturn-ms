@@ -7,6 +7,7 @@ import initWasm, {
   type SendTokensRequest as WasmSendTokensRequest,
   type CreateWalletRequest as WasmCreateWalletRequest,
   type TokenBalance,
+  type Pubkey,
 } from "encryptions-service";
 
 import {
@@ -27,6 +28,110 @@ export interface WasmWalletServiceConfig {
   jupiterUrl: string;
 }
 
+/**
+ * Type mappers to convert between WASM types and application domain types.
+ * These functions provide a clear boundary between the low-level WASM interface
+ * and our application's type system.
+ */
+class WasmTypeMapper {
+  /**
+   * Converts a WASM Pubkey object to a string representation.
+   * The Pubkey type from WASM has a toString() method we can use.
+   */
+  static pubkeyToString(pubkey: Pubkey): string {
+    return pubkey.toString();
+  }
+
+  /**
+   * Maps a WASM wallet info object to our application's WalletInfo type.
+   * Handles optional fields and provides sensible defaults.
+   */
+  static toWalletInfo(wasmWallet: WasmWalletInfo, isActive: boolean = false): WalletInfo {
+    return {
+      publicKey: this.pubkeyToString(wasmWallet.pubkey),
+      name: wasmWallet.display_name ?? "Unnamed Wallet",
+      balance: "0", // Balance is fetched separately to avoid unnecessary RPC calls
+      isActive,
+    };
+  }
+
+  /**
+   * Maps a WASM wallet creation result to our application's response type.
+   */
+  static toCreateWalletResponse(
+    wasmResult: JsWalletCreationResult,
+    requestedName?: string
+  ): CreateWalletResponse {
+    return {
+      publicKey: wasmResult.pubkey,
+      recoveryPhrase: wasmResult.recovery_phrase,
+      name: requestedName ?? "Unnamed Wallet",
+    };
+  }
+
+  /**
+   * Maps a WASM TokenBalance to our application's WalletBalance type.
+   * Handles the case where balance might be undefined.
+   */
+  static toWalletBalance(
+    publicKey: string,
+    tokenBalance: TokenBalance | undefined,
+    requestedMint: string
+  ): WalletBalance {
+    if (!tokenBalance) {
+      return {
+        publicKey,
+        balance: "0",
+        mint: requestedMint,
+      };
+    }
+
+    return {
+      publicKey,
+      balance: tokenBalance.amount,
+      mint: tokenBalance.mint,
+    };
+  }
+
+  /**
+   * Converts our application's create wallet request to the WASM format.
+   */
+  static toWasmCreateRequest(request: CreateWalletRequest): WasmCreateWalletRequest {
+    return {
+      password: request.password,
+      display_name: request.name ?? null,
+      bip39_passphrase: null,
+      network: null,
+      keystore_timeout_secs: null,
+    };
+  }
+
+  /**
+   * Converts our application's unlock request to the WASM format.
+   */
+  static toWasmUnlockRequest(request: UnlockWalletRequest): WasmUnlockRequest {
+    return {
+      pubkey: request.pubkey,
+      password: request.password,
+    };
+  }
+
+  /**
+   * Converts our application's send tokens request to the WASM format.
+   * Uses SOL mint address as default if not specified.
+   */
+  static toWasmSendRequest(request: SendTokensRequest): WasmSendTokensRequest {
+    const SOL_MINT = "So11111111111111111111111111111111111111112";
+    
+    return {
+      from: request.fromPubkey,
+      to: request.toPubkey,
+      amount: request.amount,
+      mint: request.mint ?? SOL_MINT,
+    };
+  }
+}
+
 export class WasmWalletService implements IWalletService {
   private walletManager: WasmWalletManager | null = null;
   private initialized = false;
@@ -40,10 +145,13 @@ export class WasmWalletService implements IWalletService {
     if (this.initialized) {
       return;
     }
+
     try {
+      // Initialize the WebAssembly module
       await initWasm();
       console.log("WASM module initialized");
 
+      // Create the wallet manager instance with RPC and Jupiter URLs
       this.walletManager = await create_wallet_manager(
         this.config.rpcUrl,
         this.config.jupiterUrl
@@ -65,6 +173,10 @@ export class WasmWalletService implements IWalletService {
     return this.initialized && this.walletManager !== null;
   }
 
+  /**
+   * Ensures the service is initialized before performing operations.
+   * Throws an error if called before initialization completes.
+   */
   private ensureInitialized(): WasmWalletManager {
     if (!this.isReady() || !this.walletManager) {
       throw new WalletServiceError(
@@ -75,29 +187,14 @@ export class WasmWalletService implements IWalletService {
     return this.walletManager;
   }
 
-  async createWallet(
-    request: CreateWalletRequest
-  ): Promise<CreateWalletResponse> {
+  async createWallet(request: CreateWalletRequest): Promise<CreateWalletResponse> {
     const manager = this.ensureInitialized();
 
     try {
-      const wasmRequest: WasmCreateWalletRequest = {
-        password: request.password,
-        display_name: request.name,
-        bip39_passphrase: null,
-        network: null,
-        keystore_timeout_secs: null,
-      };
-
-      const response: JsWalletCreationResult = await manager.createWallet(
-        wasmRequest
-      );
-
-      return {
-        publicKey: response.pubkey,
-        recoveryPhrase: response.recovery_phrase,
-        name: request.name,
-      };
+      const wasmRequest = WasmTypeMapper.toWasmCreateRequest(request);
+      const wasmResponse = await manager.createWallet(wasmRequest);
+      
+      return WasmTypeMapper.toCreateWalletResponse(wasmResponse, request.name);
     } catch (error) {
       console.error("Failed to create wallet:", error);
       throw new WalletServiceError(
@@ -112,14 +209,10 @@ export class WasmWalletService implements IWalletService {
     const manager = this.ensureInitialized();
 
     try {
-      const wallets: WasmWalletInfo[] = await manager.listWallets();
-
-      return wallets.map((wallet) => ({
-        publicKey: wallet.pubkey.toString(),
-        name: wallet.display_name || "Unnamed Wallet",
-        balance: "0",
-        isActive: false,
-      }));
+      const wasmWallets = await manager.listWallets();
+      
+      // Map each WASM wallet to our application's WalletInfo type
+      return wasmWallets.map(wallet => WasmTypeMapper.toWalletInfo(wallet));
     } catch (error) {
       console.error("Failed to list wallets:", error);
       throw new WalletServiceError(
@@ -134,11 +227,7 @@ export class WasmWalletService implements IWalletService {
     const manager = this.ensureInitialized();
 
     try {
-      const wasmRequest: WasmUnlockRequest = {
-        pubkey: request.pubkey,
-        password: request.password,
-      };
-
+      const wasmRequest = WasmTypeMapper.toWasmUnlockRequest(request);
       const success = await manager.unlockWallet(wasmRequest);
 
       if (!success) {
@@ -161,24 +250,9 @@ export class WasmWalletService implements IWalletService {
     const manager = this.ensureInitialized();
 
     try {
-      const balance: TokenBalance | undefined = await manager.getBalance(
-        publicKey,
-        mint
-      );
-
-      if (!balance) {
-        return {
-          publicKey,
-          balance: "0",
-          mint,
-        };
-      }
-
-      return {
-        publicKey,
-        balance: balance.amount,
-        mint: balance.mint,
-      };
+      const tokenBalance = await manager.getBalance(publicKey, mint);
+      
+      return WasmTypeMapper.toWalletBalance(publicKey, tokenBalance, mint);
     } catch (error) {
       console.error("Failed to get balance:", error);
       throw new WalletServiceError(
@@ -193,14 +267,9 @@ export class WasmWalletService implements IWalletService {
     const manager = this.ensureInitialized();
 
     try {
-      const wasmRequest: WasmSendTokensRequest = {
-        from: request.fromPubkey,
-        to: request.toPubkey,
-        amount: request.amount,
-        mint: request.mint || "So11111111111111111111111111111111111111112",
-      };
-
-      const signature: string = await manager.sendTokens(wasmRequest);
+      const wasmRequest = WasmTypeMapper.toWasmSendRequest(request);
+      const signature = await manager.sendTokens(wasmRequest);
+      
       return signature;
     } catch (error) {
       console.error("Failed to send tokens:", error);
@@ -216,7 +285,7 @@ export class WasmWalletService implements IWalletService {
     const manager = this.ensureInitialized();
 
     try {
-      const success: boolean = await manager.changePassword(
+      const success = await manager.changePassword(
         request.publicKey,
         request.oldPassword,
         request.newPassword
@@ -239,19 +308,13 @@ export class WasmWalletService implements IWalletService {
     const manager = this.ensureInitialized();
 
     try {
-      const wallet: WasmWalletInfo | undefined =
-        await manager.getActiveWallet();
+      const wasmWallet = await manager.getActiveWallet();
 
-      if (!wallet) {
+      if (!wasmWallet) {
         return null;
       }
 
-      return {
-        publicKey: wallet.pubkey.toString(),
-        name: wallet.display_name || "Unnamed Wallet",
-        balance: "0", // Another balance call refactor
-        isActive: true,
-      };
+      return WasmTypeMapper.toWalletInfo(wasmWallet, true);
     } catch (error) {
       console.error("Failed to get active wallet:", error);
       throw new WalletServiceError(
@@ -266,7 +329,7 @@ export class WasmWalletService implements IWalletService {
     const manager = this.ensureInitialized();
 
     try {
-      const success: boolean = await manager.setActiveWallet(publicKey);
+      const success = await manager.setActiveWallet(publicKey);
 
       if (!success) {
         throw new Error("Failed to set active wallet");
@@ -285,12 +348,9 @@ export class WasmWalletService implements IWalletService {
     const manager = this.ensureInitialized();
 
     try {
-      const success: TokenBalance[] = await manager.refreshActiveWalletBalance();
-
-      if (!success) {
-        throw new Error("Failed to refresh balance");
-      }
-      return success;
+      const balances = await manager.refreshActiveWalletBalance();
+      
+      return balances;
     } catch (error) {
       console.error("Failed to refresh balance:", error);
       throw new WalletServiceError(
@@ -308,6 +368,7 @@ export class WasmWalletService implements IWalletService {
       await manager.cleanupInactiveWallets();
     } catch (error) {
       console.error("Failed to cleanup wallets:", error);
+      // We log but don't throw here since cleanup is not critical
       console.warn("Cleanup failed, but continuing...");
     }
   }
