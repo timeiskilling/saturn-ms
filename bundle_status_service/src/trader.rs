@@ -38,7 +38,7 @@ use crate::{
         domain::{RedisBundleTracker, TrackerConfig},
     },
     constant::{self, HEADER_SIZE, MIN_JITO_TIP_LAMPORTS},
-    redis_con,
+    redis_con, revork::rpc_manager::JitoHttpManager,
 };
 
 // pub type SharedPriceState = Arc<Mutex<HashMap<String, DayTickerEvent>>>;
@@ -63,7 +63,7 @@ pub struct JupiterTrader {
 }
 
 impl JupiterTrader {
-    pub async fn new(rpc_url: &str, /*keypair: Keypair*/ redis_urls: Vec<String>) -> Self {
+    pub async fn new(rpc_url: &str, /*keypair: Keypair*/ redis_urls: Vec<String>,jito_manager: Arc<JitoHttpManager>) -> Self {
         let http_client = reqwest::Client::builder().build().unwrap();
         let client = solana_client::nonblocking::rpc_client::RpcClient::new_with_commitment(
             rpc_url.to_string(),
@@ -94,7 +94,7 @@ impl JupiterTrader {
             config,
             notification_system: Arc::new(UserStreamNotificationSystem::new()),
             bundle_status: Arc::new(
-                RedisBundleTracker::new(redis_urls, tracker_config)
+                RedisBundleTracker::new(redis_urls, tracker_config,jito_manager)
                     .await
                     .unwrap(),
             ),

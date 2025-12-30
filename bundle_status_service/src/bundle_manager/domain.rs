@@ -1,6 +1,5 @@
 use dashmap::DashMap;
 use futures::future::try_join_all;
-use jito_sdk_rust::JitoJsonRpcSDK;
 use redis::{AsyncCommands, RedisResult, Script};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, sync::Arc};
@@ -9,6 +8,7 @@ use tokio::time::{Duration, Instant};
 use tracing::{debug, error, info, warn};
 
 use crate::bundle_manager::client::{UserBundleUpdate, UserStreamNotificationSystem};
+use crate::revork::rpc_manager::JitoHttpManager;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BundleStatusResponse {
@@ -154,7 +154,7 @@ struct CachedBundle {
 
 pub struct RedisBundleTracker {
     redis_pool: Arc<Vec<Arc<Mutex<redis::aio::MultiplexedConnection>>>>,
-    jito_endpoint: Arc<JitoJsonRpcSDK>,
+    jito_manager: Arc<JitoHttpManager>,
     config: TrackerConfig,
     local_cache: Arc<DashMap<String, CachedBundle>>,
     batch_semaphore: Arc<Semaphore>,
@@ -194,12 +194,12 @@ struct TrackerMetrics {
 }
 
 impl RedisBundleTracker {
-    pub async fn new(redis_urls: Vec<String>, config: TrackerConfig) -> RedisResult<Self> {
+    pub async fn new(
+        redis_urls: Vec<String>,
+        config: TrackerConfig,
+        jito_manager: Arc<JitoHttpManager>,
+    ) -> RedisResult<Self> {
         let mut redis_pool = Vec::new();
-        let jito_endpoint = JitoJsonRpcSDK::new(
-            "https://mainnet.block-engine.jito.wtf/api/v1/transactions",
-            None,
-        );
         for url in redis_urls {
             let client = redis::Client::open(url)?;
             let conn = client.get_multiplexed_async_connection().await?;
@@ -208,7 +208,7 @@ impl RedisBundleTracker {
 
         Ok(Self {
             redis_pool: Arc::new(redis_pool),
-            jito_endpoint: Arc::new(jito_endpoint),
+            jito_manager,
             batch_semaphore: Arc::new(Semaphore::new(config.max_concurrent_batches)),
             lua_scripts: LuaScripts::new(),
             local_cache: Arc::new(DashMap::new()),
@@ -244,15 +244,26 @@ impl RedisBundleTracker {
             let redis = self.get_redis_connection(i);
             let mut conn = redis.lock().await;
 
-            let status_response = self
-                .jito_endpoint
+            let status_response = match self
+                .jito_manager
                 .get_in_flight_bundle_statuses(chunk.to_vec())
-                //1
                 .await
-                .unwrap();
-            
+            {
+                Ok(response) => response,
+                Err(e) => {
+                    error!("Failed to get in-flight bundle statuses: {}", e);
+                    continue; // Err(...)?
+                }
+            };
+
             let response: InflightBundleStatusResponse =
-                serde_json::from_value(status_response).unwrap();
+                match serde_json::from_value(status_response) {
+                    Ok(resp) => resp,
+                    Err(e) => {
+                        error!("Failed to parse inflight bundle status response: {}", e);
+                        continue;
+                    }
+                };
 
             for status in response.value.iter().flatten() {
                 let bundle_data = BundleStatusUpdate {
@@ -416,15 +427,16 @@ impl RedisBundleTracker {
                 if let Ok(bundle_data) = conn
                     .hget::<_, _, String>("bundle_tracker", &bundle_id)
                     .await
-                    && let Ok(bundle) = serde_json::from_str::<BundleStatusUpdate>(&bundle_data) {
-                        if let Some(cached) = self.local_cache.get(&bundle_id) {
-                            if cached.last_checked.elapsed() >= min_age {
-                                result.push(bundle);
-                            }
-                        } else {
+                    && let Ok(bundle) = serde_json::from_str::<BundleStatusUpdate>(&bundle_data)
+                {
+                    if let Some(cached) = self.local_cache.get(&bundle_id) {
+                        if cached.last_checked.elapsed() >= min_age {
                             result.push(bundle);
                         }
+                    } else {
+                        result.push(bundle);
                     }
+                }
             }
             Ok(result)
         }
@@ -451,14 +463,30 @@ impl RedisBundleTracker {
     }
 
     async fn process_inflight_chunk(&self, bundle_ids: Vec<String>) -> RedisResult<()> {
-        let status_response = self
-            .jito_endpoint
-            .get_in_flight_bundle_statuses(bundle_ids)
-            //2
+        let status_response = match self
+            .jito_manager
+            .get_in_flight_bundle_statuses(bundle_ids.clone())
             .await
-            .unwrap();
+        {
+            Ok(response) => response,
+            Err(e) => {
+                error!("Failed to get in-flight bundle statuses for chunk: {}", e);
+                self.metrics
+                    .errors
+                    .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                return Err(redis::RedisError::from((
+                    redis::ErrorKind::IoError,
+                    "Jito API error",
+                    e.to_string(),
+                )));
+            }
+        };
 
-        let response: InflightBundleStatusResponse = serde_json::from_value(status_response)?;
+        let response: InflightBundleStatusResponse = serde_json::from_value(status_response)
+            .map_err(|e| {
+                error!("Failed to parse inflight response: {}", e);
+                redis::RedisError::from((redis::ErrorKind::TypeError, "JSON parse error"))
+            })?;
 
         for status in response.value.into_iter().flatten() {
             let (new_stage, new_status) = match status.status.as_str() {
@@ -469,12 +497,7 @@ impl RedisBundleTracker {
             };
 
             if let Err(e) = self
-                .update_bundle_status(
-                    &status.bundle_id,
-                    new_status,
-                    new_stage,
-                    status.landed_slot,
-                )
+                .update_bundle_status(&status.bundle_id, new_status, new_stage, status.landed_slot)
                 .await
             {
                 error!("Failed to update bundle {}: {}", status.bundle_id, e);
@@ -508,11 +531,30 @@ impl RedisBundleTracker {
     }
 
     async fn process_landed_chunk(&self, bundle_ids: Vec<String>) -> RedisResult<()> {
-        let status_response = self.jito_endpoint.get_bundle_statuses(bundle_ids).
-        //3
-        await.unwrap();
+        let status_response = match self
+            .jito_manager
+            .get_bundle_statuses(bundle_ids.clone())
+            .await
+        {
+            Ok(response) => response,
+            Err(e) => {
+                error!("Failed to get bundle statuses for chunk: {}", e);
+                self.metrics
+                    .errors
+                    .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                return Err(redis::RedisError::from((
+                    redis::ErrorKind::IoError,
+                    "Jito API error",
+                    e.to_string(),
+                )));
+            }
+        };
 
-        let response: BundleStatusResponse = serde_json::from_value(status_response)?;
+        let response: BundleStatusResponse =
+            serde_json::from_value(status_response).map_err(|e| {
+                error!("Failed to parse bundle status response: {}", e);
+                redis::RedisError::from((redis::ErrorKind::TypeError, "JSON parse error"))
+            })?;
 
         for status in response.value.into_iter().flatten() {
             let (new_stage, new_status) = match status.confirmation_status.as_str() {
@@ -522,12 +564,7 @@ impl RedisBundleTracker {
             };
 
             if let Err(e) = self
-                .update_bundle_status(
-                    &status.bundle_id,
-                    new_status,
-                    new_stage,
-                    Some(status.slot),
-                )
+                .update_bundle_status(&status.bundle_id, new_status, new_stage, Some(status.slot))
                 .await
             {
                 error!("Failed to update bundle {}: {}", status.bundle_id, e);
@@ -545,9 +582,10 @@ impl RedisBundleTracker {
         let mut conn = redis.lock().await;
 
         if let Ok(bundle_data) = conn.hget::<_, _, String>("bundle_tracker", bundle_id).await
-            && let Ok(bundle) = serde_json::from_str::<BundleStatusUpdate>(&bundle_data) {
-                return Ok(bundle.version);
-            }
+            && let Ok(bundle) = serde_json::from_str::<BundleStatusUpdate>(&bundle_data)
+        {
+            return Ok(bundle.version);
+        }
 
         Ok(1)
     }
@@ -586,10 +624,11 @@ impl RedisBundleTracker {
         };
 
         if let Some(cached) = self.local_cache.get(bundle_id)
-            && !cached.stage.can_transition_to(&new_stage) {
-            &&  return Ok(());
+            && !cached.stage.can_transition_to(&new_stage)
+        {
+            return Ok(());
         }
-        
+
         let serialized = serde_json::to_string(&bundle_update)?;
 
         let redis = self.get_redis_connection(0);
@@ -622,14 +661,15 @@ impl RedisBundleTracker {
                 );
 
                 if let Some(notification_system) = &self.notification_system
-                    && old_status != new_status {
-                        notification_system.notify_bundle_change(
-                            bundle_id,
-                            old_status,
-                            new_stage.clone(),
-                            slot,
-                        );
-                    }
+                    && old_status != new_status
+                {
+                    notification_system.notify_bundle_change(
+                        bundle_id,
+                        old_status,
+                        new_stage.clone(),
+                        slot,
+                    );
+                }
 
                 self.metrics
                     .stage_transitions

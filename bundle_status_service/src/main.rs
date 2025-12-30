@@ -6,16 +6,21 @@ use tokio::sync::Semaphore;
 use tonic::{service::LayerExt, transport::Server};
 use tracing_subscriber::fmt::format::FmtSpan;
 
-use crate::{proto_service::{service_jupiter_status, TransactionService}, trader::JupiterTrader};
+use crate::{
+    proto_service::{TransactionService, service_jupiter_status},
+    revork::{retry_config::RetryConfig, rpc_manager::JitoHttpManager},
+    trader::JupiterTrader,
+};
 
 pub mod blockhash_data;
 pub mod bundle_manager;
-pub mod custom_builder;
 pub mod constant;
+pub mod custom_builder;
 pub mod proto_service;
 pub mod redis_con;
-pub mod trader;
+pub mod revork;
 pub mod test;
+pub mod trader;
 
 const SEMAPHORE_PERMITS: usize = 5;
 #[tokio::main]
@@ -31,10 +36,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "redis://localhost:6379".to_string(),
         "redis://localhost:6380".to_string(),
     ];
+
+    let jito_manager = Arc::new(JitoHttpManager::new(
+        "https://frankfurt.mainnet.block-engine.jito.wtf/api/v1".to_string(),
+        50,
+        RetryConfig::default(),
+        None,
+    ));
     let trader = Arc::new(
         JupiterTrader::new(
             "https://mainnet.helius-rpc.com/?api-key=bd7b24dd-d644-4612-a486-a5acb8427920",
             redis_url,
+            jito_manager
         )
         .await,
     );
@@ -42,14 +55,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let rpc_client = Arc::new(RpcClient::new(
         "https://mainnet.helius-rpc.com/?api-key=bd7b24dd-d644-4612-a486-a5acb8427920".to_string(),
     ));
-    
+
     let blockhash_cache = blockhash_data::BlockhashCache::new(rpc_client.clone());
 
     let trader_clone = trader.clone();
 
     // let data = send_bundle(trader_clone).await;
-    
-    
+
     tokio::spawn(async move {
         trader_clone.jito_tip_listener().await;
     });

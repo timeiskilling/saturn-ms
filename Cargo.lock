@@ -879,6 +879,7 @@ dependencies = [
  "config",
  "dashmap 6.1.0",
  "futures",
+ "governor 0.10.2",
  "jito-sdk-rust",
  "jupiter_trader_data",
  "pin-project",
