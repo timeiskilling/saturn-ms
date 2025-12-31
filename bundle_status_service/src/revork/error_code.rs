@@ -1,71 +1,94 @@
-use std::fmt::{self, write};
+use jupiter_trader_data::models::jupiter_models::Instruction;
+use std::fmt::{self};
+
+#[derive(Debug, Clone)]
+pub enum SaturnTransactionsServiceError {
+    Transaction(TransactionError),
+    Token(TokenError),
+    Validation(ValidationError),
+    JupiterError(JupiterReqestError),
+    ATlError(ATlError),
+    Redis(RedisErr),
+    BuildTransaction(BuildTransactionError),
+}
 
 #[derive(Debug, Clone)]
 pub enum WalletError {
     Encryption(EncryptionError),
-
     Keystore(KeystoreError),
-
     Rpc(RpcError),
-
     Transaction(TransactionError),
-
     Token(TokenError),
-
     Validation(ValidationError),
-
     State(StateError),
-
     MetadataProvider(MetadataProviderError),
-
     Io(String),
-
     Serialization(String),
-
     Internal(String),
-    
-    BlockhashRpcRequest
+    BlockhashRpcRequest,
+}
+
+#[derive(Debug, Clone)]
+pub enum RedisErr {
+    MgetALT { redis_issue: String },
+    QueryExecute {issue : String}
+}
+
+#[derive(Debug, Clone)]
+pub enum BuildTransactionError {
+    ConvertToSolana { instruction_metadata: Instruction },
+}
+
+#[derive(Debug, Clone)]
+pub enum ATlError {
+    PubkeyConvertingErr { pubkey: String, issue : String },
+    FetchALTs { alt_pubkeys: String },
+    ParseLookupTable { pubkey_header_size: String },
+    NotFound { pubkey: String },
+}
+
+#[derive(Debug, Clone)]
+pub enum JupiterReqestError {
+    QuotaCreatingReqest {
+        input_mint: String,
+        output_mint: String,
+    },
+
+    SwapInstructionReqest {
+        pubkey: String,
+    },
+
+    ParseResponseErr {
+        parsing_struct: String,
+    },
 }
 
 #[derive(Debug, Clone)]
 pub enum EncryptionError {
     InvalidPassword,
-
     DecryptionFailed { reason: String },
-
     EncryptionFailed { reason: String },
-
     InvalidSeedLength { expected: usize, got: usize },
-
     InvalidSalt { reason: String },
-
     InvalidCryptoParams { reason: String },
-
     UnsupportedEncryptionVersion { version: u8, supported: Vec<u8> },
-
     RandomGenerationFailed,
 }
 
 #[derive(Debug, Clone)]
 pub enum KeystoreError {
     Locked,
-
     Timeout {
         elapsed_seconds: u64,
         timeout_seconds: u64,
     },
-
     InvalidPassword,
-
     NotInitialized,
-
     AlreadyUnlocked,
-
     TooManyAttempts {
         attempts: usize,
         lockout_duration_seconds: u64,
     },
-
     SigningFailed {
         reason: String,
     },
@@ -77,18 +100,15 @@ pub enum RpcError {
         endpoint: String,
         reason: String,
     },
-
     Timeout {
         endpoint: String,
         timeout_ms: u64,
     },
-
     RpcMethodFailed {
         method: String,
         code: i64,
         message: String,
     },
-
     InvalidResponse {
         expected: String,
         got: String,
@@ -97,7 +117,6 @@ pub enum RpcError {
     NodeUnavailable {
         endpoint: String,
     },
-
     RateLimitExceeded {
         retry_after_seconds: Option<u64>,
     },
@@ -106,7 +125,6 @@ pub enum RpcError {
         required_lamports: u64,
         available_lamports: u64,
     },
-
     // ForUser(String),
 }
 
@@ -115,46 +133,37 @@ pub enum TransactionError {
     CreationFailed {
         reason: String,
     },
-
     SigningFailed {
         reason: String,
     },
-
     SendFailed {
         signature: Option<String>,
         reason: String,
     },
-
     ConfirmationTimeout {
         signature: String,
         timeout_seconds: u64,
     },
-
     Rejected {
         signature: String,
         reason: String,
     },
-
     SimulationFailed {
         logs: Vec<String>,
         error: String,
     },
-
     InsufficientTokenBalance {
         mint: String,
         required: u64,
         available: u64,
     },
-
     InvalidRecipient {
         address: String,
     },
-
     TransactionTooLarge {
         size_bytes: usize,
         max_bytes: usize,
     },
-
     BlockhashExpired,
 }
 
@@ -192,7 +201,6 @@ pub enum TokenError {
         got: u8,
     },
 }
-
 #[derive(Debug, Clone)]
 pub enum ValidationError {
     InvalidPublicKey {
@@ -230,7 +238,7 @@ pub enum ValidationError {
     },
 
     WalletNotFound {
-        pubkey : String,
+        pubkey: String,
     },
 
     NoActiveWallet,
@@ -291,6 +299,22 @@ pub enum MetadataProviderError {
     },
 }
 
+impl fmt::Display for SaturnTransactionsServiceError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            SaturnTransactionsServiceError::Transaction(e) => write!(f, "Transaction error: {}", e),
+            SaturnTransactionsServiceError::Token(e) => write!(f, "Token error: {}", e),
+            SaturnTransactionsServiceError::Validation(e) => write!(f, "Validation error: {}", e),
+            SaturnTransactionsServiceError::JupiterError(e) => write!(f, "Jupiter error: {}", e),
+            SaturnTransactionsServiceError::ATlError(e) => write!(f, "Atl error: {}", e),
+            SaturnTransactionsServiceError::Redis(e) => write!(f, "Redis error: {}", e),
+            SaturnTransactionsServiceError::BuildTransaction(e) => {
+                write!(f, "BuildTransaction error: {}", e)
+            }
+        }
+    }
+}
+
 impl fmt::Display for WalletError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -305,7 +329,7 @@ impl fmt::Display for WalletError {
             Self::Io(s) => write!(f, "I/O error: {}", s),
             Self::Serialization(s) => write!(f, "Serialization error: {}", s),
             Self::Internal(s) => write!(f, "Internal error: {}", s),
-            Self::BlockhashRpcRequest => write!(f, "Blockhash request error")
+            Self::BlockhashRpcRequest => write!(f, "Blockhash request error"),
         }
     }
 }
@@ -539,7 +563,9 @@ impl fmt::Display for ValidationError {
                 )
             }
             Self::NoActiveWallet => write!(f, "No active wallets"),
-            Self::WalletNotFound { pubkey } =>  write!(f, "Nit found wallets with pubkey: {}", pubkey),
+            Self::WalletNotFound { pubkey } => {
+                write!(f, "Nit found wallets with pubkey: {}", pubkey)
+            }
             Self::InvalidMnemonic { reason } => write!(f, "Invalid mnemonic: {}", reason),
             Self::EmptyField { field_name } => write!(f, "Field '{}' cannot be empty", field_name),
             Self::OutOfRange {
@@ -618,6 +644,67 @@ impl fmt::Display for MetadataProviderError {
     }
 }
 
+impl fmt::Display for JupiterReqestError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            JupiterReqestError::QuotaCreatingReqest {
+                input_mint,
+                output_mint,
+            } => write!(
+                f,
+                "Quota creating Err for inputMint: {}\n
+            outputMint: {}",
+                input_mint, output_mint
+            ),
+            JupiterReqestError::SwapInstructionReqest { pubkey } => {
+                write!(f, "Swap Instruction Reqest errr for Pubkey: {}", pubkey)
+            }
+            JupiterReqestError::ParseResponseErr { parsing_struct } => {
+                write!(f, "Fail to parse Jupiter response to {}", parsing_struct)
+            }
+        }
+    }
+}
+
+impl fmt::Display for RedisErr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            RedisErr::MgetALT { redis_issue } => write!(f, "MgetALT err: {}", redis_issue),
+            RedisErr::QueryExecute { issue } => write!(f, "Query execure err: {}", issue),
+        }
+    }
+}
+
+impl fmt::Display for ATlError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ATlError::PubkeyConvertingErr { pubkey ,issue} => {
+                write!(f, "Invalid parse pubkey from: {} because {}", pubkey,issue)
+            }
+            ATlError::FetchALTs { alt_pubkeys } => {
+                write!(f, "Invalid fetch alt from network: {}", alt_pubkeys)
+            }
+            ATlError::ParseLookupTable { pubkey_header_size } => {
+                write!(f, "Invalid header size from: {}", pubkey_header_size)
+            }
+            ATlError::NotFound { pubkey } => write!(f, "Not found atl pubkey: {}", pubkey),
+        }
+    }
+}
+
+impl fmt::Display for BuildTransactionError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            BuildTransactionError::ConvertToSolana {
+                instruction_metadata,
+            } => write!(
+                f,
+                "Err convert to solana instructions: {:#?}",
+                instruction_metadata
+            ),
+        }
+    }
+}
 impl std::error::Error for WalletError {}
 impl std::error::Error for EncryptionError {}
 impl std::error::Error for KeystoreError {}
@@ -626,4 +713,8 @@ impl std::error::Error for TransactionError {}
 impl std::error::Error for TokenError {}
 impl std::error::Error for ValidationError {}
 impl std::error::Error for StateError {}
-impl std::error::Error for MetadataProviderError {}
+impl std::error::Error for SaturnTransactionsServiceError {}
+impl std::error::Error for JupiterReqestError {}
+impl std::error::Error for RedisErr {}
+impl std::error::Error for ATlError {}
+impl std::error::Error for BuildTransactionError {}

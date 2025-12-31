@@ -12,7 +12,7 @@ use jupiter_trader_data::models::jupiter_models::{
 };
 use redis::AsyncCommands;
 use reqwest::Client;
-use serde_json::{Value, json};
+use serde_json::{Value, json, to_string};
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{
     // address_lookup_table::{instruction::create_lookup_table, state::AddressLookupTable},
@@ -38,7 +38,11 @@ use crate::{
         domain::{RedisBundleTracker, TrackerConfig},
     },
     constant::{self, HEADER_SIZE, MIN_JITO_TIP_LAMPORTS},
-    redis_con, revork::rpc_manager::JitoHttpManager,
+    redis_con,
+    revork::{
+        error_code::{ATlError, RedisErr, SaturnTransactionsServiceError},
+        jito_http_manager::JitoHttpManager,
+    },
 };
 
 // pub type SharedPriceState = Arc<Mutex<HashMap<String, DayTickerEvent>>>;
@@ -50,7 +54,7 @@ pub struct JupiterTrader {
     // keypair: Arc<Keypair>,
     jupiter_base_url: String,
     jupiter_ultra_url: String,
-    pub jito_endpoint: JitoJsonRpcSDK,
+    pub jito_manager: Arc<JitoHttpManager>,
     // pub shared_price_state: SharedPriceState,
     pub redis: Mutex<redis::aio::MultiplexedConnection>,
     pub config: Config,
@@ -63,7 +67,11 @@ pub struct JupiterTrader {
 }
 
 impl JupiterTrader {
-    pub async fn new(rpc_url: &str, /*keypair: Keypair*/ redis_urls: Vec<String>,jito_manager: Arc<JitoHttpManager>) -> Self {
+    pub async fn new(
+        rpc_url: &str,
+        /*keypair: Keypair*/ redis_urls: Vec<String>,
+        jito_manager: Arc<JitoHttpManager>,
+    ) -> Self {
         let http_client = reqwest::Client::builder().build().unwrap();
         let client = solana_client::nonblocking::rpc_client::RpcClient::new_with_commitment(
             rpc_url.to_string(),
@@ -71,10 +79,10 @@ impl JupiterTrader {
         );
         let jupiter_base_url = "https://api.jup.ag//swap/v1".to_string();
         let jupiter_ultra_url = "https://api.jup.ag//ultra/v1".to_string();
-        let jito_endpoint = JitoJsonRpcSDK::new(
-            "https://frankfurt.mainnet.block-engine.jito.wtf/api/v1",
-            None,
-        );
+        // let jito_endpoint = JitoJsonRpcSDK::new(
+        //     "https://frankfurt.mainnet.block-engine.jito.wtf/api/v1",
+        //     None,
+        // );
 
         let tracker_config = TrackerConfig::default();
 
@@ -84,7 +92,7 @@ impl JupiterTrader {
             client,
             http_client,
             jupiter_base_url,
-            jito_endpoint,
+            jito_manager: jito_manager.clone(),
             jupiter_ultra_url,
             redis: Mutex::new(redis_con::connection::redis_conn(&config).await),
             jito_tip_redis: Arc::new(Mutex::new(
@@ -94,7 +102,7 @@ impl JupiterTrader {
             config,
             notification_system: Arc::new(UserStreamNotificationSystem::new()),
             bundle_status: Arc::new(
-                RedisBundleTracker::new(redis_urls, tracker_config,jito_manager)
+                RedisBundleTracker::new(redis_urls, tracker_config, jito_manager)
                     .await
                     .unwrap(),
             ),
@@ -511,19 +519,31 @@ impl JupiterTrader {
     async fn fetch_map_address_lookup_tables(
         &self,
         address: &Value,
-    ) -> Result<Vec<AddressLookupTableAccount>, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<Vec<AddressLookupTableAccount>, SaturnTransactionsServiceError> {
         let mut tabel_accounts = Vec::new();
 
         if let Some(account_address) = address.as_object() {
             for (key, acc_addresses) in account_address {
-                let pubkey = Pubkey::from_str(key)?;
+                let pubkey = Pubkey::from_str(key).map_err(|e| {
+                    SaturnTransactionsServiceError::ATlError(ATlError::PubkeyConvertingErr {
+                        pubkey: key.to_string(),
+                        issue: e.to_string(),
+                    })
+                })?;
 
                 if let Some(data) = acc_addresses.as_array() {
                     let mut addresses = Vec::new();
 
                     for addresses_val in data {
                         if let Some(address_str) = addresses_val.as_str() {
-                            addresses.push(Pubkey::from_str(address_str)?);
+                            addresses.push(Pubkey::from_str(address_str).map_err(|e| {
+                                SaturnTransactionsServiceError::ATlError(
+                                    ATlError::PubkeyConvertingErr {
+                                        pubkey: address_str.to_string(),
+                                        issue: e.to_string(),
+                                    },
+                                )
+                            })?);
                         }
                     }
 
@@ -553,16 +573,27 @@ impl JupiterTrader {
     async fn fetch_address_lookup_tables(
         &self,
         alt_address: &[String],
-    ) -> Result<Vec<AddressLookupTableAccount>, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<Vec<AddressLookupTableAccount>, SaturnTransactionsServiceError> {
         use constant::TTL_FOR_ATL;
-        let mut con = self.alt_redis.clone();
-        let values: Vec<Option<Vec<u8>>> = con.mget(alt_address).await?;
+        let mut con: redis::aio::MultiplexedConnection = self.alt_redis.clone();
+        let values: Vec<Option<Vec<u8>>> = con.mget(alt_address).await.map_err(|e| {
+            SaturnTransactionsServiceError::Redis(RedisErr::MgetALT {
+                redis_issue: e.to_string(),
+            })
+        })?;
+
         let vec_pubkeys: Result<Vec<Pubkey>, _> = alt_address
             .iter()
             .map(|address| Pubkey::from_str(address))
             .collect();
 
-        let vec_pubkeys = vec_pubkeys?;
+        let vec_pubkeys = vec_pubkeys.map_err(|e| {
+            SaturnTransactionsServiceError::ATlError(ATlError::PubkeyConvertingErr {
+                pubkey: alt_address.join(", "),
+                issue: e.to_string(),
+            })
+        })?;
+
         let mut acc_data = vec![None; alt_address.len()];
         let mut missing_data = Vec::with_capacity(alt_address.len());
 
@@ -582,7 +613,15 @@ impl JupiterTrader {
             let missing_pubkeys: Vec<Pubkey> =
                 missing_data.iter().map(|(_, pubkey)| *pubkey).collect();
 
-            let accounts_data = self.client.get_multiple_accounts(&missing_pubkeys).await?;
+            let accounts_data = self
+                .client
+                .get_multiple_accounts(&missing_pubkeys)
+                .await
+                .map_err(|e| {
+                    SaturnTransactionsServiceError::ATlError(ATlError::FetchALTs {
+                        alt_pubkeys: missing_pubkeys.iter().map(|f| f.to_string()).collect(),
+                    })
+                })?;
 
             let mut pype_line = redis::pipe();
 
@@ -593,15 +632,23 @@ impl JupiterTrader {
                     acc_data[*idx] = Some(acc.data);
                 } else {
                     tracing::warn!("Account not found: {}", pubkey);
-                    return Err("Account data not found".into());
+                    return Err(SaturnTransactionsServiceError::ATlError(
+                        ATlError::NotFound {
+                            pubkey: pubkey.to_string(),
+                        },
+                    ));
                 }
             }
 
-            let _: () = pype_line.query_async(&mut con).await?;
+            let _: () = pype_line.query_async(&mut con).await.map_err(|e| {
+                SaturnTransactionsServiceError::Redis(RedisErr::QueryExecute {
+                    issue: e.to_string(),
+                })
+            })?;
             tracing::info!("Added {} accounts into Redis ATL", missing_data.len());
         }
 
-        let parsed: Result<Vec<_>, Box<dyn std::error::Error + Send + Sync>> = acc_data
+        let parsed: Result<Vec<_>, SaturnTransactionsServiceError> = acc_data
             .into_iter()
             .zip(vec_pubkeys.into_iter())
             .filter_map(|(account_opt, pubkey)| {
@@ -640,9 +687,9 @@ impl JupiterTrader {
     fn parse_lookup_table(
         &self,
         account_data: &[u8],
-    ) -> Result<Vec<Pubkey>, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<Vec<Pubkey>, SaturnTransactionsServiceError> {
         if account_data.len() < HEADER_SIZE {
-            return Err("Invalid ALT account data".into());
+            return Err(SaturnTransactionsServiceError::ATlError(ATlError::ParseLookupTable { pubkey_header_size: "invalid size too short".to_string() }));
         };
 
         let address_data: &[u8] = &account_data[HEADER_SIZE..];
@@ -654,7 +701,12 @@ impl JupiterTrader {
             let start = i * 32;
             let end = start + 32;
             let pubkey_bytes = &address_data[start..end];
-            let pubkey = Pubkey::try_from(pubkey_bytes)?;
+            let pubkey = Pubkey::try_from(pubkey_bytes).map_err(|e| {
+            SaturnTransactionsServiceError::ATlError(ATlError::PubkeyConvertingErr {
+                pubkey: pubkey_bytes.iter().map(|b| b.to_string()).collect(),
+                issue: e.to_string(),
+            })
+        })?;
             address.push(pubkey);
         }
 
@@ -860,7 +912,7 @@ impl JupiterTrader {
             Ok(pubk) => pubk,
             Err(_err) => {
                 tracing::error!("Err in decoding pubkey");
-                panic!("err")
+                return Err("Err in decoding pubkey".to_string().into());
             }
         };
         // let balance = self.client.get_balance(&user_pubkey).await?;
@@ -914,45 +966,34 @@ impl JupiterTrader {
         // ]);
         let params = json!([transaction]);
 
-        let max_retries = 20;
-        let mut delay = Duration::from_millis(150);
-        let backoff_factor = 2.0;
         let mut bundle_result = None;
 
-        for attempt in 1..=max_retries {
-            tracing::info!("Sending bundle (attempt {}/{})", attempt, max_retries);
-            match self
-                .jito_endpoint
-                .send_bundle(Some(params.clone()), None)
-                .await
-            {
-                Ok(response) => {
-                    if response.get("error").is_some() {
-                        tracing::error!(
-                            "Jito returned an error in the response body: {:?}",
-                            response
-                        );
-                    } else {
-                        tracing::info!("Bundle submitted successfully!");
-                        bundle_result = Some(response);
-                        break;
-                    }
-                }
-                Err(e) => {
-                    if e.to_string().contains("429 Too Many Requests") {
-                        tracing::warn!("Rate limited. Retrying in {:?}...", delay);
-                    } else {
-                        tracing::error!("Failed to send bundle with non-retriable error: {}", e);
-                        return Err(e.into());
-                    }
+        match self
+            .jito_manager
+            .send_bundle(Some(params.clone()), None)
+            .await
+        {
+            Ok(response) => {
+                if response.get("error").is_some() {
+                    tracing::error!(
+                        "Jito returned an error in the response body: {:?}",
+                        response
+                    );
+                } else {
+                    tracing::info!("Bundle submitted successfully!");
+                    bundle_result = Some(response);
                 }
             }
-
-            if attempt < max_retries {
-                tokio::time::sleep(delay).await;
-                delay = delay.mul_f32(backoff_factor);
+            Err(e) => {
+                if e.to_string().contains("429 Too Many Requests") {
+                    tracing::warn!("Rate limited. Retrying in ...")
+                } else {
+                    tracing::error!("Failed to send bundle with non-retriable error: {}", e);
+                    return Err(e.into());
+                }
             }
         }
+
         // tokio::time::sleep(Duration::from_secs(10)).await;
         let bundle_result = bundle_result.ok_or("Invalid request");
 

@@ -22,7 +22,7 @@ impl RpcManager {
             requests_per_second,
             RetryConfig::default(),
         );
-        
+            
         Self {
             provider: Arc::new(managed_client),
         }

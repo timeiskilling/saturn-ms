@@ -204,7 +204,7 @@ impl UserStreamNotificationSystem {
     //         "Landed" => "3/5".to_string(),
     //         "Confirmed" => "4/5".to_string(),
     //         "Finalized" => "5/5".to_string(),
-    //         "Failed" => "❌".to_string(),
+    //         "Failed" => "".to_string(),
     //         _ => "?/5".to_string(),
     //     }
     // }

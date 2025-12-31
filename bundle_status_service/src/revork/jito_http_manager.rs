@@ -186,6 +186,17 @@ impl JitoHttpManager {
         .await
     }
 
+    pub async fn send_bundle(&self,params: Option<serde_json::Value>, uuid: Option<&str>) -> Result<serde_json::Value, RpcError> {
+        self.execute_with_retry("send_bundle", || {
+            let inner = self.inner.clone();
+            let params = params.clone();
+            async move {
+                inner.send_bundle(params, uuid).await
+            }
+        })
+        .await
+    }
+
     pub async fn get_bundle_statuses(
         &self,
         bundle_ids: Vec<String>,

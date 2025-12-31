@@ -8,7 +8,7 @@ use tracing_subscriber::fmt::format::FmtSpan;
 
 use crate::{
     proto_service::{TransactionService, service_jupiter_status},
-    revork::{retry_config::RetryConfig, rpc_manager::JitoHttpManager},
+    revork::{retry_config::RetryConfig, jito_http_manager::JitoHttpManager},
     trader::JupiterTrader,
 };
 

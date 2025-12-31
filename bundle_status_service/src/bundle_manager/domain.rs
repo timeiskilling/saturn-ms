@@ -8,7 +8,7 @@ use tokio::time::{Duration, Instant};
 use tracing::{debug, error, info, warn};
 
 use crate::bundle_manager::client::{UserBundleUpdate, UserStreamNotificationSystem};
-use crate::revork::rpc_manager::JitoHttpManager;
+use crate::revork::jito_http_manager::JitoHttpManager;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BundleStatusResponse {
