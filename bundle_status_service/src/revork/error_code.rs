@@ -1,15 +1,18 @@
 use jupiter_trader_data::models::jupiter_models::Instruction;
+use solana_sdk::message::CompileError;
 use std::fmt::{self};
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum SaturnTransactionsServiceError {
+    Rpc(RpcError),
     Transaction(TransactionError),
     Token(TokenError),
     Validation(ValidationError),
     JupiterError(JupiterReqestError),
     ATlError(ATlError),
     Redis(RedisErr),
-    BuildTransaction(BuildTransactionError),
+    BuildTransaction(Box<BuildTransactionError>),
+    Jito(JitoEndpointErr),
 }
 
 #[derive(Debug, Clone)]
@@ -31,17 +34,42 @@ pub enum WalletError {
 #[derive(Debug, Clone)]
 pub enum RedisErr {
     MgetALT { redis_issue: String },
-    QueryExecute {issue : String}
+    QueryExecute { issue: String },
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
+pub enum JitoEndpointErr {
+    JitoErrResponse { response: String },
+}
+
+#[derive(Debug)]
 pub enum BuildTransactionError {
-    ConvertToSolana { instruction_metadata: Instruction },
+    ConvertToSolana {
+        instruction_metadata: Instruction,
+    },
+    InvalidDecode {
+        decode_err: base64::DecodeError,
+    },
+    IvalidPubkey {
+        pubkey: Vec<u8>,
+        issue: String,
+    },
+    V0message(CompileError),
+
+    BincodeVersionedTransactionSerializetion {
+        data: solana_sdk::transaction::VersionedTransaction,
+        issue: String,
+    },
+
+    BincodeTransactionSerializetion {
+        data: solana_sdk::transaction::Transaction,
+        issue: String,
+    },
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum ATlError {
-    PubkeyConvertingErr { pubkey: String, issue : String },
+    PubkeyConvertingErr { bad_bytes: Vec<u8>, issue: String },
     FetchALTs { alt_pubkeys: String },
     ParseLookupTable { pubkey_header_size: String },
     NotFound { pubkey: String },
@@ -52,14 +80,24 @@ pub enum JupiterReqestError {
     QuotaCreatingReqest {
         input_mint: String,
         output_mint: String,
+        reason : String
     },
 
     SwapInstructionReqest {
-        pubkey: String,
+        pubkey: Vec<u8>,
+        issue: String,
     },
 
     ParseResponseErr {
-        parsing_struct: String,
+        reason: String,
+    },
+
+    NotSuccessReqest {
+        reason: String,
+    },
+
+    HeaderParse {
+        reason: String,
     },
 }
 
@@ -311,6 +349,8 @@ impl fmt::Display for SaturnTransactionsServiceError {
             SaturnTransactionsServiceError::BuildTransaction(e) => {
                 write!(f, "BuildTransaction error: {}", e)
             }
+            SaturnTransactionsServiceError::Rpc(e) => write!(f, "Rpc error: {}", e),
+            SaturnTransactionsServiceError::Jito(e) => write!(f, "Jito error: {}", e),
         }
     }
 }
@@ -650,17 +690,28 @@ impl fmt::Display for JupiterReqestError {
             JupiterReqestError::QuotaCreatingReqest {
                 input_mint,
                 output_mint,
+                reason,
             } => write!(
                 f,
                 "Quota creating Err for inputMint: {}\n
-            outputMint: {}",
-                input_mint, output_mint
+            outputMint: {}\n Reason: {}",
+                input_mint, output_mint,reason
             ),
-            JupiterReqestError::SwapInstructionReqest { pubkey } => {
-                write!(f, "Swap Instruction Reqest errr for Pubkey: {}", pubkey)
+            JupiterReqestError::SwapInstructionReqest { pubkey, issue } => {
+                write!(
+                    f,
+                    "Swap Instruction Reqest err for Pubkey: {:?} \n issue: {}",
+                    pubkey, issue
+                )
             }
-            JupiterReqestError::ParseResponseErr { parsing_struct } => {
-                write!(f, "Fail to parse Jupiter response to {}", parsing_struct)
+            JupiterReqestError::ParseResponseErr { reason } => {
+                write!(f, "Fail to parse Jupiter response to {}", reason)
+            }
+            JupiterReqestError::NotSuccessReqest { reason } => {
+                write!(f, "Failed request to Jupiter reason: {}", reason)
+            }
+            JupiterReqestError::HeaderParse { reason } => {
+                write!(f, "Failed parse headers reason: {}", reason)
             }
         }
     }
@@ -675,11 +726,25 @@ impl fmt::Display for RedisErr {
     }
 }
 
+impl fmt::Display for JitoEndpointErr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            JitoEndpointErr::JitoErrResponse { response } => {
+                write!(f, "Response gets err: {:?}", response)
+            }
+        }
+    }
+}
+
 impl fmt::Display for ATlError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ATlError::PubkeyConvertingErr { pubkey ,issue} => {
-                write!(f, "Invalid parse pubkey from: {} because {}", pubkey,issue)
+            ATlError::PubkeyConvertingErr { bad_bytes, issue } => {
+                write!(
+                    f,
+                    "Invalid parse pubkey from: {:?} because {}",
+                    bad_bytes, issue
+                )
             }
             ATlError::FetchALTs { alt_pubkeys } => {
                 write!(f, "Invalid fetch alt from network: {}", alt_pubkeys)
@@ -702,9 +767,37 @@ impl fmt::Display for BuildTransactionError {
                 "Err convert to solana instructions: {:#?}",
                 instruction_metadata
             ),
+            BuildTransactionError::InvalidDecode { decode_err } => {
+                write!(f, "Err decod instruction data: {}", decode_err)
+            }
+            BuildTransactionError::IvalidPubkey { pubkey, issue } => {
+                write!(
+                    f,
+                    "BuildTransactionError invalid parse pubkey from: {:?} because {}",
+                    pubkey, issue
+                )
+            }
+            BuildTransactionError::V0message(e) => {
+                write!(f, "BuildTransactionError V0 message creating: {}", e)
+            }
+            BuildTransactionError::BincodeVersionedTransactionSerializetion { data, issue } => {
+                write!(
+                    f,
+                    "Failde serialize VersionedTransaction: {:#?}\n issue: {}",
+                    data, issue
+                )
+            }
+            BuildTransactionError::BincodeTransactionSerializetion { data, issue } => {
+                write!(
+                    f,
+                    "Failde serialize Transaction: {:#?}\n issue: {}",
+                    data, issue
+                )
+            }
         }
     }
 }
+
 impl std::error::Error for WalletError {}
 impl std::error::Error for EncryptionError {}
 impl std::error::Error for KeystoreError {}
@@ -718,3 +811,4 @@ impl std::error::Error for JupiterReqestError {}
 impl std::error::Error for RedisErr {}
 impl std::error::Error for ATlError {}
 impl std::error::Error for BuildTransactionError {}
+impl std::error::Error for JitoEndpointErr {}

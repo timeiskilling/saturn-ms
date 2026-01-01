@@ -5,14 +5,13 @@ use base64::{Engine, engine::general_purpose};
 use config::Config;
 use core::str;
 use dashmap::DashMap;
-use jito_sdk_rust::JitoJsonRpcSDK;
 use jupiter_trader_data::models::jupiter_models::{
     Instruction, JupiterQuoteResponse, JupiterSwapInstructionsRsponse, JupiterSwapRequest,
     JupiterSwapResponse, JupiterUltraQuoteResponse, PriorityLevel, QuoteOptions, TokenNaming,
 };
 use redis::AsyncCommands;
-use reqwest::Client;
-use serde_json::{Value, json, to_string};
+use reqwest::{Client, header::HeaderValue};
+use serde_json::{Value, json};
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{
     // address_lookup_table::{instruction::create_lookup_table, state::AddressLookupTable},
@@ -27,7 +26,7 @@ use solana_sdk::{
     system_instruction::transfer,
     transaction::{Transaction, VersionedTransaction},
 };
-use std::{str::FromStr, sync::Arc, time::Duration};
+use std::{str::FromStr, sync::Arc};
 use tokio::sync::{Mutex, RwLock};
 use tracing::instrument;
 
@@ -40,7 +39,10 @@ use crate::{
     constant::{self, HEADER_SIZE, MIN_JITO_TIP_LAMPORTS},
     redis_con,
     revork::{
-        error_code::{ATlError, RedisErr, SaturnTransactionsServiceError},
+        error_code::{
+            ATlError, BuildTransactionError, JitoEndpointErr, JupiterReqestError, RedisErr,
+            SaturnTransactionsServiceError,
+        },
         jito_http_manager::JitoHttpManager,
     },
 };
@@ -261,7 +263,7 @@ impl JupiterTrader {
         slippage_bps: u16,
         options: QuoteOptions,
         // fee_account : &str,
-    ) -> Result<JupiterQuoteResponse, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<JupiterQuoteResponse, SaturnTransactionsServiceError> {
         let url = format!("{}/quote", self.jupiter_base_url);
 
         let amount_str = amount.to_string();
@@ -271,8 +273,11 @@ impl JupiterTrader {
         let additional_params = cleaned_options.to_params();
 
         let mut headers = reqwest::header::HeaderMap::new();
-        headers.insert("Accept", "application/json".parse()?);
-        headers.insert("x-api-key", "02aaffb2-fd16-4030-9b4f-f9dd7e178a2c".parse()?);
+        headers.insert("Accept", HeaderValue::from_static("application/json"));
+        headers.insert(
+            "x-api-key",
+            HeaderValue::from_static("02aaffb2-fd16-4030-9b4f-f9dd7e178a2c"),
+        );
 
         let response = self
             .http_client
@@ -287,15 +292,36 @@ impl JupiterTrader {
             .query(&additional_params)
             .headers(headers)
             .send()
-            .await?;
+            .await
+            .map_err(|e| {
+                SaturnTransactionsServiceError::JupiterError(
+                    JupiterReqestError::QuotaCreatingReqest {
+                        input_mint: input_mint.to_string(),
+                        output_mint: output_mint.to_string(),
+                        reason : e.to_string()
+                    },
+                )
+            })?;
 
         if !response.status().is_success() {
-            let error_txt = response.text().await?;
+            let error_txt = response.text().await.map_err(|e| {
+                SaturnTransactionsServiceError::JupiterError(JupiterReqestError::NotSuccessReqest {
+                    reason: e.to_string(),
+                })
+            })?;
+
             tracing::error!("Jupiter API err : {}", error_txt);
-            return Err(format!("Jupiter API error: {}", error_txt).into());
+
+            return Err(SaturnTransactionsServiceError::JupiterError(
+                JupiterReqestError::NotSuccessReqest { reason: error_txt },
+            ));
         }
 
-        let quote: JupiterQuoteResponse = response.json().await?;
+        let quote: JupiterQuoteResponse = response.json().await.map_err(|e| {
+            SaturnTransactionsServiceError::JupiterError(JupiterReqestError::ParseResponseErr {
+                reason: e.to_string(),
+            })
+        })?;
         // println!("   Send: {:.6} SOL", input_amount / 1_000_000_000.0);
         // println!("   Take: {:.2} USDC", output_amount / 1_000_000.0);
         // println!("   Slipping: {}%", quote.slippage_bps as f64 / 100.0);
@@ -408,7 +434,7 @@ impl JupiterTrader {
         swap_response: &JupiterSwapInstructionsRsponse,
         blockhash: Hash,
         pubkey: &Pubkey,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, SaturnTransactionsServiceError> {
         let len = swap_response.instruction_count();
         let mut instructions = Vec::with_capacity(len);
 
@@ -510,7 +536,14 @@ impl JupiterTrader {
             message: versioned_message,
         };
 
-        let serialized_tx = bincode::serialize(&transaction)?;
+        let serialized_tx = bincode::serialize(&transaction).map_err(|e| {
+            SaturnTransactionsServiceError::BuildTransaction(Box::new(
+                BuildTransactionError::BincodeVersionedTransactionSerializetion {
+                    data: transaction.clone(),
+                    issue: e.to_string(),
+                },
+            ))
+        })?;
         let base58_tx = bs58::encode(serialized_tx).into_string();
 
         Ok(base58_tx)
@@ -526,7 +559,7 @@ impl JupiterTrader {
             for (key, acc_addresses) in account_address {
                 let pubkey = Pubkey::from_str(key).map_err(|e| {
                     SaturnTransactionsServiceError::ATlError(ATlError::PubkeyConvertingErr {
-                        pubkey: key.to_string(),
+                        bad_bytes: key.as_bytes().to_vec(),
                         issue: e.to_string(),
                     })
                 })?;
@@ -539,7 +572,7 @@ impl JupiterTrader {
                             addresses.push(Pubkey::from_str(address_str).map_err(|e| {
                                 SaturnTransactionsServiceError::ATlError(
                                     ATlError::PubkeyConvertingErr {
-                                        pubkey: address_str.to_string(),
+                                        bad_bytes: address_str.as_bytes().to_vec(),
                                         issue: e.to_string(),
                                     },
                                 )
@@ -589,7 +622,7 @@ impl JupiterTrader {
 
         let vec_pubkeys = vec_pubkeys.map_err(|e| {
             SaturnTransactionsServiceError::ATlError(ATlError::PubkeyConvertingErr {
-                pubkey: alt_address.join(", "),
+                bad_bytes: alt_address.join(", ").into_bytes(),
                 issue: e.to_string(),
             })
         })?;
@@ -617,7 +650,7 @@ impl JupiterTrader {
                 .client
                 .get_multiple_accounts(&missing_pubkeys)
                 .await
-                .map_err(|e| {
+                .map_err(|_e| {
                     SaturnTransactionsServiceError::ATlError(ATlError::FetchALTs {
                         alt_pubkeys: missing_pubkeys.iter().map(|f| f.to_string()).collect(),
                     })
@@ -679,8 +712,13 @@ impl JupiterTrader {
         alt_account: &[AddressLookupTableAccount],
         blockhash: Hash,
         pubkey: &Pubkey,
-    ) -> Result<v0::Message, Box<dyn std::error::Error + Send + Sync>> {
-        let message = Message::try_compile(pubkey, instructions, alt_account, blockhash)?;
+    ) -> Result<v0::Message, SaturnTransactionsServiceError> {
+        let message =
+            Message::try_compile(pubkey, instructions, alt_account, blockhash).map_err(|e| {
+                SaturnTransactionsServiceError::BuildTransaction(Box::new(
+                    BuildTransactionError::V0message(e),
+                ))
+            })?;
         Ok(message)
     }
     #[instrument(skip_all, level = "info")]
@@ -689,7 +727,11 @@ impl JupiterTrader {
         account_data: &[u8],
     ) -> Result<Vec<Pubkey>, SaturnTransactionsServiceError> {
         if account_data.len() < HEADER_SIZE {
-            return Err(SaturnTransactionsServiceError::ATlError(ATlError::ParseLookupTable { pubkey_header_size: "invalid size too short".to_string() }));
+            return Err(SaturnTransactionsServiceError::ATlError(
+                ATlError::ParseLookupTable {
+                    pubkey_header_size: "invalid size too short".to_string(),
+                },
+            ));
         };
 
         let address_data: &[u8] = &account_data[HEADER_SIZE..];
@@ -702,11 +744,11 @@ impl JupiterTrader {
             let end = start + 32;
             let pubkey_bytes = &address_data[start..end];
             let pubkey = Pubkey::try_from(pubkey_bytes).map_err(|e| {
-            SaturnTransactionsServiceError::ATlError(ATlError::PubkeyConvertingErr {
-                pubkey: pubkey_bytes.iter().map(|b| b.to_string()).collect(),
-                issue: e.to_string(),
-            })
-        })?;
+                SaturnTransactionsServiceError::ATlError(ATlError::PubkeyConvertingErr {
+                    bad_bytes: pubkey_bytes.to_vec(),
+                    issue: e.to_string(),
+                })
+            })?;
             address.push(pubkey);
         }
 
@@ -901,20 +943,30 @@ impl JupiterTrader {
         pubkey: &str,
         quote: JupiterQuoteResponse,
         blockhash: &BlockhashCache,
-    ) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<Vec<String>, SaturnTransactionsServiceError> {
         let mut transactions: Vec<String> = Vec::with_capacity(6);
         // tokio::time::sleep(Duration::from_secs(5)).await;
 
         // let jito_tip_acc = Pubkey::from_str(&self.jito_endpoint.get_random_tip_account().await?)?;
-        let jito_tip_acc = Pubkey::from_str("96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5")?;
-        let user_pubkey = Pubkey::from_str(pubkey);
-        let user_pubkey = match user_pubkey {
-            Ok(pubk) => pubk,
-            Err(_err) => {
-                tracing::error!("Err in decoding pubkey");
-                return Err("Err in decoding pubkey".to_string().into());
-            }
-        };
+        let jito_tip_acc = Pubkey::from_str("96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5")
+            .map_err(|e| {
+                SaturnTransactionsServiceError::BuildTransaction(Box::new(
+                    BuildTransactionError::IvalidPubkey {
+                        pubkey: "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"
+                            .as_bytes()
+                            .to_vec(),
+                        issue: e.to_string(),
+                    },
+                ))
+            })?;
+        let user_pubkey = Pubkey::from_str(pubkey).map_err(|e| {
+            SaturnTransactionsServiceError::BuildTransaction(Box::new(
+                BuildTransactionError::IvalidPubkey {
+                    pubkey: pubkey.as_bytes().to_vec(),
+                    issue: e.to_string(),
+                },
+            ))
+        })?;
         // let balance = self.client.get_balance(&user_pubkey).await?;
         // if balance < 1_000_000_000 {
         //     tracing::info!("Low balance, requesting airdrop...");
@@ -938,7 +990,15 @@ impl JupiterTrader {
 
         let tip_transaction = Transaction::new_with_payer(&[tip_instruction], Some(&user_pubkey));
 
-        let tip_encoded = bs58::encode(bincode::serialize(&tip_transaction)?).into_string();
+        let tip_encoded = bs58::encode(bincode::serialize(&tip_transaction).map_err(|e| {
+            SaturnTransactionsServiceError::BuildTransaction(Box::new(
+                BuildTransactionError::BincodeTransactionSerializetion {
+                    data: tip_transaction,
+                    issue: e.to_string(),
+                },
+            ))
+        })?)
+        .into_string();
 
         transactions.push(tip_encoded);
 
@@ -957,7 +1017,7 @@ impl JupiterTrader {
         &self,
         transaction: Vec<String>,
         user_pbk: &str,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, SaturnTransactionsServiceError> {
         tracing::info!("Prepearung sending transactions");
         // let transactions = json!(transaction);
         // let params = json!([
@@ -989,7 +1049,7 @@ impl JupiterTrader {
                     tracing::warn!("Rate limited. Retrying in ...")
                 } else {
                     tracing::error!("Failed to send bundle with non-retriable error: {}", e);
-                    return Err(e.into());
+                    return Err(SaturnTransactionsServiceError::Rpc(e));
                 }
             }
         }
@@ -1017,21 +1077,33 @@ impl JupiterTrader {
                         if let Some(error) = response_json["error"].as_object() {
                             let error_msg = format!("Jito error: {:?}", error);
                             tracing::error!("{}", error_msg);
-                            Err(error_msg.into())
+                            Err(SaturnTransactionsServiceError::Jito(
+                                JitoEndpointErr::JitoErrResponse {
+                                    response: error_msg,
+                                },
+                            ))
                         } else {
                             let error_msg = format!(
                                 "Failed to get bundle UUID from response JSON: {:?}",
                                 response_json
                             );
                             tracing::error!("{}", error_msg);
-                            Err(error_msg.into())
+                            Err(SaturnTransactionsServiceError::Jito(
+                                JitoEndpointErr::JitoErrResponse {
+                                    response: error_msg,
+                                },
+                            ))
                         }
                     }
                 }
             }
             Err(_) => {
                 tracing::error!("Failed to send bundle");
-                Err("Failed to send bundle".into())
+                Err(SaturnTransactionsServiceError::Jito(
+                    JitoEndpointErr::JitoErrResponse {
+                        response: "Failed to send bundle".to_string(),
+                    },
+                ))
             }
         }
     }
@@ -1042,7 +1114,7 @@ impl JupiterTrader {
         quote: JupiterQuoteResponse,
         blockhash: solana_sdk::hash::Hash,
         pubkey: &Pubkey,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, SaturnTransactionsServiceError> {
         let url = format!("{}/swap-instructions", self.jupiter_base_url);
         tracing::info!("CREATING_TRANSACTION");
         let swap_request = JupiterSwapRequest::new(
@@ -1058,15 +1130,36 @@ impl JupiterTrader {
             .post(&url)
             .json(&swap_request)
             .send()
-            .await?;
+            .await
+            .map_err(|e| {
+                SaturnTransactionsServiceError::JupiterError(
+                    JupiterReqestError::SwapInstructionReqest {
+                        pubkey: pubkey.as_array().to_vec(),
+                        issue: e.to_string(),
+                    },
+                )
+            })?;
 
         if !response.status().is_success() {
-            let error_txt = response.text().await?;
+            let error_txt = response.text().await.map_err(|e| {
+                SaturnTransactionsServiceError::JupiterError(JupiterReqestError::NotSuccessReqest {
+                    reason: e.to_string(),
+                })
+            })?;
+
             tracing::error!("Jupiter API err : {}", error_txt);
-            return Err("err".into());
+
+            return Err(SaturnTransactionsServiceError::JupiterError(
+                JupiterReqestError::NotSuccessReqest { reason: error_txt },
+            ));
         }
 
-        let swap_instructions: JupiterSwapInstructionsRsponse = response.json().await?;
+        let swap_instructions: JupiterSwapInstructionsRsponse =
+            response.json().await.map_err(|e| {
+                SaturnTransactionsServiceError::JupiterError(JupiterReqestError::ParseResponseErr {
+                    reason: e.to_string(),
+                })
+            })?;
 
         let transactions = self
             .build_transaction_from_instructions(&swap_instructions, blockhash, pubkey)
@@ -1299,7 +1392,7 @@ impl JupiterTrader {
 //#[instrument(skip_all, level = "info")]
 pub fn convert_instruction_to_solana(
     jupiter_instructions: &[Instruction],
-) -> Result<Vec<solana_sdk::instruction::Instruction>, Box<dyn std::error::Error + Send + Sync>> {
+) -> Result<Vec<solana_sdk::instruction::Instruction>, SaturnTransactionsServiceError> {
     use solana_sdk::instruction::{
         AccountMeta as SolanaAccountMeta, Instruction as SolanaInstruction,
     };
@@ -1307,20 +1400,39 @@ pub fn convert_instruction_to_solana(
     jupiter_instructions
         .iter()
         .map(|instruct| {
-            let program_id = Pubkey::from_str(&instruct.program_id)?;
-            let data = general_purpose::STANDARD.decode(&instruct.data)?;
+            let program_id = Pubkey::from_str(&instruct.program_id).map_err(|e| {
+                SaturnTransactionsServiceError::BuildTransaction(Box::new(
+                    BuildTransactionError::IvalidPubkey {
+                        pubkey: instruct.program_id.as_bytes().to_vec(),
+                        issue: e.to_string(),
+                    },
+                ))
+            })?;
 
-            let accounts: Result<Vec<SolanaAccountMeta>, _> = instruct
+            let data = general_purpose::STANDARD
+                .decode(&instruct.data)
+                .map_err(|e| {
+                    SaturnTransactionsServiceError::BuildTransaction(Box::new(
+                        BuildTransactionError::InvalidDecode { decode_err: e },
+                    ))
+                })?;
+
+            let accounts: Result<Vec<SolanaAccountMeta>, SaturnTransactionsServiceError> = instruct
                 .accounts
                 .iter()
                 .map(|acc| {
-                    Ok::<SolanaAccountMeta, Box<dyn std::error::Error + Send + Sync>>(
-                        SolanaAccountMeta {
-                            pubkey: Pubkey::from_str(&acc.pubkey)?,
-                            is_signer: acc.is_signer,
-                            is_writable: acc.is_writable,
-                        },
-                    )
+                    Ok::<SolanaAccountMeta, SaturnTransactionsServiceError>(SolanaAccountMeta {
+                        pubkey: Pubkey::from_str(&acc.pubkey).map_err(|e| {
+                            SaturnTransactionsServiceError::BuildTransaction(Box::new(
+                                BuildTransactionError::IvalidPubkey {
+                                    pubkey: acc.pubkey.as_bytes().to_vec(),
+                                    issue: e.to_string(),
+                                },
+                            ))
+                        })?,
+                        is_signer: acc.is_signer,
+                        is_writable: acc.is_writable,
+                    })
                 })
                 .collect();
 
