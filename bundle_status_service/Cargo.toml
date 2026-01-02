@@ -19,7 +19,10 @@ proto_models = {path = "../proto_models"}
 
 jito-sdk-rust = "0.3.2" 
 dashmap = "6.1.0"
+
 tokio = { version = "1.47.1", features = ["full", "macros"] }
+async-trait = "0.1.89"
+
 redis = { version = "0.32.5", features = ["tokio-comp", "json"] } 
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }

@@ -80,7 +80,7 @@ pub enum JupiterReqestError {
     QuotaCreatingReqest {
         input_mint: String,
         output_mint: String,
-        reason : String
+        reason: String,
     },
 
     SwapInstructionReqest {
@@ -98,6 +98,34 @@ pub enum JupiterReqestError {
 
     HeaderParse {
         reason: String,
+    },
+
+    RateLimitExceeded {
+        retry_after_seconds: Option<u64>,
+        endpoint: String,
+    },
+
+    TimeoutExceeded {
+        endpoint: String,
+        timeout_ms: u64,
+        operation: String,
+    },
+
+    MaxRetriesExceeded {
+        operation: String,
+        attempts: u32,
+        last_error: String,
+    },
+
+    NetworkError {
+        operation: String,
+        reason: String,
+    },
+
+    InvalidApiResponse {
+        operation: String,
+        status_code: u16,
+        body: String,
     },
 }
 
@@ -693,26 +721,70 @@ impl fmt::Display for JupiterReqestError {
                 reason,
             } => write!(
                 f,
-                "Quota creating Err for inputMint: {}\n
-            outputMint: {}\n Reason: {}",
-                input_mint, output_mint,reason
+                "Quota creating error for inputMint: {}, outputMint: {}, reason: {}",
+                input_mint, output_mint, reason
             ),
             JupiterReqestError::SwapInstructionReqest { pubkey, issue } => {
                 write!(
                     f,
-                    "Swap Instruction Reqest err for Pubkey: {:?} \n issue: {}",
+                    "Swap instruction request error for pubkey: {:?}, issue: {}",
                     pubkey, issue
                 )
             }
             JupiterReqestError::ParseResponseErr { reason } => {
-                write!(f, "Fail to parse Jupiter response to {}", reason)
+                write!(f, "Failed to parse Jupiter response: {}", reason)
             }
             JupiterReqestError::NotSuccessReqest { reason } => {
-                write!(f, "Failed request to Jupiter reason: {}", reason)
+                write!(f, "Failed request to Jupiter, reason: {}", reason)
             }
             JupiterReqestError::HeaderParse { reason } => {
-                write!(f, "Failed parse headers reason: {}", reason)
+                write!(f, "Failed to parse headers, reason: {}", reason)
             }
+            JupiterReqestError::RateLimitExceeded {
+                retry_after_seconds,
+                endpoint,
+            } => match retry_after_seconds {
+                Some(seconds) => write!(
+                    f,
+                    "Rate limit exceeded for {}, retry after {} seconds",
+                    endpoint, seconds
+                ),
+                None => write!(f, "Rate limit exceeded for {}", endpoint),
+            },
+            JupiterReqestError::TimeoutExceeded {
+                endpoint,
+                timeout_ms,
+                operation,
+            } => write!(
+                f,
+                "Operation '{}' timed out after {}ms for endpoint {}",
+                operation, timeout_ms, endpoint
+            ),
+            JupiterReqestError::MaxRetriesExceeded {
+                operation,
+                attempts,
+                last_error,
+            } => write!(
+                f,
+                "Max retries exceeded for operation '{}' after {} attempts. Last error: {}",
+                operation, attempts, last_error
+            ),
+            JupiterReqestError::NetworkError { operation, reason } => {
+                write!(
+                    f,
+                    "Network error during operation '{}': {}",
+                    operation, reason
+                )
+            }
+            JupiterReqestError::InvalidApiResponse {
+                operation,
+                status_code,
+                body,
+            } => write!(
+                f,
+                "Invalid API response for operation '{}', status code: {}, body: {}",
+                operation, status_code, body
+            ),
         }
     }
 }

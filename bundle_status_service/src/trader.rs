@@ -10,7 +10,7 @@ use jupiter_trader_data::models::jupiter_models::{
     JupiterSwapResponse, JupiterUltraQuoteResponse, PriorityLevel, QuoteOptions, TokenNaming,
 };
 use redis::AsyncCommands;
-use reqwest::{Client, header::HeaderValue};
+use reqwest::{Client, ClientBuilder, header::HeaderValue};
 use serde_json::{Value, json};
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{
@@ -26,7 +26,7 @@ use solana_sdk::{
     system_instruction::transfer,
     transaction::{Transaction, VersionedTransaction},
 };
-use std::{str::FromStr, sync::Arc};
+use std::{str::FromStr, sync::Arc, time::Duration};
 use tokio::sync::{Mutex, RwLock};
 use tracing::instrument;
 
@@ -44,6 +44,7 @@ use crate::{
             SaturnTransactionsServiceError,
         },
         jito_http_manager::JitoHttpManager,
+        reqwest_client::JupiterProvider,
     },
 };
 
@@ -51,7 +52,7 @@ use crate::{
 
 pub struct JupiterTrader {
     pub client: RpcClient,
-    pub http_client: Client,
+    pub http_client: Arc<dyn JupiterProvider>,
     tip_cache: Arc<RwLock<Option<f64>>>,
     // keypair: Arc<Keypair>,
     jupiter_base_url: String,
@@ -73,8 +74,8 @@ impl JupiterTrader {
         rpc_url: &str,
         /*keypair: Keypair*/ redis_urls: Vec<String>,
         jito_manager: Arc<JitoHttpManager>,
+        http_client: Arc<dyn JupiterProvider>,
     ) -> Self {
-        let http_client = reqwest::Client::builder().build().unwrap();
         let client = solana_client::nonblocking::rpc_client::RpcClient::new_with_commitment(
             rpc_url.to_string(),
             CommitmentConfig::confirmed(),
@@ -124,127 +125,127 @@ impl JupiterTrader {
         self.bundle_status.clone()
     }
 
-    pub async fn set_naming(&self) {
-        tracing::info!("set naming of toporganicscore");
-        let mut headers = reqwest::header::HeaderMap::new();
-        headers.insert("Accept", "application/json".parse().unwrap());
-        headers.insert(
-            "x-api-key",
-            "02aaffb2-fd16-4030-9b4f-f9dd7e178a2c".parse().unwrap(),
-        );
+    // pub async fn set_naming(&self) {
+    //     tracing::info!("set naming of toporganicscore");
+    //     let mut headers = reqwest::header::HeaderMap::new();
+    //     headers.insert("Accept", "application/json".parse().unwrap());
+    //     headers.insert(
+    //         "x-api-key",
+    //         "02aaffb2-fd16-4030-9b4f-f9dd7e178a2c".parse().unwrap(),
+    //     );
 
-        let response = self
-            .http_client
-            .get("https://api.jup.ag//tokens/v2/toporganicscore/24h")
-            .headers(headers)
-            .send()
-            .await
-            .unwrap();
+    //     let response = self
+    //         .http_client
+    //         .get("https://api.jup.ag//tokens/v2/toporganicscore/24h")
+    //         .headers(headers)
+    //         .send()
+    //         .await
+    //         .unwrap();
 
-        let token: Vec<TokenNaming> = response.json().await.unwrap();
+    //     let token: Vec<TokenNaming> = response.json().await.unwrap();
 
-        let _ = token.into_iter().map(|data| {
-            self.coin_naming.insert(data.symbol, data.mint);
-        });
-    }
+    //     let _ = token.into_iter().map(|data| {
+    //         self.coin_naming.insert(data.symbol, data.mint);
+    //     });
+    // }
 
-    pub async fn send_order(
-        &self,
-        input_mint: &str,
-        output_mint: &str,
-        amount: u64,
-    ) -> Result<JupiterUltraQuoteResponse, Box<dyn std::error::Error + Send + Sync>> {
-        let url = format!("{}/order", self.jupiter_ultra_url);
+    // pub async fn send_order(
+    //     &self,
+    //     input_mint: &str,
+    //     output_mint: &str,
+    //     amount: u64,
+    // ) -> Result<JupiterUltraQuoteResponse, Box<dyn std::error::Error + Send + Sync>> {
+    //     let url = format!("{}/order", self.jupiter_ultra_url);
 
-        let params = [
-            ("inputMint", input_mint),
-            ("outputMint", output_mint),
-            ("amount", &amount.to_string()),
-        ];
+    //     let params = [
+    //         ("inputMint", input_mint),
+    //         ("outputMint", output_mint),
+    //         ("amount", &amount.to_string()),
+    //     ];
 
-        let mut headers = reqwest::header::HeaderMap::new();
-        headers.insert("Accept", "application/json".parse()?);
-        headers.insert(
-            "x-api-key",
-            "02aaffb2-fd16-4030-9b4f-f9dd7e178a2c".parse().unwrap(),
-        );
-        let response = self
-            .http_client
-            .get(&url)
-            .query(&params)
-            .headers(headers)
-            .send()
-            .await?;
+    //     let mut headers = reqwest::header::HeaderMap::new();
+    //     headers.insert("Accept", "application/json".parse()?);
+    //     headers.insert(
+    //         "x-api-key",
+    //         "02aaffb2-fd16-4030-9b4f-f9dd7e178a2c".parse().unwrap(),
+    //     );
+    //     let response = self
+    //         .http_client
+    //         .get(&url)
+    //         .query(&params)
+    //         .headers(headers)
+    //         .send()
+    //         .await?;
 
-        if !response.status().is_success() {
-            let error_txt = response.text().await?;
-            tracing::error!("Jupiter Ultra API err: {}", error_txt);
-            return Err(format!("Jupiter Ultra API error: {}", error_txt).into());
-        }
+    //     if !response.status().is_success() {
+    //         let error_txt = response.text().await?;
+    //         tracing::error!("Jupiter Ultra API err: {}", error_txt);
+    //         return Err(format!("Jupiter Ultra API error: {}", error_txt).into());
+    //     }
 
-        let quote: JupiterUltraQuoteResponse = response.json().await?;
+    //     let quote: JupiterUltraQuoteResponse = response.json().await?;
 
-        // let input_amount = quote.in_amount.parse::<u64>().unwrap_or(0) as f64;
-        // let output_amount = quote.out_amount.parse::<u64>().unwrap_or(0) as f64;
+    //     // let input_amount = quote.in_amount.parse::<u64>().unwrap_or(0) as f64;
+    //     // let output_amount = quote.out_amount.parse::<u64>().unwrap_or(0) as f64;
 
-        // println!("   Send: {:.6} SOL", input_amount / 1_000_000_000.0);
-        // println!("   Take: {:.2} USDC", output_amount / 1_000_000.0);
-        // println!("   Slipping: {}%", quote.slippage_bps as f64 / 100.0);
+    //     // println!("   Send: {:.6} SOL", input_amount / 1_000_000_000.0);
+    //     // println!("   Take: {:.2} USDC", output_amount / 1_000_000.0);
+    //     // println!("   Slipping: {}%", quote.slippage_bps as f64 / 100.0);
 
-        // // Handle the price impact
-        // println!("Impact on price: {}%", quote.price_impact_pct);
+    //     // // Handle the price impact
+    //     // println!("Impact on price: {}%", quote.price_impact_pct);
 
-        Ok(quote)
-    }
-    pub async fn get_quote(
-        &self,
-        input_mint: &str,
-        output_mint: &str,
-        amount: u64,
-        slippage_bps: u16,
-        //fee_account : &str,
-    ) -> Result<JupiterQuoteResponse, Box<dyn std::error::Error + Send + Sync>> {
-        let url = format!("{}/quote", self.jupiter_base_url);
+    //     Ok(quote)
+    // }
+    // pub async fn get_quote(
+    //     &self,
+    //     input_mint: &str,
+    //     output_mint: &str,
+    //     amount: u64,
+    //     slippage_bps: u16,
+    //     //fee_account : &str,
+    // ) -> Result<JupiterQuoteResponse, Box<dyn std::error::Error + Send + Sync>> {
+    //     let url = format!("{}/quote", self.jupiter_base_url);
 
-        let params = [
-            ("inputMint", input_mint),
-            ("outputMint", output_mint),
-            ("amount", &amount.to_string()),
-            ("slippageBps", &slippage_bps.to_string()),
-            // ("platformFeeBps", "20"),
-            //("feeAccount",fee_account)
-        ];
+    //     let params = [
+    //         ("inputMint", input_mint),
+    //         ("outputMint", output_mint),
+    //         ("amount", &amount.to_string()),
+    //         ("slippageBps", &slippage_bps.to_string()),
+    //         // ("platformFeeBps", "20"),
+    //         //("feeAccount",fee_account)
+    //     ];
 
-        let mut headers = reqwest::header::HeaderMap::new();
-        headers.insert("Accept", "application/json".parse()?);
-        headers.insert("x-api-key", "02aaffb2-fd16-4030-9b4f-f9dd7e178a2c".parse()?);
+    //     let mut headers = reqwest::header::HeaderMap::new();
+    //     headers.insert("Accept", "application/json".parse()?);
+    //     headers.insert("x-api-key", "02aaffb2-fd16-4030-9b4f-f9dd7e178a2c".parse()?);
 
-        let response = self
-            .http_client
-            .get(&url)
-            .query(&params)
-            .headers(headers)
-            .send()
-            .await?;
+    //     let response = self
+    //         .http_client
+    //         .get(&url)
+    //         .query(&params)
+    //         .headers(headers)
+    //         .send()
+    //         .await?;
 
-        if !response.status().is_success() {
-            let error_txt = response.text().await?;
-            tracing::error!("Jupiter API err : {}", error_txt);
-            return Err(format!("Jupiter API error: {}", error_txt).into());
-        }
+    //     if !response.status().is_success() {
+    //         let error_txt = response.text().await?;
+    //         tracing::error!("Jupiter API err : {}", error_txt);
+    //         return Err(format!("Jupiter API error: {}", error_txt).into());
+    //     }
 
-        let quote: JupiterQuoteResponse = response.json().await?;
+    //     let quote: JupiterQuoteResponse = response.json().await?;
 
-        // let input_amount = quote.in_amount.parse::<u64>().unwrap_or(0) as f64;
-        // let output_amount = quote.out_amount.parse::<u64>().unwrap_or(0) as f64;
+    //     // let input_amount = quote.in_amount.parse::<u64>().unwrap_or(0) as f64;
+    //     // let output_amount = quote.out_amount.parse::<u64>().unwrap_or(0) as f64;
 
-        // println!("   Send: {:.6} SOL", input_amount / 1_000_000_000.0);
-        // println!("   Take: {:.2} USDC", output_amount / 1_000_000.0);
-        // println!("   Slipping: {}%", quote.slippage_bps as f64 / 100.0);
-        // println!("   Impact on price: {}%", quote.price_impact_pct);
+    //     // println!("   Send: {:.6} SOL", input_amount / 1_000_000_000.0);
+    //     // println!("   Take: {:.2} USDC", output_amount / 1_000_000.0);
+    //     // println!("   Slipping: {}%", quote.slippage_bps as f64 / 100.0);
+    //     // println!("   Impact on price: {}%", quote.price_impact_pct);
 
-        Ok(quote)
-    }
+    //     Ok(quote)
+    // }
 
     // async fn build_adnd_send_transaction(
     //     &self,
@@ -264,114 +265,51 @@ impl JupiterTrader {
         options: QuoteOptions,
         // fee_account : &str,
     ) -> Result<JupiterQuoteResponse, SaturnTransactionsServiceError> {
-        let url = format!("{}/quote", self.jupiter_base_url);
-
-        let amount_str = amount.to_string();
-        let slippage_bps_str = slippage_bps.to_string();
-
-        let cleaned_options = options.cleaned();
-        let additional_params = cleaned_options.to_params();
-
-        let mut headers = reqwest::header::HeaderMap::new();
-        headers.insert("Accept", HeaderValue::from_static("application/json"));
-        headers.insert(
-            "x-api-key",
-            HeaderValue::from_static("02aaffb2-fd16-4030-9b4f-f9dd7e178a2c"),
-        );
-
-        let response = self
-            .http_client
-            .get(&url)
-            .query(&[
-                ("inputMint", input_mint),
-                ("outputMint", output_mint),
-                ("amount", &amount_str),
-                ("slippageBps", &slippage_bps_str),
-                ("platformFeeBps", "20"),
-            ])
-            .query(&additional_params)
-            .headers(headers)
-            .send()
-            .await
-            .map_err(|e| {
-                SaturnTransactionsServiceError::JupiterError(
-                    JupiterReqestError::QuotaCreatingReqest {
-                        input_mint: input_mint.to_string(),
-                        output_mint: output_mint.to_string(),
-                        reason : e.to_string()
-                    },
-                )
-            })?;
-
-        if !response.status().is_success() {
-            let error_txt = response.text().await.map_err(|e| {
-                SaturnTransactionsServiceError::JupiterError(JupiterReqestError::NotSuccessReqest {
-                    reason: e.to_string(),
-                })
-            })?;
-
-            tracing::error!("Jupiter API err : {}", error_txt);
-
-            return Err(SaturnTransactionsServiceError::JupiterError(
-                JupiterReqestError::NotSuccessReqest { reason: error_txt },
-            ));
-        }
-
-        let quote: JupiterQuoteResponse = response.json().await.map_err(|e| {
-            SaturnTransactionsServiceError::JupiterError(JupiterReqestError::ParseResponseErr {
-                reason: e.to_string(),
-            })
-        })?;
-        // println!("   Send: {:.6} SOL", input_amount / 1_000_000_000.0);
-        // println!("   Take: {:.2} USDC", output_amount / 1_000_000.0);
-        // println!("   Slipping: {}%", quote.slippage_bps as f64 / 100.0);
-        // println!("   Impact on price: {}%", quote.price_impact_pct);
-        // println!("_____________________________________________________");
-
+        let quote = self.http_client.get_quote_with_options(input_mint, output_mint, amount, slippage_bps, options).await?;
         Ok(quote)
     }
 
-    pub async fn get_swap(
-        &self,
-        quote: JupiterQuoteResponse,
-        pubkey: &str,
-    ) -> Result<Transaction, Box<dyn std::error::Error + Send + Sync>> {
-        let url = format!("{}/swap", self.jupiter_base_url);
+    // pub async fn get_swap(
+    //     &self,
+    //     quote: JupiterQuoteResponse,
+    //     pubkey: &str,
+    // ) -> Result<Transaction, Box<dyn std::error::Error + Send + Sync>> {
+    //     let url = format!("{}/swap", self.jupiter_base_url);
 
-        let swap = JupiterSwapRequest::new(
-            pubkey.to_string(),
-            quote,
-            10_000_000,
-            PriorityLevel::VeryHigh,
-            true,
-        );
+    //     let swap = JupiterSwapRequest::new(
+    //         pubkey.to_string(),
+    //         quote,
+    //         10_000_000,
+    //         PriorityLevel::VeryHigh,
+    //         true,
+    //     );
 
-        let response = self.http_client.post(&url).json(&swap).send().await?;
+    //     let response = self.http_client.post(&url).json(&swap).send().await?;
 
-        if !response.status().is_success() {
-            let error_txt = response.text().await?;
-            tracing::error!("Jupiter API err : {}", error_txt);
-            return Err("err".into());
-        }
+    //     if !response.status().is_success() {
+    //         let error_txt = response.text().await?;
+    //         tracing::error!("Jupiter API err : {}", error_txt);
+    //         return Err("err".into());
+    //     }
 
-        let swap_response: JupiterSwapResponse = response.json().await?;
+    //     let swap_response: JupiterSwapResponse = response.json().await?;
 
-        if let Some(simulation_error) = &swap_response.simulation_error {
-            tracing::error!(
-                "Simulation error: {} - {}",
-                simulation_error.error_code,
-                simulation_error.error
-            );
-            return Err(format!("Simulation failed: {}", simulation_error.error).into());
-        }
+    //     if let Some(simulation_error) = &swap_response.simulation_error {
+    //         tracing::error!(
+    //             "Simulation error: {} - {}",
+    //             simulation_error.error_code,
+    //             simulation_error.error
+    //         );
+    //         return Err(format!("Simulation failed: {}", simulation_error.error).into());
+    //     }
 
-        let transactions_data =
-            general_purpose::STANDARD.decode(&swap_response.swap_transaction)?;
+    //     let transactions_data =
+    //         general_purpose::STANDARD.decode(&swap_response.swap_transaction)?;
 
-        let transaction: Transaction = bincode::deserialize(&transactions_data)?;
+    //     let transaction: Transaction = bincode::deserialize(&transactions_data)?;
 
-        Ok(transaction)
-    }
+    //     Ok(transaction)
+    // }
 
     // pub async fn execute_swap_instruction(
     //     &self,
@@ -1115,51 +1053,7 @@ impl JupiterTrader {
         blockhash: solana_sdk::hash::Hash,
         pubkey: &Pubkey,
     ) -> Result<String, SaturnTransactionsServiceError> {
-        let url = format!("{}/swap-instructions", self.jupiter_base_url);
-        tracing::info!("CREATING_TRANSACTION");
-        let swap_request = JupiterSwapRequest::new(
-            pubkey.to_string(),
-            quote,
-            100_000_000,
-            PriorityLevel::VeryHigh,
-            true,
-        );
-
-        let response = self
-            .http_client
-            .post(&url)
-            .json(&swap_request)
-            .send()
-            .await
-            .map_err(|e| {
-                SaturnTransactionsServiceError::JupiterError(
-                    JupiterReqestError::SwapInstructionReqest {
-                        pubkey: pubkey.as_array().to_vec(),
-                        issue: e.to_string(),
-                    },
-                )
-            })?;
-
-        if !response.status().is_success() {
-            let error_txt = response.text().await.map_err(|e| {
-                SaturnTransactionsServiceError::JupiterError(JupiterReqestError::NotSuccessReqest {
-                    reason: e.to_string(),
-                })
-            })?;
-
-            tracing::error!("Jupiter API err : {}", error_txt);
-
-            return Err(SaturnTransactionsServiceError::JupiterError(
-                JupiterReqestError::NotSuccessReqest { reason: error_txt },
-            ));
-        }
-
-        let swap_instructions: JupiterSwapInstructionsRsponse =
-            response.json().await.map_err(|e| {
-                SaturnTransactionsServiceError::JupiterError(JupiterReqestError::ParseResponseErr {
-                    reason: e.to_string(),
-                })
-            })?;
+        let swap_instructions = self.http_client.create_swap_transaction(quote, pubkey).await?;
 
         let transactions = self
             .build_transaction_from_instructions(&swap_instructions, blockhash, pubkey)

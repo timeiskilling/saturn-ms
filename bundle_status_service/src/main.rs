@@ -8,7 +8,7 @@ use tracing_subscriber::fmt::format::FmtSpan;
 
 use crate::{
     proto_service::{TransactionService, service_jupiter_status},
-    revork::{retry_config::RetryConfig, jito_http_manager::JitoHttpManager},
+    revork::{jito_http_manager::JitoHttpManager, reqwest_client::HttpManager, retry_config::RetryConfig},
     trader::JupiterTrader,
 };
 
@@ -43,11 +43,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         RetryConfig::default(),
         None,
     ));
+
+    let http_client = Arc::new(HttpManager::new("https://api.jup.ag//swap/v1".to_string(), 50, RetryConfig::default(), None));
     let trader = Arc::new(
         JupiterTrader::new(
             "https://mainnet.helius-rpc.com/?api-key=bd7b24dd-d644-4612-a486-a5acb8427920",
             redis_url,
-            jito_manager
+            jito_manager,
+            http_client,
         )
         .await,
     );

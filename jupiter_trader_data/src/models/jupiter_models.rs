@@ -181,7 +181,7 @@ pub struct UltraSwapInfo {
     pub fee_mint: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize,Clone)]
 pub struct JupiterSwapRequest {
     #[serde(rename = "userPublicKey")]
     pub user_public_key: String,
@@ -244,13 +244,13 @@ pub struct JupiterQuoteResponse {
     pub route_plan: Vec<RoutePlan>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize,Clone)]
 pub struct PrioritizationFeeLamports {
     #[serde(rename = "priorityLevelWithMaxLamports")]
     pub priority_level_with_max_lamports: PriorityLevelWithMaxLamports,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize,Clone)]
 pub struct PriorityLevelWithMaxLamports {
     #[serde(rename = "maxLamports")]
     pub max_lamports: u64,
@@ -339,7 +339,7 @@ pub enum SwapMode {
     ExactOut,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize,Clone)]
 pub enum PriorityLevel {
     #[serde(rename = "medium")]
     Medium,
