@@ -1,10 +1,13 @@
 import { useState, useCallback } from "react";
 import { useWallet } from "../contexts/WalletContext";
+import type { 
+  JsWalletCreationResult,
+  TokenBalance,
+} from "encryptions-service";
 import {
-  type CreateWalletRequest,
-  type CreateWalletResponse,
-  type WalletInfo,
-  type SendTokensRequest,
+  type CreateWalletParams,
+  type UIWalletInfo,
+  type SendTokensParams,
   WalletServiceError,
 } from "../services/wallet/wallet_service";
 
@@ -13,18 +16,20 @@ interface OperationState<T> {
   isLoading: boolean;
   error: string | null;
 }
-
 export const useCreateWallet = () => {
   const { walletService } = useWallet();
-  const [state, setState] = useState<OperationState<CreateWalletResponse>>({
+  const [state, setState] = useState<OperationState<JsWalletCreationResult>>({
     data: null,
     isLoading: false,
     error: null,
   });
 
   const createWallet = useCallback(
-    async (request: CreateWalletRequest) => {
+    async (params: CreateWalletParams) => {
+      console.log("🔵 createWallet called with params:", params);
+      
       if (!walletService) {
+        console.log("❌ Wallet service not available");
         setState({
           data: null,
           isLoading: false,
@@ -33,15 +38,29 @@ export const useCreateWallet = () => {
         return null;
       }
 
+      console.log("🟡 Setting loading state to true");
       setState({ data: null, isLoading: true, error: null });
 
       try {
-        const response = await walletService.createWallet(request);
-        setState({ data: response, isLoading: false, error: null });
-        return response;
+        console.log("🟢 Calling walletService.createWallet...");
+        const result = await walletService.createWallet(params);
+        console.log("✅ Wallet created successfully:", result);
+        
+        setState({ data: result, isLoading: false, error: null });
+        return result;
       } catch (error) {
+        console.error("❌ Error in createWallet:", error);
+        console.error("Error details:", {
+          type: typeof error,
+          instanceof: error instanceof Error,
+          message: error instanceof Error ? error.message : 'unknown',
+          stack: error instanceof Error ? error.stack : 'no stack'
+        });
+        
         const errorMessage =
           error instanceof WalletServiceError
+            ? error.message
+            : error instanceof Error
             ? error.message
             : "Failed to create wallet";
 
@@ -65,7 +84,7 @@ export const useCreateWallet = () => {
 
 export const useWalletList = () => {
   const { walletService } = useWallet();
-  const [state, setState] = useState<OperationState<WalletInfo[]>>({
+  const [state, setState] = useState<OperationState<UIWalletInfo[]>>({
     data: null,
     isLoading: false,
     error: null,
@@ -111,7 +130,7 @@ export const useSendTokens = () => {
   });
 
   const sendTokens = useCallback(
-    async (request: SendTokensRequest) => {
+    async (params: SendTokensParams) => {
       if (!walletService) {
         setState({
           data: null,
@@ -124,7 +143,7 @@ export const useSendTokens = () => {
       setState({ data: null, isLoading: true, error: null });
 
       try {
-        const signature = await walletService.sendTokens(request);
+        const signature = await walletService.sendTokens(params);
         setState({ data: signature, isLoading: false, error: null });
         return signature;
       } catch (error) {
@@ -153,7 +172,7 @@ export const useSendTokens = () => {
 
 export const useActiveWallet = () => {
   const { walletService } = useWallet();
-  const [state, setState] = useState<OperationState<WalletInfo>>({
+  const [state, setState] = useState<OperationState<UIWalletInfo>>({
     data: null,
     isLoading: false,
     error: null,
@@ -214,29 +233,37 @@ export const useRefreshBalance = () => {
   const { walletService } = useWallet();
   const [isLoading, setIsLoading] = useState(false);
 
-  const refreshBalance = useCallback(async (publicKey?: string) => {
-    if (!walletService) {
-      return null;
-    }
+  const refreshBalance = useCallback(
+    async (
+      publicKey?: string,
+      mint?: string
+    ): Promise<TokenBalance | undefined | TokenBalance[]> => {
+      if (!walletService) {
+        return undefined;
+      }
 
-    setIsLoading(true);
+      setIsLoading(true);
 
-    try {
-      const balance = publicKey
-        ? await walletService.getBalance(publicKey)
-        : await walletService.refreshActiveWalletBalance();
-
-      return balance;
-    } catch (error) {
-      console.error("Failed to refresh balance:", error);
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [walletService]);
+      try {
+        if (publicKey && mint) {
+          const balance = await walletService.getBalance(publicKey, mint);
+          return balance;
+        } else {
+          const balances = await walletService.refreshActiveWalletBalance();
+          return balances;
+        }
+      } catch (error) {
+        console.error("Failed to refresh balance:", error);
+        return undefined;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [walletService]
+  );
 
   return {
     refreshBalance,
-    isLoading
-  }
+    isLoading,
+  };
 };
