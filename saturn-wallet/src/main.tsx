@@ -1,8 +1,9 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import WalletTestComponent from './components/WalletTestComponent'
 import { WasmWalletService } from './services/wallet/implementations/wasm-wallet-service'
 import { WalletProvider } from './contexts/WalletContext';
+// import WalletTestComponent from './components/WalletTestComponent';
+import WalletMainPage from './components/WalletMainPage';
 
 const walletService = new WasmWalletService({
   rpcUrl: "https://api.devnet.solana.com",
@@ -12,7 +13,7 @@ const walletService = new WasmWalletService({
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <WalletProvider walletService={walletService}>
-      <WalletTestComponent />
+      <WalletMainPage />
     </WalletProvider>
   </StrictMode>,
 )

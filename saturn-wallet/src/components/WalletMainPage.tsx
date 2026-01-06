@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useWallet } from '../contexts/WalletContext';
-import { useActiveWallet, useCreateWallet, useWalletList } from '../hooks/useWalletOperations';
+import { useActiveWallet,useWalletList } from '../hooks/useWalletOperations';
 import { WalletInfoHelpers, type UIWalletInfo } from '../services/wallet/wallet_service';
+import CreateWalletForm from './CreateWalletForm';
 
 const WalletMainPage: React.FC = () => {
     const { isInitialized, isLoading: serviceLoading, error: serviceError } = useWallet();
@@ -165,102 +166,6 @@ const WalletMainPage: React.FC = () => {
                         />
                     );
                 })}
-            </div>
-        </div>
-    );
-};
-
-
-interface CreateWalletFormProps {
-    onSuccess: () => void;
-    onCancel: () => void;
-}
-
-const CreateWalletForm: React.FC<CreateWalletFormProps> = ({ onSuccess, onCancel }) => {
-    const { createWallet, isLoading, error } = useCreateWallet();
-
-    const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
-    const [walletName, setWalletName] = useState('');
-
-    const handleSubmit = async () => {
-        if (password !== confirmPassword) {
-            alert('Password doesnt match');
-            return;
-        }
-
-        if (password.length < 8) {
-            alert('Password must be at leas 8 symbols');
-            return;
-        }
-
-        const result = await createWallet({
-            password,
-            name: walletName || undefined
-        });
-
-        if (result) {
-            alert(`Save this seed phrase:\n\n${result.recovery_phrase}\n`);
-            onSuccess();
-        }
-    }
-
-    return (
-        <div style={styles.formContainer}>
-            <h2>Creating new wallet</h2>
-
-            <div style={styles.formGroup}>
-                <label>Name wallet (optional)</label>
-                <input
-                    type="text"
-                    value={walletName}
-                    onChange={(e) => setWalletName(e.target.value)}
-                    placeholder="My main wallet"
-                    style={styles.input}
-                    disabled={isLoading} />
-            </div>
-
-            <div style={styles.formGroup}>
-                <label>Password *</label>
-                <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Minimum 8 symbols"
-                    style={styles.input}
-                    disabled={isLoading} />
-            </div>
-
-            <div style={styles.formGroup}>
-                <label>Confirmation password *</label>
-                <input
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Repeat password"
-                    style={styles.input}
-                    disabled={isLoading} />
-            </div>
-
-            {error && (
-                <div style={styles.errorBox}>
-                    {error}
-                </div>
-            )}
-
-            <div style={styles.buttonGroup}>
-                <button
-                    onClick={handleSubmit}
-                    disabled={isLoading || !password || !confirmPassword}
-                    style={styles.primaryButton}>
-                    {isLoading ? 'Creating...' : 'Create wallet'}
-                </button>
-                <button
-                    onClick={onCancel}
-                    disabled={isLoading}
-                    style={styles.secondaryButton}>
-                    Cancel
-                </button>
             </div>
         </div>
     );

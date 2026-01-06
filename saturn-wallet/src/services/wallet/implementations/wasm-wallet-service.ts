@@ -72,41 +72,43 @@ export class WasmWalletService implements IWalletService {
     return this.walletManager;
   }
 
-  async createWallet(params: CreateWalletParams): Promise<JsWalletCreationResult> {
-  console.log("🔷 WasmWalletService.createWallet called");
-  console.log("🔷 Params:", params);
-  
-  const manager = this.ensureInitialized();
-  console.log("🔷 Manager obtained:", manager);
+  async createWallet(
+    params: CreateWalletParams
+  ): Promise<JsWalletCreationResult> {
+    console.log("🔷 WasmWalletService.createWallet called");
+    console.log("🔷 Params:", params);
 
-  try {
-    console.log("🔷 Converting params to WASM request...");
-    const wasmRequest = RequestAdapters.toCreateWalletRequest(params);
-    console.log("🔷 WASM request created:", wasmRequest);
-    
-    console.log("🔷 Calling manager.createWallet...");
-    const result = await manager.createWallet(wasmRequest);
-    console.log("🔷 Manager returned result:", result);
-    
-    console.log(`✅ Wallet created: ${result.pubkey}`);
-    return result;
-  } catch (error) {
-    console.error("❌ Error in WasmWalletService.createWallet:", error);
-    throw new WalletServiceError(
-      "Failed to create wallet",
-      WalletErrorCodes.UNKNOWN_ERROR,
-      error
-    );
+    const manager = this.ensureInitialized();
+    console.log("🔷 Manager obtained:", manager);
+
+    try {
+      console.log("🔷 Converting params to WASM request...");
+      const wasmRequest = RequestAdapters.toCreateWalletRequest(params);
+      console.log("🔷 WASM request created:", wasmRequest);
+
+      console.log("🔷 Calling manager.createWallet...");
+      const result = await manager.createWallet(wasmRequest);
+      console.log("🔷 Manager returned result:", result);
+
+      console.log(`✅ Wallet created: ${result.pubkey}`);
+      return result;
+    } catch (error) {
+      console.error("❌ Error in WasmWalletService.createWallet:", error);
+      throw new WalletServiceError(
+        "Failed to create wallet",
+        WalletErrorCodes.UNKNOWN_ERROR,
+        error
+      );
+    }
   }
-}
 
   async listWallets(): Promise<UIWalletInfo[]> {
     const manager = this.ensureInitialized();
 
     try {
       const wasmWallets = await manager.listWallets();
-      
-      return wasmWallets.map(wasmInfo => 
+
+      return wasmWallets.map((wasmInfo) =>
         WalletInfoHelpers.fromWasm(wasmInfo, false)
       );
     } catch (error) {
@@ -149,11 +151,13 @@ export class WasmWalletService implements IWalletService {
 
     try {
       const balance = await manager.getBalance(publicKey, mint);
-      
+
       if (balance) {
-        console.log(`Balance for ${publicKey}: ${balance.amount} ${balance.symbol}`);
+        console.log(
+          `Balance for ${publicKey}: ${balance.amount} ${balance.symbol}`
+        );
       }
-      
+
       return balance;
     } catch (error) {
       console.error("Failed to get balance:", error);
@@ -171,7 +175,7 @@ export class WasmWalletService implements IWalletService {
     try {
       const wasmRequest = RequestAdapters.toSendTokensRequest(params);
       const signature = await manager.sendTokens(wasmRequest);
-      
+
       console.log(`Transaction sent: ${signature}`);
       return signature;
     } catch (error) {
@@ -256,7 +260,7 @@ export class WasmWalletService implements IWalletService {
 
     try {
       const balances = await manager.refreshActiveWalletBalance();
-      
+
       console.log(`Refreshed ${balances.length} token balances`);
       return balances;
     } catch (error) {
