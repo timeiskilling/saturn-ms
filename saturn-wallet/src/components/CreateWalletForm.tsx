@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useCreateWallet } from '../hooks/useWalletOperations';
 
-interface CreateWalletFormProps {
+type CreateWalletFormProps = {
     onSuccess: () => void;
     onCancel: () => void;
 }
@@ -19,7 +19,7 @@ const CreateWalletForm: React.FC<CreateWalletFormProps> = ({ onSuccess, onCancel
             return;
         }
 
-        if (password.length < 8) {
+        if (password.length < 12) {
             alert('Password must be at least 8 symbols');
             return;
         }

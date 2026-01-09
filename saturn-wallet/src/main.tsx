@@ -4,7 +4,7 @@ import { WasmWalletService } from './services/wallet/implementations/wasm-wallet
 import { WalletProvider } from './contexts/WalletContext';
 // import WalletTestComponent from './components/WalletTestComponent';
 import WalletMainPage from './components/WalletMainPage';
-
+import './index.css'
 const walletService = new WasmWalletService({
   rpcUrl: "https://api.devnet.solana.com",
   jupiterUrl: "https://api.jup.ag"
@@ -12,8 +12,8 @@ const walletService = new WasmWalletService({
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <WalletProvider walletService={walletService}>
-      <WalletMainPage />
-    </WalletProvider>
+      <WalletProvider walletService={walletService}>
+        <WalletMainPage />
+      </WalletProvider>
   </StrictMode>,
 )

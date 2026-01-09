@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useWallet } from '../contexts/WalletContext';
-import { useActiveWallet,useWalletList } from '../hooks/useWalletOperations';
+import { useActiveWallet, useWalletList } from '../hooks/useWalletOperations';
 import { WalletInfoHelpers, type UIWalletInfo } from '../services/wallet/wallet_service';
 import CreateWalletForm from './CreateWalletForm';
+import NoiseOverlay from '../effects/noise';
+
+
 
 const WalletMainPage: React.FC = () => {
     const { isInitialized, isLoading: serviceLoading, error: serviceError } = useWallet();
@@ -14,10 +17,12 @@ const WalletMainPage: React.FC = () => {
     const [showCreateForm, setShowCreateForm] = useState(false);
 
     useEffect(() => {
-        if (isInitialized && !wallets && !walletsLoading) {
+        if (isInitialized) {
             fetchWallets();
         }
-    }, [isInitialized, wallets, walletsLoading, fetchWallets])
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isInitialized])
+
 
     const handleCreateClick = () => {
         // setShowCreateForm(prev => !prev)
@@ -34,7 +39,9 @@ const WalletMainPage: React.FC = () => {
     };
 
     const handleSelectWallet = async (publicKey: string) => {
+        console.time("setActive");
         const success = await setActive(publicKey);
+        console.timeEnd("setActive");
         if (success) {
             console.log('Active wallet changed:', publicKey);
         }
@@ -128,6 +135,7 @@ const WalletMainPage: React.FC = () => {
 
     return (
         <div style={styles.container}>
+            <NoiseOverlay />
             <div style={styles.header}>
                 <h1>My wallets</h1>
                 <button
@@ -148,14 +156,16 @@ const WalletMainPage: React.FC = () => {
                         <small style={styles.hint}>
                             {WalletInfoHelpers.getPublicKey(activeWallet)}
                         </small>
-                    </div>
+                    </div>  
                 </div>
             )}
 
             <div style={styles.walletsList}>
                 {wallets.map((wallet) => {
                     const publicKey = WalletInfoHelpers.getPublicKey(wallet);
-                    const isActive = wallet.isActive;
+                    const isActive = activeWallet
+                        ? WalletInfoHelpers.getPublicKey(activeWallet) === publicKey
+                        : false;
 
                     return (
                         <WalletCard

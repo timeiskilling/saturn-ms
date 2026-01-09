@@ -7,6 +7,8 @@ import type {
   WalletInfo as WasmWalletInfo,
 } from "encryptions-service";
 
+import bs58 from 'bs58';
+
 export type { JsWalletCreationResult as WalletCreationResult };
 
 export type { TokenBalance };
@@ -27,7 +29,12 @@ export const WalletInfoHelpers = {
   },
 
   getPublicKey(walletInfo: UIWalletInfo): string {
-    return walletInfo.wasmInfo.pubkey.toString();
+    const key = walletInfo.wasmInfo.pubkey;
+    if (Array.isArray(key) || key instanceof Uint8Array) {
+      return bs58.encode(key as Uint8Array);
+    }
+
+    return key.toString();
   },
 
   getDisplayName(walletInfo: UIWalletInfo): string {
