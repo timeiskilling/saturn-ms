@@ -1,13 +1,14 @@
 #![cfg(target_arch = "wasm32")]
 
-use std::str::FromStr;
-use wallet_models::domain::models::acc_data::Network;
-use wasm_bindgen::prelude::*;
-use crate::wasm::wasm_encryptions::SecureString;
+use crate::{wasm::wasm_encryptions::SecureString};
+use crate::error_handling::error_code::WalletError;
 use serde::{Deserialize, Serialize};
 use solana_sdk::pubkey::Pubkey;
+use std::str::FromStr;
 use tsify::Tsify;
-use wasm_bindgen::{JsValue};
+use wallet_models::domain::models::acc_data::Network;
+use wasm_bindgen::JsValue;
+use wasm_bindgen::prelude::*;
 
 #[derive(Serialize, Deserialize, Tsify)]
 #[tsify(from_wasm_abi)]
@@ -74,7 +75,6 @@ pub struct JsWalletCreationResult {
     pub recovery_phrase: String,
 }
 
-
 #[derive(Serialize, Deserialize, Debug, Clone, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct TokenBalance {
@@ -89,7 +89,7 @@ pub struct TokenBalance {
     pub token_program: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize,Tsify)]
+#[derive(Debug, Clone, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct WalletInfo {
     pub pubkey: Pubkey,
@@ -97,4 +97,17 @@ pub struct WalletInfo {
     pub display_name: Option<String>,
     pub network: Network,
     pub is_unlocked: bool,
+}
+
+pub trait LockResultExt<T> {
+    fn or_busy(self, method_name: &str) -> Result<T, WalletError>;
+}
+
+impl<T> LockResultExt<T> for Option<T> {
+    fn or_busy(self, method_name: &str) -> Result<T, WalletError> {
+        self.ok_or_else(|| WalletError::BlockedWalletManager {
+            issue: "Wallet manager is busy".to_string(),
+            method: method_name.to_string(),
+        })
+    }
 }

@@ -9,7 +9,7 @@ pub mod wasm_token_acc_info;
 pub mod wasm_types;
 pub mod wasm_wallet_manager;
 pub mod wasm_wallet_service;
-use std::rc::Rc;
+use std::{cell::RefCell, rc::Rc};
 
 pub use wasm_wallet_manager::WasmWalletManager;
 
@@ -20,6 +20,10 @@ use crate::wasm::{
     wasm_token_acc_info::JupiterClient,
     wasm_wallet_service::{WalletManager, WalletManagerConfig},
 };
+
+
+// #[cfg(target_arch = "wasm32")]
+type Shared<T> = Rc<RefCell<T>>;
 
 #[wasm_bindgen(start)]
 pub fn init_panic_hook() -> Result<(), JsValue> {

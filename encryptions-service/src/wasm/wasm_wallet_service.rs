@@ -1,10 +1,9 @@
 #![cfg(target_arch = "wasm32")]
 
 use async_lock::RwLock;
-use serde::{Deserialize, Serialize};
 use solana_sdk::{pubkey::Pubkey, signature::Signature};
-use std::{collections::HashMap, rc::Rc, sync::Arc, time::Duration};
-use wallet_models::domain::models::{acc_data::Network};
+use std::{cell::RefCell, collections::HashMap, rc::Rc, time::Duration};
+use wallet_models::domain::models::acc_data::Network;
 use zeroize::Zeroizing;
 
 // #[cfg(target_arch = "wasm32")]
@@ -21,9 +20,10 @@ use crate::{
     },
     traits::signer_wraper::{SaturnSigner, SecureKeystore, SolanaKeypairSigner},
     wasm::{
-        models::{TokenBalance, WalletCreationResult, WalletInfo},
+        models::{LockResultExt, TokenBalance, WalletCreationResult, WalletInfo},
         wasm_encryptions::{
-            CryptoError, CryptoVault, EncryptionParams, SecureString, create_encrypt_data, encrypt_seed_with_verification, keypair_from_seed
+            CryptoError, CryptoVault, EncryptionParams, SecureString, create_encrypt_data,
+            encrypt_seed_with_verification, keypair_from_seed,
         },
         wasm_rpc_client::{SolanaRpcProvider, WasmRpcClient},
         wasm_solana_methods::create_unsign_transaction,
@@ -35,9 +35,9 @@ use crate::{
 pub struct WalletManager {
     rpc_provider: Rc<WasmRpcClient>,
     wallets: Rc<RwLock<HashMap<Pubkey, WalletEntry>>>,
-    active_wallet: Arc<RwLock<Option<Pubkey>>>,
+    active_wallet: Rc<RefCell<Option<Pubkey>>>,
     config: WalletManagerConfig,
-    metadata_provider: Arc<dyn TokenMetaDataProvider>,
+    metadata_provider: Rc<dyn TokenMetaDataProvider>,
 }
 
 pub struct WalletManagerConfig {
@@ -76,16 +76,17 @@ impl WalletManager {
         Self {
             rpc_provider,
             wallets: Rc::new(RwLock::new(HashMap::new())),
-            active_wallet: Arc::new(RwLock::new(None)),
+            active_wallet: Rc::new(RefCell::new(None)),
             config,
-            metadata_provider: Arc::new(metadata_provider),
+            metadata_provider: Rc::new(metadata_provider),
         }
     }
 
-    pub fn get_metadata_provider(&self) -> Arc<dyn TokenMetaDataProvider> {
+    pub fn get_metadata_provider(&self) -> Rc<dyn TokenMetaDataProvider> {
         self.metadata_provider.clone()
     }
-    pub async fn create_wallet(
+
+    pub fn create_wallet(
         &self,
         password: SecureString,
         bip39_passphrase: Option<SecureString>,
@@ -127,7 +128,7 @@ impl WalletManager {
             keystore_timeout: timeout,
         };
 
-        let mut wallets = self.wallets.write().await;
+        let mut wallets = self.wallets.try_write().or_busy("create_wallet")?;
 
         if wallets.contains_key(&pubkey) {
             return Err(WalletError::Validation(ValidationError::InvalidPublicKey {
@@ -137,7 +138,7 @@ impl WalletManager {
 
         wallets.insert(pubkey, entry);
 
-        let mut active = self.active_wallet.write().await;
+        let mut active = self.active_wallet.borrow_mut();
         if active.is_none() {
             *active = Some(pubkey);
         }
@@ -157,12 +158,12 @@ impl WalletManager {
         })
     }
 
-    pub async fn unlock_wallet(
+    pub fn unlock_wallet(
         &self,
         pubkey: &Pubkey,
         password: SecureString,
     ) -> Result<(), WalletError> {
-        let mut wallets = self.wallets.write().await;
+        let mut wallets = self.wallets.try_write().or_busy("unlock_wallet")?;
 
         let entry = wallets.get_mut(pubkey).ok_or_else(|| {
             WalletError::Validation(ValidationError::WalletNotFound {
@@ -173,7 +174,6 @@ impl WalletManager {
         let is_valid = entry
             .crypto_vault
             .verify_password(&password)
-            .await
             .map_err(|_| WalletError::Encryption(EncryptionError::InvalidPassword))?;
 
         if !is_valid {
@@ -187,7 +187,6 @@ impl WalletManager {
         let mut seed = entry
             .crypto_vault
             .decrypt_seed(password)
-            .await
             .map_err(|e| match e {
                 CryptoError::DecryptionFailed(_) => {
                     WalletError::Encryption(EncryptionError::DecryptionFailed {
@@ -223,12 +222,12 @@ impl WalletManager {
         Ok(())
     }
 
-    pub async fn get_balance(
+    pub fn get_balance(
         &self,
         pubkey: &Pubkey,
         mint: &Pubkey,
     ) -> Result<Option<TokenBalance>, WalletError> {
-        let wallets = self.wallets.read().await;
+        let wallets = self.wallets.try_read().or_busy("get_balance")?;
 
         let entry = wallets.get(pubkey).ok_or_else(|| {
             WalletError::Validation(ValidationError::WalletNotFound {
@@ -236,11 +235,14 @@ impl WalletManager {
             })
         })?;
 
-        Ok(entry.wallet_state.get_token_balance(mint).await)
+        Ok(entry.wallet_state.get_token_balance(mint))
     }
 
-    pub async fn refresh_balances(&self, pubkey: &Pubkey) -> Result<Vec<TokenBalance>, WalletError> {
-        let wallets = self.wallets.read().await;
+    pub async fn refresh_balances(
+        &self,
+        pubkey: &Pubkey,
+    ) -> Result<Vec<TokenBalance>, WalletError> {
+        let wallets = self.wallets.write().await;
 
         let entry = wallets.get(pubkey).ok_or_else(|| {
             WalletError::Validation(ValidationError::WalletNotFound {
@@ -257,15 +259,17 @@ impl WalletManager {
             wallet = %pubkey,
             "Balances refreshed successfully"
         );
-        
-        Ok(entry.wallet_state.get_all_token_balances().await)
+
+        Ok(entry.wallet_state.get_all_token_balances())
     }
 
     pub async fn refresh_active_wallet_balances(&self) -> Result<Vec<TokenBalance>, WalletError> {
-        let active = self.active_wallet.read().await;
+        let maybe_pubkey = {
+            let active = self.active_wallet.borrow();
+            *active
+        };
 
-        if let Some(pubkey) = *active {
-            drop(active);
+        if let Some(pubkey) = maybe_pubkey {
             self.refresh_balances(&pubkey).await
         } else {
             Err(WalletError::Validation(ValidationError::NoActiveWallet))
@@ -309,7 +313,6 @@ impl WalletManager {
             entry
                 .wallet_state
                 .get_token_balance(mint)
-                .await
                 .ok_or(WalletError::Token(TokenError::TokenNotFound {
                     mint: mint.to_string(),
                 }))?;
@@ -401,13 +404,13 @@ impl WalletManager {
         Ok(final_signature)
     }
 
-    pub async fn change_password(
+    pub fn change_password(
         &self,
         pubkey: &Pubkey,
         old_password: SecureString,
         new_password: SecureString,
     ) -> Result<(), WalletError> {
-        let mut wallets = self.wallets.write().await;
+        let mut wallets = self.wallets.try_write().or_busy("change_password")?;
 
         let entry = wallets.get_mut(pubkey).ok_or_else(|| {
             WalletError::Validation(ValidationError::WalletNotFound {
@@ -429,9 +432,8 @@ impl WalletManager {
         let mut seed = entry
             .crypto_vault
             .decrypt_seed(old_password)
-            .await
             .map_err(|_| WalletError::Encryption(EncryptionError::InvalidPassword))?;
-        let encryption_params = entry.crypto_vault.encrypt_params().await;
+        let encryption_params = entry.crypto_vault.encrypt_params();
 
         let new_encrypt = encrypt_seed_with_verification(&seed, new_password, encryption_params)
             .map_err(|e| {
@@ -442,7 +444,7 @@ impl WalletManager {
 
         seed.zeroize();
 
-        entry.crypto_vault.change_encrypt(new_encrypt).await;
+        entry.crypto_vault.change_encrypt(new_encrypt);
 
         entry.last_activity = Instant::now();
 
@@ -454,9 +456,10 @@ impl WalletManager {
         Ok(())
     }
 
-    pub async fn set_active_wallet(&self, pubkey: Pubkey) -> Result<(), WalletError> {
+    pub fn set_active_wallet(&self, pubkey: Pubkey) -> Result<(), WalletError> {
         {
-            let wallets = self.wallets.read().await;
+            let wallets = self.wallets.try_write().or_busy("set_active_wallet")?;
+
             if !wallets.contains_key(&pubkey) {
                 return Err(WalletError::Validation(ValidationError::WalletNotFound {
                     pubkey: pubkey.to_string(),
@@ -464,7 +467,7 @@ impl WalletManager {
             }
         }
 
-        let mut active = self.active_wallet.write().await;
+        let mut active = self.active_wallet.borrow_mut();
         *active = Some(pubkey);
 
         tracing::info!(
@@ -475,16 +478,18 @@ impl WalletManager {
         Ok(())
     }
 
-    pub async fn get_active_wallet(&self) -> Option<WalletInfo> {
+    pub fn get_active_wallet(&self) -> Option<WalletInfo> {
         let active_pubkey = {
-            let active = self.active_wallet.read().await;
+            let active = self.active_wallet.borrow();
             *active
         }?;
 
-        let wallets = self.wallets.read().await;
+        let wallets = self
+            .wallets
+            .try_read()
+            .expect("busy wallet in get_active_wallet");
 
-        wallets.get(&active_pubkey).map(|entry| {
-        WalletInfo {
+        wallets.get(&active_pubkey).map(|entry| WalletInfo {
             pubkey: active_pubkey,
             display_name: entry.wallet_state.get_display_name().map(|s| s.to_string()),
             network: entry.wallet_state.get_network(),
@@ -493,12 +498,14 @@ impl WalletManager {
                 .as_ref()
                 .map(|ks| ks.is_unlocked())
                 .unwrap_or(false),
-        }
-    })
+        })
     }
 
-    pub async fn list_wallets(&self) -> Vec<WalletInfo> {
-        let wallets = self.wallets.read().await;
+    pub fn list_wallets(&self) -> Vec<WalletInfo> {
+        let wallets = self
+            .wallets
+            .try_read()
+            .expect("busy wallet in list_wallets");
 
         wallets
             .iter()
@@ -515,8 +522,12 @@ impl WalletManager {
             .collect()
     }
 
-    pub async fn cleanup_inactive_wallets(&self) {
-        let mut wallets = self.wallets.write().await;
+    pub fn cleanup_inactive_wallets(&self) {
+        let mut wallets = self
+            .wallets
+            .try_write()
+            .expect("busy wallet in cleanup_inactive_wallets");
+
         let now = Instant::now();
 
         let mut locked_count = 0;

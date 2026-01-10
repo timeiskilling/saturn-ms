@@ -1,5 +1,8 @@
 #![cfg(target_arch = "wasm32")]
 
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use argon2::Params;
 use argon2::password_hash::rand_core::{OsRng as RandOsRng, RngCore};
 use argon2::{Argon2, password_hash::SaltString};
@@ -11,7 +14,6 @@ use chacha20poly1305::{
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
 use solana_sdk::pubkey::Pubkey;
-use async_lock::RwLock;
 use solana_sdk::signature::Keypair;
 use solana_sdk::signer::{SeedDerivable, Signer};
 use zeroize::{Zeroize, ZeroizeOnDrop};
@@ -322,7 +324,7 @@ pub struct WalletMetadata {
 }
 
 pub struct CryptoVault {
-    encrypt_info: RwLock<EncryptInfo>,
+    encrypt_info: Rc<RefCell<EncryptInfo>>,
     pubkey: Pubkey,
 }
 
@@ -330,7 +332,7 @@ impl CryptoVault {
     pub fn new(encrypt_info: EncryptInfo) -> Self {
         let pubkey = encrypt_info.encrypted_data.pubkey;
         Self {
-            encrypt_info : RwLock::new(encrypt_info),
+            encrypt_info : Rc::new(RefCell::new(encrypt_info)),
             pubkey,
         }
     }
@@ -339,23 +341,23 @@ impl CryptoVault {
         &self.pubkey
     }
 
-    pub async fn verify_password(&self, password: &SecureString) -> Result<bool, CryptoError> {
-        verify_password(&self.encrypt_info.read().await.encrypted_data.encrypt, password.clone())
+    pub fn verify_password(&self, password: &SecureString) -> Result<bool, CryptoError> {
+        verify_password(&self.encrypt_info.borrow().encrypted_data.encrypt, password.clone())
     }
 
-    pub async fn decrypt_seed(&self, password: SecureString) -> Result<[u8; 32], CryptoError> {
-        decrypt_seed_versioned(&self.encrypt_info.read().await.encrypted_data.encrypt, password)
+    pub fn decrypt_seed(&self, password: SecureString) -> Result<[u8; 32], CryptoError> {
+        decrypt_seed_versioned(&self.encrypt_info.borrow().encrypted_data.encrypt, password)
     }
 
-    pub async fn metadata(&self) -> WalletMetadata {
-        self.encrypt_info.read().await.metadata.clone()
+    pub fn metadata(&self) -> WalletMetadata {
+        self.encrypt_info.borrow().metadata.clone()
     }
 
-    pub async fn encrypt_params(&self) -> EncryptionParams {
-        self.encrypt_info.read().await.encrypted_data.encrypt.argon2_params.clone()
+    pub fn encrypt_params(&self) -> EncryptionParams {
+        self.encrypt_info.borrow().encrypted_data.encrypt.argon2_params.clone()
     }
 
-    pub async fn change_encrypt(&self, new_encrypt : Encrypt) {
-        self.encrypt_info.write().await.encrypted_data.encrypt = new_encrypt;
+    pub fn change_encrypt(&self, new_encrypt : Encrypt) {
+        self.encrypt_info.borrow_mut().encrypted_data.encrypt = new_encrypt;
     }
 }

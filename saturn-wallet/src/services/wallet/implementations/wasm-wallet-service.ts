@@ -72,9 +72,9 @@ export class WasmWalletService implements IWalletService {
     return this.walletManager;
   }
 
-  async createWallet(
+  createWallet(
     params: CreateWalletParams
-  ): Promise<JsWalletCreationResult> {
+  ): JsWalletCreationResult {
     console.log("🔷 WasmWalletService.createWallet called");
     console.log("🔷 Params:", params);
 
@@ -87,7 +87,7 @@ export class WasmWalletService implements IWalletService {
       console.log("🔷 WASM request created:", wasmRequest);
 
       console.log("🔷 Calling manager.createWallet...");
-      const result = await manager.createWallet(wasmRequest);
+      const result =  manager.createWallet(wasmRequest);
       console.log("🔷 Manager returned result:", result);
 
       console.log(`✅ Wallet created: ${result.pubkey}`);
@@ -102,11 +102,11 @@ export class WasmWalletService implements IWalletService {
     }
   }
 
-  async listWallets(): Promise<UIWalletInfo[]> {
+  listWallets(): UIWalletInfo[] {
     const manager = this.ensureInitialized();
 
     try {
-      const wasmWallets = await manager.listWallets();
+      const wasmWallets = manager.listWallets();
 
       return wasmWallets.map((wasmInfo) =>
         WalletInfoHelpers.fromWasm(wasmInfo, false)
@@ -121,18 +121,20 @@ export class WasmWalletService implements IWalletService {
     }
   }
 
-  async unlockWallet(params: UnlockWalletParams): Promise<void> {
+  unlockWallet(params: UnlockWalletParams): boolean {
     const manager = this.ensureInitialized();
 
     try {
       const wasmRequest = RequestAdapters.toUnlockWalletRequest(params);
-      const success = await manager.unlockWallet(wasmRequest);
+      const success = manager.unlockWallet(wasmRequest);
 
       if (!success) {
         throw new Error("Unlock operation returned false");
       }
 
       console.log(`Wallet unlocked: ${params.pubkey}`);
+      
+      return success;
     } catch (error) {
       console.error("Failed to unlock wallet:", error);
       throw new WalletServiceError(
@@ -143,14 +145,14 @@ export class WasmWalletService implements IWalletService {
     }
   }
 
-  async getBalance(
+  getBalance(
     publicKey: string,
     mint: string = "So11111111111111111111111111111111111111112"
-  ): Promise<TokenBalance | undefined> {
+  ): TokenBalance | undefined {
     const manager = this.ensureInitialized();
 
     try {
-      const balance = await manager.getBalance(publicKey, mint);
+      const balance = manager.getBalance(publicKey, mint);
 
       if (balance) {
         console.log(
@@ -188,11 +190,11 @@ export class WasmWalletService implements IWalletService {
     }
   }
 
-  async changePassword(params: ChangePasswordParams): Promise<void> {
+  changePassword(params: ChangePasswordParams): boolean {
     const manager = this.ensureInitialized();
 
     try {
-      const success = await manager.changePassword(
+      const success = manager.changePassword(
         params.publicKey,
         params.oldPassword,
         params.newPassword
@@ -203,6 +205,8 @@ export class WasmWalletService implements IWalletService {
       }
 
       console.log(`Password changed for: ${params.publicKey}`);
+
+      return success;
     } catch (error) {
       console.error("Failed to change password:", error);
       throw new WalletServiceError(
@@ -213,11 +217,11 @@ export class WasmWalletService implements IWalletService {
     }
   }
 
-  async getActiveWallet(): Promise<UIWalletInfo | null> {
+  getActiveWallet(): UIWalletInfo | null {
     const manager = this.ensureInitialized();
 
     try {
-      const wasmWallet = await manager.getActiveWallet();
+      const wasmWallet = manager.getActiveWallet();
 
       if (!wasmWallet) {
         return null;
@@ -234,17 +238,19 @@ export class WasmWalletService implements IWalletService {
     }
   }
 
-  async setActiveWallet(publicKey: string): Promise<void> {
+  setActiveWallet(publicKey: string): boolean {
     const manager = this.ensureInitialized();
 
     try {
-      const success = await manager.setActiveWallet(publicKey);
+      const success = manager.setActiveWallet(publicKey);
 
       if (!success) {
         throw new Error("Failed to set active wallet");
       }
 
       console.log(`Active wallet set to: ${publicKey}`);
+
+      return success;
     } catch (error) {
       console.error("Failed to set active wallet:", error);
       throw new WalletServiceError(

@@ -1,8 +1,7 @@
 #![cfg(target_arch = "wasm32")]
 
-use std::{collections::HashMap, rc::Rc, str::FromStr, sync::Arc};
+use std::{cell::RefCell, collections::HashMap, rc::Rc, str::FromStr};
 
-use async_lock::RwLock;
 use solana_sdk::pubkey::Pubkey;
 use wallet_models::domain::models::acc_data::Network;
 
@@ -29,10 +28,10 @@ pub trait WalletSaturnManager {
     fn get_token_balance(
         &self,
         mint: &Pubkey,
-    ) -> impl std::future::Future<Output = Option<TokenBalance>>;
+    ) -> Option<TokenBalance>;
 
     fn get_all_token_balances(&self) 
-        -> impl std::future::Future<Output = Vec<TokenBalance>>;
+        -> Vec<TokenBalance>;
 }
 
 // #[cfg(target_arch = "wasm32")]
@@ -40,7 +39,7 @@ pub struct WasmSaturnWalletState {
     pubkey: Pubkey,
     network: Network,
     display_name: Option<String>,
-    token_balances: Arc<RwLock<HashMap<Pubkey, TokenBalance>>>,
+    token_balances: Rc<RefCell<HashMap<Pubkey, TokenBalance>>>,
     rpc_client: Rc<dyn SolanaRpcProvider>,
 }
 
@@ -56,7 +55,7 @@ impl WasmSaturnWalletState {
             pubkey,
             network,
             display_name,
-            token_balances: Arc::new(RwLock::new(HashMap::new())),
+            token_balances: Rc::new(RefCell::new(HashMap::new())),
             rpc_client,
         }
     }
@@ -88,7 +87,7 @@ impl WalletSaturnManager for WasmSaturnWalletState {
             .await
             .map_err(|e| WalletError::Io(e.to_string()))?;
 
-        let mut balances = self.token_balances.write().await;
+        let mut balances = self.token_balances.borrow_mut();
         balances.clear();
 
         for balance in new_balances {
@@ -103,13 +102,13 @@ impl WalletSaturnManager for WasmSaturnWalletState {
         Ok(())
     }
 
-    async fn get_token_balance(&self, mint: &Pubkey) -> Option<TokenBalance> {
-        let balances = self.token_balances.read().await;
+    fn get_token_balance(&self, mint: &Pubkey) -> Option<TokenBalance> {
+        let balances = self.token_balances.borrow();
         balances.get(mint).cloned()
     }
 
-    async fn get_all_token_balances(&self) -> Vec<TokenBalance> {
-        let balances = self.token_balances.read().await;
+    fn get_all_token_balances(&self) -> Vec<TokenBalance> {
+        let balances = self.token_balances.borrow_mut();
         balances.values().cloned().collect()
     }
 }

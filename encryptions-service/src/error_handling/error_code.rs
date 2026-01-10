@@ -24,7 +24,12 @@ pub enum WalletError {
 
     Internal(String),
     
-    BlockhashRpcRequest
+    BlockhashRpcRequest,
+
+    BlockedWalletManager{
+        issue : String,
+        method : String
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -305,7 +310,8 @@ impl fmt::Display for WalletError {
             Self::Io(s) => write!(f, "I/O error: {}", s),
             Self::Serialization(s) => write!(f, "Serialization error: {}", s),
             Self::Internal(s) => write!(f, "Internal error: {}", s),
-            Self::BlockhashRpcRequest => write!(f, "Blockhash request error")
+            Self::BlockhashRpcRequest => write!(f, "Blockhash request error"),
+            Self::BlockedWalletManager { issue, method } => write!(f,"{} in {}",issue,method)
         }
     }
 }

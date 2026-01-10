@@ -132,19 +132,19 @@ export const WalletErrorCodes = {
 } as const;
 
 export interface IWalletService {
-  initialize(): Promise<void>;
+  initialize(): void;
   isReady(): boolean;
-  createWallet(params: CreateWalletParams): Promise<JsWalletCreationResult>;
-  listWallets(): Promise<UIWalletInfo[]>;
-  unlockWallet(params: UnlockWalletParams): Promise<void>;
+  createWallet(params: CreateWalletParams): JsWalletCreationResult;
+  listWallets(): UIWalletInfo[];
+  unlockWallet(params: UnlockWalletParams): boolean;
   getBalance(
     publicKey: string,
     mint?: string
-  ): Promise<TokenBalance | undefined>;
+  ): TokenBalance | undefined;
   sendTokens(params: SendTokensParams): Promise<string>;
-  changePassword(params: ChangePasswordParams): Promise<void>;
-  getActiveWallet(): Promise<UIWalletInfo | null>;
-  setActiveWallet(publicKey: string): Promise<void>;
+  changePassword(params: ChangePasswordParams): boolean;
+  getActiveWallet(): UIWalletInfo | null;
+  setActiveWallet(publicKey: string): boolean;
   refreshActiveWalletBalance(): Promise<TokenBalance[]>;
-  cleanupInactiveWallets(): Promise<void>;
+  cleanupInactiveWallets(): void;
 }
