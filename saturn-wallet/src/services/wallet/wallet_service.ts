@@ -4,23 +4,25 @@ import type {
   CreateWalletRequest as WasmCreateWalletRequest,
   SendTokensRequest as WasmSendTokensRequest,
   UnlockWalletRequest as WasmUnlockWalletRequest,
-  WalletInfo as WasmWalletInfo,
+  // WalletInfo as WasmWalletInfo,
+  JsWalletInfo,
+  // WalletInfo,
 } from "encryptions-service";
 
-import bs58 from 'bs58';
+// import bs58 from 'bs58';
 
 export type { JsWalletCreationResult as WalletCreationResult };
 
 export type { TokenBalance };
 
 export interface UIWalletInfo {
-  wasmInfo: WasmWalletInfo;
+  wasmInfo: JsWalletInfo;
   isActive: boolean;
   cachedBalance?: string;
 }
 
 export const WalletInfoHelpers = {
-  fromWasm(wasmInfo: WasmWalletInfo, isActive: boolean = false): UIWalletInfo {
+  fromWasm(wasmInfo: JsWalletInfo, isActive: boolean = false): UIWalletInfo {
     return {
       wasmInfo,
       isActive,
@@ -28,13 +30,9 @@ export const WalletInfoHelpers = {
     };
   },
 
-  getPublicKey(walletInfo: UIWalletInfo): string {
-    const key = walletInfo.wasmInfo.pubkey;
-    if (Array.isArray(key) || key instanceof Uint8Array) {
-      return bs58.encode(key as Uint8Array);
-    }
 
-    return key.toString();
+  getPublicKey(walletInfo: UIWalletInfo): string {
+    return walletInfo.wasmInfo.pubkey
   },
 
   getDisplayName(walletInfo: UIWalletInfo): string {

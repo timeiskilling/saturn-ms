@@ -1,4 +1,4 @@
-#![cfg(target_arch = "wasm32")]
+// #![cfg(target_arch = "wasm32")]
 
 use crate::{wasm::wasm_encryptions::SecureString};
 use crate::error_handling::error_code::WalletError;
@@ -96,6 +96,17 @@ pub struct WalletInfo {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub display_name: Option<String>,
     pub network: Network,
+    pub is_unlocked: bool,
+}
+
+
+#[derive(Debug, Clone, Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub struct JsWalletInfo {
+    pub pubkey: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub display_name: Option<String>,
+    pub network: String,
     pub is_unlocked: bool,
 }
 

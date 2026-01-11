@@ -1,4 +1,4 @@
-#![cfg(target_arch = "wasm32")]
+// #![cfg(target_arch = "wasm32")]
 
 use async_lock::RwLock;
 use solana_sdk::pubkey::Pubkey;
@@ -8,9 +8,9 @@ use std::time::Duration;
 use wallet_models::domain::models::acc_data::Network;
 use wasm_bindgen::prelude::*;
 
+use crate::wasm::models::*;
 use crate::wasm::wasm_encryptions::SecureString;
 use crate::wasm::wasm_wallet_service::WalletManager;
-use crate::wasm::{models::*};
 
 use crate::error_handling::error_code::{KeystoreError, RpcError, ValidationError, WalletError};
 
@@ -224,7 +224,7 @@ impl WasmWalletManager {
     }
 
     #[wasm_bindgen(js_name = getActiveWallet)]
-    pub fn get_active_wallet(&self) -> Result<Option<WalletInfo>, JsValue> {
+    pub fn get_active_wallet(&self) -> Result<Option<JsWalletInfo>, JsValue> {
         let manager = self
             .inner
             .try_read()
@@ -236,15 +236,29 @@ impl WasmWalletManager {
     }
 
     #[wasm_bindgen(js_name = listWallets)]
-    pub fn list_wallets(&self) -> Result<Vec<WalletInfo>, JsValue> {
+    pub fn list_wallets(&self) -> Result<Vec<JsWalletInfo>, JsValue> {
         let manager = self
             .inner
-            .try_read()
-            .ok_or_else(|| JsValue::from_str("Wallet manager is busy"))?;
+            .try_write()
+            .ok_or_else(|| JsValue::from_str("Wallet manager is busy in list_wallets"))?;
 
         let wallets = manager.list_wallets();
 
-        Ok(wallets)
+        let js_wallets: Vec<JsWalletInfo> = wallets
+            .into_iter()
+            .map(|w| {
+                let pubkey_str = w.pubkey.to_string();
+                tracing::info!("Wallet in list: {}", pubkey_str);
+                JsWalletInfo {
+                    pubkey: pubkey_str,
+                    display_name: w.display_name,
+                    network: format!("{:?}", w.network),
+                    is_unlocked: w.is_unlocked,
+                }
+            })
+            .collect();
+
+        Ok(js_wallets)
     }
 
     #[wasm_bindgen(js_name = cleanupInactiveWallets)]

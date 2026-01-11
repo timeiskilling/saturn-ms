@@ -1,4 +1,4 @@
-#![cfg(target_arch = "wasm32")]
+// #![cfg(target_arch = "wasm32")]
 
 use async_lock::RwLock;
 use solana_sdk::{pubkey::Pubkey, signature::Signature};
@@ -20,7 +20,7 @@ use crate::{
     },
     traits::signer_wraper::{SaturnSigner, SecureKeystore, SolanaKeypairSigner},
     wasm::{
-        models::{LockResultExt, TokenBalance, WalletCreationResult, WalletInfo},
+        models::{JsWalletInfo, LockResultExt, TokenBalance, WalletCreationResult, WalletInfo},
         wasm_encryptions::{
             CryptoError, CryptoVault, EncryptionParams, SecureString, create_encrypt_data,
             encrypt_seed_with_verification, keypair_from_seed,
@@ -50,7 +50,7 @@ impl Default for WalletManagerConfig {
     fn default() -> Self {
         Self {
             default_keystore_timeout: Duration::from_secs(360),
-            default_encryption_params: EncryptionParams::default(),
+            default_encryption_params: EncryptionParams::wasm(),
             default_network: Network::Solana,
         }
     }
@@ -94,6 +94,7 @@ impl WalletManager {
         network: Option<Network>,
         keystore_timeout: Option<Duration>,
     ) -> Result<WalletCreationResult, WalletError> {
+
         let (encrypt_info, mnemonic) = create_encrypt_data(
             password,
             bip39_passphrase,
@@ -460,6 +461,11 @@ impl WalletManager {
         {
             let wallets = self.wallets.try_write().or_busy("set_active_wallet")?;
 
+            tracing::info!("Looking for: {}", pubkey.to_string());
+            tracing::info!(
+                "Available wallets: {:?}",
+                wallets.keys().map(|k| k.to_string()).collect::<Vec<_>>()
+            );
             if !wallets.contains_key(&pubkey) {
                 return Err(WalletError::Validation(ValidationError::WalletNotFound {
                     pubkey: pubkey.to_string(),
@@ -478,7 +484,7 @@ impl WalletManager {
         Ok(())
     }
 
-    pub fn get_active_wallet(&self) -> Option<WalletInfo> {
+    pub fn get_active_wallet(&self) -> Option<JsWalletInfo> {
         let active_pubkey = {
             let active = self.active_wallet.borrow();
             *active
@@ -489,10 +495,10 @@ impl WalletManager {
             .try_read()
             .expect("busy wallet in get_active_wallet");
 
-        wallets.get(&active_pubkey).map(|entry| WalletInfo {
-            pubkey: active_pubkey,
+        wallets.get(&active_pubkey).map(|entry| JsWalletInfo {
+            pubkey: active_pubkey.to_string(),
             display_name: entry.wallet_state.get_display_name().map(|s| s.to_string()),
-            network: entry.wallet_state.get_network(),
+            network: format!("{:?}", entry.wallet_state.get_network()),
             is_unlocked: entry
                 .keystore
                 .as_ref()

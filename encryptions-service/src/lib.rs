@@ -1,4 +1,4 @@
-#![cfg(target_arch = "wasm32")]
+// #![cfg(target_arch = "wasm32")]
 // pub mod endpoints;
 pub mod error_handling;
 // pub mod password_encryptions;

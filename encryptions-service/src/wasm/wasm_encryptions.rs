@@ -1,4 +1,4 @@
-#![cfg(target_arch = "wasm32")]
+// #![cfg(target_arch = "wasm32")]
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -71,6 +71,14 @@ impl EncryptionParams {
             argon2_memory_kib: 262144, // 256 MB
             argon2_iterations: 5,
             argon2_parallelism: 8,
+        }
+    }
+
+    pub fn wasm() -> Self {
+        Self {
+            argon2_memory_kib: 32768,  
+            argon2_iterations: 3,
+            argon2_parallelism: 1,    
         }
     }
 }

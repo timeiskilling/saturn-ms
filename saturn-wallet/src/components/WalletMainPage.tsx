@@ -29,9 +29,9 @@ const WalletMainPage: React.FC = () => {
         setShowCreateForm(true);
     };
 
-    const handleWalletCreated = () => {
+    const handleWalletCreated = async () => {
         setShowCreateForm(false);
-        fetchWallets();
+        await fetchWallets();
     };
 
     const handleCancelCreate = () => {
@@ -39,11 +39,34 @@ const WalletMainPage: React.FC = () => {
     };
 
     const handleSelectWallet = async (publicKey: string) => {
-        console.time("setActive");
-        const success = await setActive(publicKey);
-        console.timeEnd("setActive");
+        console.log("=== DEBUG START ===");
+        console.log("1. publicKey parameter:", publicKey);
+        console.log("2. publicKey length:", publicKey.length);
+        console.log("3. publicKey char codes:", Array.from(publicKey).map((c, i) =>
+            `${i}: ${c} (${c.charCodeAt(0)})`
+        ).join(', '));
+
+        // Create a fresh copy of the string to rule out reference issues
+        const freshCopy = String(publicKey);
+        console.log("4. Fresh copy:", freshCopy);
+        console.log("5. Are they equal?:", publicKey === freshCopy);
+
+        console.log("=== DEBUG END ===");
+        console.log("Attempting to set active wallet:", freshCopy);
+
+        let success = await setActive(freshCopy);
+        // console.timeEnd("setActive");
+
+        if (!success) {
+            console.log("Manager busy, waiting and retrying...");
+            await new Promise(resolve => setTimeout(resolve, 200));
+            success = await setActive(publicKey);
+        }
+
         if (success) {
             console.log('Active wallet changed:', publicKey);
+        } else {
+            console.error('Failed to set active wallet after retry');
         }
     };
 
@@ -156,7 +179,7 @@ const WalletMainPage: React.FC = () => {
                         <small style={styles.hint}>
                             {WalletInfoHelpers.getPublicKey(activeWallet)}
                         </small>
-                    </div>  
+                    </div>
                 </div>
             )}
 
