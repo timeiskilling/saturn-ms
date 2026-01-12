@@ -1,12 +1,9 @@
-// #![cfg(target_arch = "wasm32")]
-// pub mod endpoints;
+#![cfg(target_arch = "wasm32")]
+
 pub mod error_handling;
-// pub mod password_encryptions;
-// pub mod rpc_layer;
-// pub mod state;
+
 pub mod traits;
-// pub mod batching;
-// pub mod transactions;
+
 
 
 pub mod wasm;
