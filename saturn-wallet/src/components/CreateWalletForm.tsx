@@ -20,7 +20,7 @@ const CreateWalletForm: React.FC<CreateWalletFormProps> = ({ onSuccess, onCancel
         }
 
         if (password.length < 12) {
-            alert('Password must be at least 8 symbols');
+            alert('Password must be at least 12 symbols');
             return;
         }
 
@@ -57,7 +57,7 @@ const CreateWalletForm: React.FC<CreateWalletFormProps> = ({ onSuccess, onCancel
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Minimum 8 symbols"
+                    placeholder="Minimum 12 symbols"
                     style={styles.input}
                     disabled={isLoading}
                 />

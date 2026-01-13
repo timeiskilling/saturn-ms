@@ -1,4 +1,4 @@
-import { StrictMode } from 'react'
+// import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { WasmWalletService } from './services/wallet/implementations/wasm-wallet-service'
 import { WalletProvider } from './contexts/WalletContext';
@@ -11,9 +11,7 @@ const walletService = new WasmWalletService({
 });
 
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-      <WalletProvider walletService={walletService}>
-        <WalletMainPage />
-      </WalletProvider>
-  </StrictMode>,
+  <WalletProvider walletService={walletService}>
+    <WalletMainPage />
+  </WalletProvider>
 )
