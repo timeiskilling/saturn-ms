@@ -8,7 +8,7 @@ type CreateWalletFormProps = {
 
 const CreateWalletForm: React.FC<CreateWalletFormProps> = ({ onSuccess, onCancel }) => {
     const { createWallet, isLoading, error } = useCreateWallet();
-
+    
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [walletName, setWalletName] = useState('');

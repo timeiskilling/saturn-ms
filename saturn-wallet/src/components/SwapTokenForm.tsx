@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { useSendTokens } from '../hooks/useWalletOperations';
 
-type SendTokenFormProps = {
+type SwapTokenFormProps = {
     onSuccess: () => void;
     onCancel: () => void;
 }
 
-const SwapTokenForm: React.FC<SendTokenFormProps> = ({ onSuccess, onCancel }) => {
+const SwapTokenForm: React.FC<SwapTokenFormProps> = ({ onSuccess, onCancel }) => {
     const { sendTokens, data, isLoading, error } = useSendTokens();
     const [inputMint, setInputMint] = useState('');
     const [outputMint, setOutputMint] = useState('');
@@ -106,7 +106,9 @@ const SwapTokenForm: React.FC<SendTokenFormProps> = ({ onSuccess, onCancel }) =>
                     <span>{priceOfOutputMint ? priceOfOutputMint : 0}</span>
                 </div>
                 <div>
-                    <button disabled={isLoading || !inputMint || !outputMint}></button>
+                    <button disabled={isLoading || !inputMint || !outputMint}>
+                        Swap
+                    </button>
                 </div>
             </div>
         </div>
