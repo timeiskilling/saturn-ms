@@ -231,39 +231,124 @@ export const useActiveWallet = () => {
 
 export const useRefreshBalance = () => {
   const { walletService } = useWallet();
-  const [isLoading, setIsLoading] = useState(false);
+  
+  const [state, setState] = useState<OperationState<TokenBalance[]>>({
+    data: null,
+    isLoading: false,
+    error: null,
+  });
 
   const refreshBalance = useCallback(
     async (
       publicKey?: string,
       mint?: string
-    ): Promise<TokenBalance | undefined | TokenBalance[]> => {
+    ): Promise<TokenBalance[] | TokenBalance | undefined> => {
       if (!walletService) {
+        setState({
+          data: null,
+          isLoading: false,
+          error: "Wallet service is not initialized",
+        });
         return undefined;
       }
 
-      setIsLoading(true);
+      setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
       try {
         if (publicKey && mint) {
-          const balance = await walletService.getBalance(publicKey, mint);
+          console.log(`🔄 Refreshing balance for token ${mint} in wallet ${publicKey}`);
+          
+          const balance = walletService.getBalance(publicKey, mint);
+          
+          if (balance) {
+            setState({
+              data: [balance],
+              isLoading: false,
+              error: null,
+            });
+          } else {
+            setState({
+              data: [],
+              isLoading: false,
+              error: null,
+            });
+          }
+          
           return balance;
-        } else {
-          const balances = await walletService.refreshActiveWalletBalance();
+        }
+        
+
+        if (publicKey && !mint) {
+          console.log(`Refreshing all balances for wallet ${publicKey}`);
+          
+          const balances = await walletService.refreshBalance(publicKey);
+          
+          setState({
+            data: balances,
+            isLoading: false,
+            error: null,
+          });
+          
+          console.log(`Loaded ${balances.length} token balances`);
           return balances;
         }
+        console.log(`Refreshing active wallet balance`);
+        
+        const balances = await walletService.refreshActiveWalletBalance();
+        
+        setState({
+          data: balances,
+          isLoading: false,
+          error: null,
+        });
+        
+        console.log(`Loaded ${balances.length} token balances for active wallet`);
+        return balances;
+        
       } catch (error) {
         console.error("Failed to refresh balance:", error);
+        
+        const errorMessage =
+          error instanceof WalletServiceError
+            ? error.message
+            : "Failed to refresh balance";
+        
+        setState({
+          data: null,
+          isLoading: false,
+          error: errorMessage,
+        });
+        
         return undefined;
-      } finally {
-        setIsLoading(false);
       }
     },
     [walletService]
   );
 
+  const refreshActiveWallet = useCallback(async () => {
+    return await refreshBalance();
+  }, [refreshBalance]);
+
+  const refreshWallet = useCallback(
+    async (publicKey: string) => {
+      return await refreshBalance(publicKey);
+    },
+    [refreshBalance]
+  );
+
+  const reset = useCallback(() => {
+    setState({
+      data: null,
+      isLoading: false,
+      error: null,
+    });
+  }, []);
+
   return {
+    ...state,
     refreshBalance,
-    isLoading,
+    refreshActiveWallet,
+    refreshWallet,
+    reset,
   };
 };

@@ -2,6 +2,7 @@ import initWasm, {
   WasmWalletManager,
   create_wallet_manager,
   type JsWalletCreationResult,
+  type JsWalletInfo,
   type TokenBalance,
 } from "encryptions-service";
 
@@ -24,7 +25,7 @@ export interface WasmWalletServiceConfig {
 }
 
 export class WasmWalletService implements IWalletService {
-  private walletManager: WasmWalletManager | null = null;
+  private walletManager: WasmWalletManager  | null = null;
   private initialized = false;
   private config: WasmWalletServiceConfig;
 
@@ -38,6 +39,7 @@ export class WasmWalletService implements IWalletService {
     }
 
     try {
+
       await initWasm();
       console.log("WASM module initialized successfully");
 
@@ -62,7 +64,7 @@ export class WasmWalletService implements IWalletService {
     return this.initialized && this.walletManager !== null;
   }
 
-  private ensureInitialized(): WasmWalletManager {
+  private ensureInitialized(): WasmWalletManager  {
     if (!this.isReady() || !this.walletManager) {
       throw new WalletServiceError(
         "Wallet service is not initialized. Call initialize() first.",
@@ -72,28 +74,17 @@ export class WasmWalletService implements IWalletService {
     return this.walletManager;
   }
 
-  createWallet(
-    params: CreateWalletParams
-  ): JsWalletCreationResult {
-    console.log("🔷 WasmWalletService.createWallet called");
-    console.log("🔷 Params:", params);
-
+  createWallet(params: CreateWalletParams): JsWalletCreationResult {
     const manager = this.ensureInitialized();
-    console.log("🔷 Manager obtained:", manager);
 
     try {
-      console.log("🔷 Converting params to WASM request...");
       const wasmRequest = RequestAdapters.toCreateWalletRequest(params);
-      console.log("🔷 WASM request created:", wasmRequest);
-
-      console.log("🔷 Calling manager.createWallet...");
-      const result =  manager.createWallet(wasmRequest);
-      console.log("🔷 Manager returned result:", result);
+      const result = manager.createWallet(wasmRequest);
 
       console.log(`✅ Wallet created: ${result.pubkey}`);
       return result;
     } catch (error) {
-      console.error("❌ Error in WasmWalletService.createWallet:", error);
+      console.error("❌ Error in createWallet:", error);
       throw new WalletServiceError(
         "Failed to create wallet",
         WalletErrorCodes.UNKNOWN_ERROR,
@@ -108,7 +99,7 @@ export class WasmWalletService implements IWalletService {
     try {
       const wasmWallets = manager.listWallets();
 
-      return wasmWallets.map((wasmInfo) =>
+      return wasmWallets.map((wasmInfo: JsWalletInfo) =>
         WalletInfoHelpers.fromWasm(wasmInfo, false)
       );
     } catch (error) {
@@ -133,7 +124,6 @@ export class WasmWalletService implements IWalletService {
       }
 
       console.log(`Wallet unlocked: ${params.pubkey}`);
-      
       return success;
     } catch (error) {
       console.error("Failed to unlock wallet:", error);
@@ -205,7 +195,6 @@ export class WasmWalletService implements IWalletService {
       }
 
       console.log(`Password changed for: ${params.publicKey}`);
-
       return success;
     } catch (error) {
       console.error("Failed to change password:", error);
@@ -249,7 +238,6 @@ export class WasmWalletService implements IWalletService {
       }
 
       console.log(`Active wallet set to: ${publicKey}`);
-
       return success;
     } catch (error) {
       console.error("Failed to set active wallet:", error);
@@ -261,18 +249,39 @@ export class WasmWalletService implements IWalletService {
     }
   }
 
+  async refreshBalance(publicKey: string): Promise<TokenBalance[]> {
+    const manager = this.ensureInitialized();
+
+    try {
+      const balances = await manager.refreshBalance(publicKey);
+
+      console.log(
+        `✅ Refreshed ${balances.length} token balances for wallet: ${publicKey}`
+      );
+      
+      return balances;
+    } catch (error) {
+      console.error(`Failed to refresh balance for ${publicKey}:`, error);
+      throw new WalletServiceError(
+        `Failed to refresh balance for wallet ${publicKey}`,
+        WalletErrorCodes.NETWORK_ERROR,
+        error
+      );
+    }
+  }
+
   async refreshActiveWalletBalance(): Promise<TokenBalance[]> {
     const manager = this.ensureInitialized();
 
     try {
       const balances = await manager.refreshActiveWalletBalance();
 
-      console.log(`Refreshed ${balances.length} token balances`);
+      console.log(`✅ Refreshed ${balances.length} token balances for active wallet`);
       return balances;
     } catch (error) {
-      console.error("Failed to refresh balance:", error);
+      console.error("Failed to refresh active wallet balance:", error);
       throw new WalletServiceError(
-        "Failed to refresh balance",
+        "Failed to refresh active wallet balance",
         WalletErrorCodes.NETWORK_ERROR,
         error
       );

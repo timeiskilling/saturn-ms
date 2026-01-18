@@ -89,19 +89,19 @@ const SendTokenForm: React.FC<SendTokenFormProps> = () => {
     const solanaFmUrl = `https://solana.fm/tx/${data}`; 
     
     return (
-        <div style={{ color: 'green', marginTop: '10px' }}>
-            <p>Transaction success!</p>
-            <a 
-                href={solanaFmUrl} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                style={{ textDecoration: 'underline' }}
-            >
-                Check in Solana FM ↗
-            </a>
-        </div>
-    );
-}
+            <div style={{ color: 'green', marginTop: '10px' }}>
+                <p>Transaction success!</p>
+                <a 
+                    href={solanaFmUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    style={{ textDecoration: 'underline' }}
+                >
+                    Check in Solana FM ↗
+                </a>
+            </div>
+        );
+    }
 
 
     if (!walletInfo) {

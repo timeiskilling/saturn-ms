@@ -4,15 +4,10 @@ import type {
   CreateWalletRequest as WasmCreateWalletRequest,
   SendTokensRequest as WasmSendTokensRequest,
   UnlockWalletRequest as WasmUnlockWalletRequest,
-  // WalletInfo as WasmWalletInfo,
   JsWalletInfo,
-  // WalletInfo,
 } from "encryptions-service";
 
-// import bs58 from 'bs58';
-
 export type { JsWalletCreationResult as WalletCreationResult };
-
 export type { TokenBalance };
 
 export interface UIWalletInfo {
@@ -30,9 +25,8 @@ export const WalletInfoHelpers = {
     };
   },
 
-
   getPublicKey(walletInfo: UIWalletInfo): string {
-    return walletInfo.wasmInfo.pubkey
+    return walletInfo.wasmInfo.pubkey;
   },
 
   getDisplayName(walletInfo: UIWalletInfo): string {
@@ -90,6 +84,7 @@ export const RequestAdapters = {
 
     return request;
   },
+
   toSendTokensRequest(params: SendTokensParams): WasmSendTokensRequest {
     const SOL_MINT = "So11111111111111111111111111111111111111112";
     return {
@@ -129,20 +124,19 @@ export const WalletErrorCodes = {
   UNKNOWN_ERROR: "UNKNOWN_ERROR",
 } as const;
 
+
 export interface IWalletService {
   initialize(): void;
   isReady(): boolean;
   createWallet(params: CreateWalletParams): JsWalletCreationResult;
   listWallets(): UIWalletInfo[];
   unlockWallet(params: UnlockWalletParams): boolean;
-  getBalance(
-    publicKey: string,
-    mint?: string
-  ): TokenBalance | undefined;
+  getBalance(publicKey: string, mint?: string): TokenBalance | undefined;
   sendTokens(params: SendTokensParams): Promise<string>;
   changePassword(params: ChangePasswordParams): boolean;
   getActiveWallet(): UIWalletInfo | null;
   setActiveWallet(publicKey: string): boolean;
+  refreshBalance(publicKey: string): Promise<TokenBalance[]>;
   refreshActiveWalletBalance(): Promise<TokenBalance[]>;
   cleanupInactiveWallets(): void;
 }
