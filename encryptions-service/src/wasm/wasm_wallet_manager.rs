@@ -62,6 +62,27 @@ impl WasmWalletManager {
         Ok(js_result)
     }
 
+    #[wasm_bindgen(js_name = restoreFromEncrypted)]
+    pub fn restore_from_encrypted(
+        &self,
+        request: RestoreWalletRequest,
+    ) -> Result<JsValue, JsValue> {
+        let manager = self
+            .inner
+            .try_write()
+            .ok_or_else(|| JsValue::from_str("Wallet manager is busy"))?;
+
+        manager
+            .restore_from_encrypted(request)
+            .map_err(|e| JsValue::from_str(&format!("Failed to restore wallet: {}", e)))?;
+
+        let result = serde_json::json!({
+            "success": true
+        });
+
+        Ok(serde_wasm_bindgen::to_value(&result)?)
+    }
+
     #[wasm_bindgen(js_name = unlockWallet)]
     pub fn unlock_wallet(&self, request: UnlockWalletRequest) -> Result<bool, JsValue> {
         let secure_pass = request.get_secure_data()?;

@@ -2,7 +2,7 @@
 
 use std::cell::RefCell;
 use std::rc::Rc;
-
+use serde::{Serialize,Deserialize};
 use argon2::Params;
 use argon2::password_hash::rand_core::{OsRng as RandOsRng, RngCore};
 use argon2::{Argon2, password_hash::SaltString};
@@ -40,7 +40,12 @@ impl From<String> for SecureString {
     }
 }
 
-#[derive(Debug, Clone)]
+impl std::convert::From<&str> for SecureString {
+    fn from(value: &str) -> Self {
+        Self::new(value.to_string())
+    }
+}
+#[derive(Debug, Clone,Serialize,Deserialize)]
 pub struct EncryptionParams {
     pub argon2_memory_kib: u32,
     pub argon2_iterations: u32,
@@ -83,13 +88,13 @@ impl EncryptionParams {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct EncryptedData {
     pub pubkey: Pubkey,
     pub encrypt: Encrypt,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Encrypt {
     pub version: u8,
     pub ciphertext: Vec<u8>,

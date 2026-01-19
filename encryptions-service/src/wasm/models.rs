@@ -1,12 +1,13 @@
+use crate::error_handling::error_code::EncryptionError;
 // #![cfg(target_arch = "wasm32")]
-
-use crate::{wasm::wasm_encryptions::SecureString};
 use crate::error_handling::error_code::WalletError;
+use crate::wasm::wasm_encryptions::EncryptedData;
+use crate::wasm::wasm_encryptions::SecureString;
 use serde::{Deserialize, Serialize};
 use solana_sdk::pubkey::Pubkey;
+use wallet_models::domain::models::acc_data::Network;
 use std::str::FromStr;
 use tsify::Tsify;
-use wallet_models::domain::models::acc_data::Network;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::prelude::*;
 
@@ -99,7 +100,6 @@ pub struct WalletInfo {
     pub is_unlocked: bool,
 }
 
-
 #[derive(Debug, Clone, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct JsWalletInfo {
@@ -120,5 +120,40 @@ impl<T> LockResultExt<T> for Option<T> {
             issue: "Wallet manager is busy".to_string(),
             method: method_name.to_string(),
         })
+    }
+}
+
+#[wasm_bindgen]
+pub struct RestoreWalletRequest {
+    encrypted_data: String,
+    password: String,
+    name : String,
+    network : String
+}
+
+#[wasm_bindgen]
+impl RestoreWalletRequest {
+    #[wasm_bindgen(constructor)]
+    pub fn new(encrypted_data: String, password: String, name : String,network : String) -> Self {
+        Self {encrypted_data,password,name, network }
+    }
+}
+
+impl RestoreWalletRequest {
+    pub(crate) fn get_data(&self) -> Result<(EncryptedData, SecureString,Network,String), WalletError> {
+        let encrypted: EncryptedData = serde_json::from_str(&self.encrypted_data).map_err(|e| {
+            WalletError::Encryption(EncryptionError::DecryptionFailed {
+                reason: "invalid json parsing".to_string(),
+            })
+        })?;
+
+        let password = SecureString::from(self.password.as_str());
+
+        let network = Network::from_str(&self.network).map_err(|e|{
+            WalletError::Io("Invalid Network".to_string())
+        })?;
+
+        let name = self.name.clone();
+        Ok((encrypted, password,network,name))
     }
 }

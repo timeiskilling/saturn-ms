@@ -2,6 +2,8 @@
 import React, { useEffect, useState } from 'react';
 import { useActiveWallet, useSendTokens } from '../hooks/useWalletOperations';
 import type { SendTokensParams } from '../services/wallet/wallet_service';
+import { useBalance } from '../contexts/WalletContext';
+import { formatBalance, getReadableAmount } from '../services/formator';
 
 type SendTokenFormProps = {
     onSuccess: () => void;
@@ -13,7 +15,6 @@ const SendTokenForm: React.FC<SendTokenFormProps> = () => {
     const [inputMint, setInputMint] = useState('');
     const [inputAddress, setInputAddress] = useState('');
 
-
     const {
         data: walletInfo,
         error: walletError,
@@ -21,25 +22,43 @@ const SendTokenForm: React.FC<SendTokenFormProps> = () => {
         fetchActiveWallet
     } = useActiveWallet();
 
+    const balance = useBalance();
+    const balances = balance.balances;
 
-
-    const [amountOfInputMint, setAmountOfInputMint] = useState(0);
+    const [amountInput, setAmountInput] = useState<string>('');
     const [priceOfInputMint, setPriceOfInputMint] = useState(0);
 
-    const mockUserTokens = [
-        { mint: 'sol_mint_address', symbol: 'SOL', balance: 1.5 },
-        { mint: 'usdc_mint_address', symbol: 'USDC', balance: 100 },
-    ];
+    const selectedToken = balances.find(t => t.mint === inputMint);
 
-    const selectedToken = mockUserTokens.find(t => t.mint === inputMint);
-    const currentBalance = selectedToken ? selectedToken.balance : 0;
+    const walletBalanceReadable = selectedToken ? parseFloat(selectedToken.amount) : 0;
 
-    const isExceedsBalance = inputMint && amountOfInputMint > currentBalance;
+    const parsedAmount = parseFloat(amountInput);
+    const isValidAmount = !isNaN(parsedAmount) && parsedAmount > 0;
+    const isExceedsBalance = isValidAmount && parsedAmount > walletBalanceReadable;
+
     const isValidPubkey = inputAddress.length >= 32 && inputAddress.length <= 44;
     const showAddressError = inputAddress.length > 0 && !isValidPubkey;
 
+    const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+
+        if (val === '' || /^\d*\.?\d*$/.test(val)) {
+            if (selectedToken && val.includes('.')) {
+                const decimals = val.split('.')[1].length;
+                if (decimals > selectedToken.decimals) {
+                    return;
+                }
+            }
+            setAmountInput(val);
+        }
+    };
+
     useEffect(() => {
         fetchActiveWallet();
+    }, []);
+
+    useEffect(() => {
+        balance.refreshBalance();
     }, []);
 
     const handleSend = async () => {
@@ -48,7 +67,7 @@ const SendTokenForm: React.FC<SendTokenFormProps> = () => {
             return;
         }
 
-        if (!inputAddress || !inputMint || amountOfInputMint <= 0) {
+        if (!inputAddress || !inputMint || parsedAmount <= 0) {
             console.error('Please fill all required fields');
             return;
         }
@@ -56,15 +75,14 @@ const SendTokenForm: React.FC<SendTokenFormProps> = () => {
         const request: SendTokensParams = {
             fromPubkey: walletInfo.wasmInfo.pubkey,
             toPubkey: inputAddress,
-            amount: amountOfInputMint.toString(),
+            amount: parsedAmount.toString(),
             mint: inputMint
         };
 
         try {
             await sendTokens(request);
-
             setInputAddress('');
-            setAmountOfInputMint(0);
+            setAmountInput('');
             setInputMint('');
         } catch (err) {
             console.error('Failed to send tokens:', err);
@@ -74,7 +92,6 @@ const SendTokenForm: React.FC<SendTokenFormProps> = () => {
     if (walletLoading) {
         return <div>Loading wallet information...</div>;
     }
-
 
     if (walletError) {
         return (
@@ -86,14 +103,14 @@ const SendTokenForm: React.FC<SendTokenFormProps> = () => {
     }
 
     if (data) {
-    const solanaFmUrl = `https://solana.fm/tx/${data}`; 
-    
-    return (
+        const solanaFmUrl = `https://solana.fm/tx/${data}`;
+
+        return (
             <div style={{ color: 'green', marginTop: '10px' }}>
                 <p>Transaction success!</p>
-                <a 
-                    href={solanaFmUrl} 
-                    target="_blank" 
+                <a
+                    href={solanaFmUrl}
+                    target="_blank"
                     rel="noopener noreferrer"
                     style={{ textDecoration: 'underline' }}
                 >
@@ -113,7 +130,7 @@ const SendTokenForm: React.FC<SendTokenFormProps> = () => {
         !inputMint ||
         isExceedsBalance ||
         !isValidPubkey ||
-        amountOfInputMint <= 0 ||
+        parsedAmount <= 0 ||
         !walletInfo;
 
     return (
@@ -146,9 +163,10 @@ const SendTokenForm: React.FC<SendTokenFormProps> = () => {
                     <label>Amount</label>
                     <div style={{ display: 'flex', gap: '8px' }}>
                         <input
-                            type="number"
-                            value={amountOfInputMint || ''}
-                            onChange={(e) => setAmountOfInputMint(e.target.valueAsNumber || 0)}
+                            type="text"
+                            inputMode="decimal"
+                            value={amountInput}
+                            onChange={handleAmountChange}
                             disabled={isLoading}
                             placeholder="0.00"
                             min="0"
@@ -162,11 +180,16 @@ const SendTokenForm: React.FC<SendTokenFormProps> = () => {
                             style={{ padding: '8px' }}
                         >
                             <option value="" disabled>Select Token</option>
-                            {mockUserTokens.map((token) => (
-                                <option key={token.mint} value={token.mint}>
-                                    {token.symbol} (Balance: {token.balance})
-                                </option>
-                            ))}
+                            {balances.map((token) => {
+                                const tokenVal = getReadableAmount(token.raw, token.decimals);
+                                const formattedVal = formatBalance(tokenVal);
+
+                                return (
+                                    <option key={token.mint} value={token.mint}>
+                                        {token.symbol} (Balance: {formattedVal})
+                                    </option>
+                                );
+                            })}
                         </select>
                     </div>
                 </div>
@@ -179,7 +202,7 @@ const SendTokenForm: React.FC<SendTokenFormProps> = () => {
 
                 {isExceedsBalance && (
                     <div style={{ color: 'red', fontSize: '12px', marginBottom: '1rem' }}>
-                        Insufficient balance. Maximum available: {currentBalance}
+                        Insufficient balance. Maximum available: {formatBalance(walletBalanceReadable)}
                     </div>
                 )}
 

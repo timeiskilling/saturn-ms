@@ -1,27 +1,27 @@
 import React, { useState } from 'react';
 import { useSendTokens } from '../hooks/useWalletOperations';
+import { useBalance } from '../contexts/WalletContext';
 
 type SwapTokenFormProps = {
     onSuccess: () => void;
     onCancel: () => void;
 }
 
-const SwapTokenForm: React.FC<SwapTokenFormProps> = ({ onSuccess, onCancel }) => {
+const SwapTokenForm: React.FC<SwapTokenFormProps> = () => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { sendTokens, data, isLoading, error } = useSendTokens();
+    const balance = useBalance();
+    balance.refreshBalance();
+    const balances = balance.balances;
+
     const [inputMint, setInputMint] = useState('');
     const [outputMint, setOutputMint] = useState('');
-
     const [amountOfInputMint, setAmountPriceOfInputMint] = useState(0);
     const [amountOfOutputMint, setAmountPriceOfOutputMint] = useState(0);
 
     const [priceOfInputMint, setPriceOfInputMint] = useState(0);
     const [priceOfOutputMint, setPriceOfOutputMint] = useState(0);
-
-    const mockUserTokens = [
-        { mint: 'sol_mint_address', symbol: 'SOL', balance: 1.5 },
-        { mint: 'usdc_mint_address', symbol: 'USDC', balance: 100 },
-    ];
-
+    
     const mockAvailableTokens = [
         { mint: 'sol_mint_address', symbol: 'SOL' },
         { mint: 'usdc_mint_address', symbol: 'USDC' },
@@ -31,8 +31,8 @@ const SwapTokenForm: React.FC<SwapTokenFormProps> = ({ onSuccess, onCancel }) =>
 
 
     const getBalance = (mint: string) => {
-        const userToken = mockUserTokens.find(t => t.mint === mint);
-        return userToken ? userToken.balance : 0;
+        const userToken = balances.find(t => t.mint === mint);
+        return userToken ? userToken.usd_price : 0;
     }
 
     const handleSwitch = () => {
@@ -64,7 +64,7 @@ const SwapTokenForm: React.FC<SwapTokenFormProps> = ({ onSuccess, onCancel }) =>
                         disabled={isLoading}
                     >
                         <option value="" disabled>Select Token</option>
-                        {mockUserTokens.map((token) => (
+                        {balances.map((token) => (
                             <option key={token.mint} value={token.mint}>
                                 {token.symbol} (Bal: {getBalance(token.mint)})
                             </option>

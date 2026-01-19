@@ -3,18 +3,16 @@ import { useWallet } from '../contexts/WalletContext';
 import { useActiveWallet, useWalletList } from '../hooks/useWalletOperations';
 import { WalletInfoHelpers, type UIWalletInfo } from '../services/wallet/wallet_service';
 import CreateWalletForm from './CreateWalletForm';
+import SendTokenForm from './SendTokenForm'; 
 import NoiseOverlay from '../effects/noise';
-
-
 
 const WalletMainPage: React.FC = () => {
     const { isInitialized, isLoading: serviceLoading, error: serviceError } = useWallet();
-
     const { data: wallets, isLoading: walletsLoading, error: walletError, fetchWallets } = useWalletList();
-
     const { data: activeWallet, setActive } = useActiveWallet();
 
     const [showCreateForm, setShowCreateForm] = useState(false);
+    const [showSendForm, setShowSendForm] = useState(false); 
 
     useEffect(() => {
         if (isInitialized) {
@@ -23,9 +21,7 @@ const WalletMainPage: React.FC = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isInitialized])
 
-
     const handleCreateClick = () => {
-        // setShowCreateForm(prev => !prev)
         setShowCreateForm(true);
     };
 
@@ -38,38 +34,28 @@ const WalletMainPage: React.FC = () => {
         setShowCreateForm(false);
     };
 
+    const handleSendClick = () => {
+        setShowSendForm(true);
+    };
+
+    const handleSendSuccess = () => {
+        setShowSendForm(false);
+        fetchWallets(); 
+    };
+
+    const handleCancelSend = () => {
+        setShowSendForm(false);
+    };
+
     const handleSelectWallet = async (publicKey: string) => {
-        console.log("=== DEBUG START ===");
-        console.log("1. publicKey parameter:", publicKey);
-        console.log("2. publicKey length:", publicKey.length);
-        console.log("3. publicKey char codes:", Array.from(publicKey).map((c, i) =>
-            `${i}: ${c} (${c.charCodeAt(0)})`
-        ).join(', '));
-
-        // Create a fresh copy of the string to rule out reference issues
-        const freshCopy = String(publicKey);
-        console.log("4. Fresh copy:", freshCopy);
-        console.log("5. Are they equal?:", publicKey === freshCopy);
-
-        console.log("=== DEBUG END ===");
-        console.log("Attempting to set active wallet:", freshCopy);
-
-        let success = await setActive(freshCopy);
-        // console.timeEnd("setActive");
+        console.log("Attempting to set active wallet:", publicKey);
+        let success = await setActive(publicKey);
 
         if (!success) {
-            console.log("Manager busy, waiting and retrying...");
             await new Promise(resolve => setTimeout(resolve, 200));
             success = await setActive(publicKey);
         }
-
-        if (success) {
-            console.log('Active wallet changed:', publicKey);
-        } else {
-            console.error('Failed to set active wallet after retry');
-        }
     };
-
 
     if (serviceLoading) {
         return (
@@ -77,7 +63,6 @@ const WalletMainPage: React.FC = () => {
                 <div style={styles.centerContent}>
                     <div style={styles.spinner}>⏳</div>
                     <h2>Init service wallet...</h2>
-                    <p style={styles.hint}>Loading WebAssembly module</p>
                 </div>
             </div>
         );
@@ -90,9 +75,6 @@ const WalletMainPage: React.FC = () => {
                     <div style={styles.errorIcon}>❌</div>
                     <h2>Err initialization</h2>
                     <p style={styles.errorText}>{serviceError}</p>
-                    <p style={styles.hint}>
-                        Check console
-                    </p>
                 </div>
             </div>
         );
@@ -109,28 +91,30 @@ const WalletMainPage: React.FC = () => {
         );
     }
 
-    if (walletsLoading) {
+    if (showSendForm) {
         return (
             <div style={styles.container}>
-                <div style={styles.centerContent}>
-                    <div style={styles.spinner}>⏳</div>
-                    <h2>loading wallets...</h2>
+                <div style={styles.formContainer}> 
+                    <button onClick={handleCancelSend} style={styles.backButton}>← Back</button>
+                    <SendTokenForm
+                        onSuccess={handleSendSuccess}
+                        onCancel={handleCancelSend}
+                    />
                 </div>
             </div>
         );
+    }
+
+    if (walletsLoading) {
+        return <div style={styles.container}>Loading wallets...</div>;
     }
 
     if (walletError) {
         return (
             <div style={styles.container}>
                 <div style={styles.centerContent}>
-                    <div style={styles.errorIcon}>
-                        <h2>Err loading wallet</h2>
-                        <p style={styles.errorText}>{walletError}</p>
-                        <button onClick={fetchWallets} style={styles.retryButton}>
-                            Try again
-                        </button>
-                    </div>
+                    <p style={styles.errorText}>{walletError}</p>
+                    <button onClick={fetchWallets} style={styles.retryButton}>Try again</button>
                 </div>
             </div>
         );
@@ -141,14 +125,8 @@ const WalletMainPage: React.FC = () => {
             <div style={styles.container}>
                 <div style={styles.centerContent}>
                     <div style={styles.emptyIcon}>👛</div>
-                    <h2>You haven't ant wallets</h2>
-                    <p style={styles.hint}>
-                        Create your first wallet for work in Solana blockchain
-                    </p>
-                    <button
-                        onClick={handleCreateClick}
-                        style={styles.primaryButton}
-                    >
+                    <h2>You haven't any wallets</h2>
+                    <button onClick={handleCreateClick} style={styles.primaryButton}>
                         Create first wallet
                     </button>
                 </div>
@@ -161,24 +139,32 @@ const WalletMainPage: React.FC = () => {
             <NoiseOverlay />
             <div style={styles.header}>
                 <h1>My wallets</h1>
-                <button
-                    onClick={handleCreateClick}
-                    style={styles.primaryButton}
-                >
+                <button onClick={handleCreateClick} style={styles.primaryButton}>
                     + New wallet
                 </button>
             </div>
 
             {activeWallet && (
                 <div style={styles.activeWalletBanner}>
-                    <div>
-                        <strong>Active wallet:</strong>
-                        <div style={styles.walletAddress}>
-                            {WalletInfoHelpers.getDisplayName(activeWallet)}
+                    <div style={styles.activeWalletContent}> 
+                        <div>
+                            <strong>Active wallet:</strong>
+                            <div style={styles.walletAddress}>
+                                {WalletInfoHelpers.getDisplayName(activeWallet)}
+                            </div>
+                            <small style={styles.hint}>
+                                {WalletInfoHelpers.getPublicKey(activeWallet)}
+                            </small>
                         </div>
-                        <small style={styles.hint}>
-                            {WalletInfoHelpers.getPublicKey(activeWallet)}
-                        </small>
+                        
+                        <div style={styles.activeWalletActions}>
+                             <button 
+                                onClick={handleSendClick} 
+                                style={styles.sendButton} 
+                             >
+                                📤 Send
+                             </button>
+                        </div>
                     </div>
                 </div>
             )}
@@ -204,12 +190,12 @@ const WalletMainPage: React.FC = () => {
     );
 };
 
+
 interface WalletCardProps {
-    wallet: UIWalletInfo; // UIWalletInfo
+    wallet: UIWalletInfo;
     isActive: boolean;
     onSelect: () => void;
 }
-
 
 const WalletCard: React.FC<WalletCardProps> = ({ wallet, isActive, onSelect }) => {
     const publicKey = WalletInfoHelpers.getPublicKey(wallet);
@@ -231,12 +217,12 @@ const WalletCard: React.FC<WalletCardProps> = ({ wallet, isActive, onSelect }) =
 
             <div style={styles.walletCardBody}>
                 <div style={styles.infoRow}>
-                    <span style={styles.label}>Adress:</span>
+                    <span style={styles.label}>Address:</span>
                     <span style={styles.monospace}>{publicKey.slice(0, 8)}...{publicKey.slice(-8)}</span>
                 </div>
 
                 <div style={styles.infoRow}>
-                    <span style={styles.label}>Статус:</span>
+                    <span style={styles.label}>Status:</span>
                     <span>{isUnlocked ? '🔓 Unlocked' : '🔒 Locked'}</span>
                 </div>
             </div>
@@ -245,6 +231,7 @@ const WalletCard: React.FC<WalletCardProps> = ({ wallet, isActive, onSelect }) =
 }
 
 export default WalletMainPage;
+
 
 const styles: { [key: string]: React.CSSProperties } = {
     container: {
@@ -267,26 +254,12 @@ const styles: { [key: string]: React.CSSProperties } = {
         alignItems: 'center',
         marginBottom: '30px',
     },
-    spinner: {
-        fontSize: '48px',
-        marginBottom: '20px',
-    },
-    errorIcon: {
-        fontSize: '48px',
-        marginBottom: '20px',
-    },
-    emptyIcon: {
-        fontSize: '64px',
-        marginBottom: '20px',
-    },
-    hint: {
-        color: '#888',
-        fontSize: '14px',
-    },
-    errorText: {
-        color: '#ff6b6b',
-        fontSize: '14px',
-    },
+    spinner: { fontSize: '48px', marginBottom: '20px' },
+    errorIcon: { fontSize: '48px', marginBottom: '20px' },
+    emptyIcon: { fontSize: '64px', marginBottom: '20px' },
+    hint: { color: '#888', fontSize: '14px' },
+    errorText: { color: '#ff6b6b', fontSize: '14px' },
+    
     primaryButton: {
         padding: '12px 24px',
         fontSize: '16px',
@@ -298,26 +271,29 @@ const styles: { [key: string]: React.CSSProperties } = {
         fontWeight: 'bold',
         transition: 'all 0.2s',
     },
-    secondaryButton: {
-        padding: '12px 24px',
-        fontSize: '16px',
-        backgroundColor: 'transparent',
+    sendButton: {
+        padding: '10px 20px',
+        fontSize: '14px',
+        backgroundColor: '#000', 
         color: '#00FFBD',
         border: '1px solid #00FFBD',
-        borderRadius: '8px',
+        borderRadius: '6px',
         cursor: 'pointer',
         fontWeight: 'bold',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px'
     },
-    retryButton: {
-        padding: '12px 24px',
-        fontSize: '16px',
-        backgroundColor: '#00FFBD',
-        color: '#000',
+    backButton: {
+        background: 'none',
         border: 'none',
-        borderRadius: '8px',
+        color: '#888',
         cursor: 'pointer',
-        marginTop: '20px',
+        marginBottom: '15px',
+        fontSize: '14px',
+        padding: 0
     },
+    
     activeWalletBanner: {
         backgroundColor: 'rgba(0, 255, 189, 0.1)',
         border: '1px solid rgba(0, 255, 189, 0.3)',
@@ -325,6 +301,16 @@ const styles: { [key: string]: React.CSSProperties } = {
         padding: '20px',
         marginBottom: '30px',
     },
+    activeWalletContent: {
+        display: 'flex',
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+    },
+    activeWalletActions: {
+        display: 'flex',
+        gap: '10px'
+    },
+    
     walletAddress: {
         fontSize: '18px',
         fontWeight: 'bold',
@@ -362,20 +348,16 @@ const styles: { [key: string]: React.CSSProperties } = {
         borderRadius: '4px',
         fontWeight: 'bold',
     },
-    walletCardBody: {
-        fontSize: '14px',
-    },
+    walletCardBody: { fontSize: '14px' },
     infoRow: {
         display: 'flex',
         justifyContent: 'space-between',
         marginBottom: '10px',
     },
-    label: {
-        color: '#888',
-    },
-    monospace: {
-        fontFamily: 'monospace',
-    },
+    label: { color: '#888' },
+    monospace: { fontFamily: 'monospace' },
+    
+    // <--- Контейнер форми, який використовується і для Create, і для Send
     formContainer: {
         maxWidth: '500px',
         margin: '0 auto',
@@ -384,31 +366,14 @@ const styles: { [key: string]: React.CSSProperties } = {
         borderRadius: '10px',
         border: '1px solid #333',
     },
-    formGroup: {
-        marginBottom: '20px',
-    },
-    input: {
-        width: '100%',
-        padding: '12px',
-        fontSize: '16px',
-        backgroundColor: '#1a1a1a',
-        color: '#fff',
-        border: '1px solid #444',
-        borderRadius: '6px',
-        marginTop: '5px',
-        boxSizing: 'border-box',
-    },
-    errorBox: {
-        backgroundColor: 'rgba(255, 0, 0, 0.1)',
-        border: '1px solid rgba(255, 0, 0, 0.3)',
-        borderRadius: '6px',
-        padding: '12px',
-        color: '#ff6b6b',
-        marginBottom: '15px',
-    },
-    buttonGroup: {
-        display: 'flex',
-        gap: '10px',
-        marginTop: '20px',
+    retryButton: {
+         padding: '12px 24px',
+         fontSize: '16px',
+         backgroundColor: '#00FFBD',
+         color: '#000',
+         border: 'none',
+         borderRadius: '8px',
+         cursor: 'pointer',
+         marginTop: '20px',
     },
 };

@@ -1,7 +1,7 @@
 // #![cfg(target_arch = "wasm32")]
 
 use async_lock::RwLock;
-use solana_sdk::{pubkey::Pubkey, signature::Signature};
+use solana_sdk::{pubkey::Pubkey, signature::Signature, signer::Signer};
 use std::{cell::RefCell, collections::HashMap, rc::Rc, time::Duration};
 use wallet_models::domain::models::acc_data::Network;
 use zeroize::Zeroizing;
@@ -20,10 +20,14 @@ use crate::{
     },
     traits::signer_wraper::{SaturnSigner, SecureKeystore, SolanaKeypairSigner},
     wasm::{
-        models::{JsWalletInfo, LockResultExt, TokenBalance, WalletCreationResult, WalletInfo},
+        models::{
+            JsWalletInfo, LockResultExt, RestoreWalletRequest, TokenBalance, WalletCreationResult,
+            WalletInfo,
+        },
         wasm_encryptions::{
-            CryptoError, CryptoVault, EncryptionParams, SecureString, create_encrypt_data,
-            encrypt_seed_with_verification, keypair_from_seed,
+            CryptoError, CryptoVault, EncryptInfo, EncryptionParams, SecureString, WalletMetadata,
+            create_encrypt_data, decrypt_seed_versioned, encrypt_seed_with_verification,
+            keypair_from_seed, verify_password,
         },
         wasm_rpc_client::{SolanaRpcProvider, WasmRpcClient},
         wasm_solana_methods::create_unsign_transaction,
@@ -94,7 +98,6 @@ impl WalletManager {
         network: Option<Network>,
         keystore_timeout: Option<Duration>,
     ) -> Result<WalletCreationResult, WalletError> {
-
         let (encrypt_info, mnemonic) = create_encrypt_data(
             password,
             bip39_passphrase,
@@ -157,6 +160,88 @@ impl WalletManager {
             pubkey,
             mnemonic_phrase,
         })
+    }
+
+    pub fn restore_from_encrypted(
+        &self,
+        request: RestoreWalletRequest,
+    ) -> Result<(), WalletError> {
+        let (encrypted_data, password, network, display_name) = request.get_data()?;
+
+        let is_valid = verify_password(&encrypted_data.encrypt, password.clone())
+            .map_err(|_| WalletError::Encryption(EncryptionError::InvalidPassword))?;
+
+        if !is_valid {
+            return Err(WalletError::Encryption(EncryptionError::InvalidPassword));
+        }
+
+        let mut seed = decrypt_seed_versioned(&encrypted_data.encrypt, password).map_err(|e| {
+            WalletError::Encryption(EncryptionError::InvalidSeedLength {
+                expected: 32,
+                got: 32,
+            })
+        })?;
+
+        let keypair = keypair_from_seed(&seed).map_err(|e| {
+            WalletError::Encryption(EncryptionError::InvalidSeedLength {
+                expected: 32,
+                got: 32,
+            })
+        })?;
+
+        seed.zeroize();
+
+        let pubkey = keypair.pubkey();
+
+        if pubkey != encrypted_data.pubkey {
+            return Err(WalletError::Validation(ValidationError::InvalidPublicKey {
+                input: encrypted_data.pubkey.to_string(),
+            }));
+        }
+
+        let mut wallets = self.wallets.try_write().or_busy("restore_from_encrypted")?;
+
+        if wallets.contains_key(&pubkey) {
+            return Ok(());
+        }
+
+        let encrypt_info = EncryptInfo {
+            encrypted_data,
+            metadata: WalletMetadata {
+                uses_bip39_passphrase: false,
+            },
+        };
+
+        let crypto_vault = CryptoVault::new(encrypt_info);
+
+        let wallet_state = WasmSaturnWalletState::new(
+            pubkey,
+            network,
+            Some(display_name),
+            self.rpc_provider.clone(),
+        );
+
+        let entry = WalletEntry {
+            crypto_vault,
+            wallet_state,
+            keystore: None,
+            last_activity: Instant::now(),
+            keystore_timeout: self.config.default_keystore_timeout,
+        };
+
+        wallets.insert(pubkey, entry);
+
+        let mut active = self.active_wallet.borrow_mut();
+        if active.is_none() {
+            *active = Some(pubkey);
+        }
+
+        tracing::info!(
+            wallet = %pubkey,
+            "Wallet restored from encrypted storage"
+        );
+
+        Ok(())
     }
 
     pub fn unlock_wallet(

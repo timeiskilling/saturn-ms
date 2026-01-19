@@ -20,3 +20,9 @@ impl From<String> for SecureString {
         Self::new(s)
     }
 }
+
+impl std::convert::From<&str> for SecureString {
+    fn from(value: &str) -> Self {
+        Self::new(value.to_string())
+    }
+}
