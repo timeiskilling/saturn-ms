@@ -3,7 +3,8 @@ import { useWallet } from '../contexts/WalletContext';
 import { useActiveWallet, useWalletList } from '../hooks/useWalletOperations';
 import { WalletInfoHelpers, type UIWalletInfo } from '../services/wallet/wallet_service';
 import CreateWalletForm from './CreateWalletForm';
-import SendTokenForm from './SendTokenForm'; 
+import SendTokenForm from './SendTokenForm';
+import BuyTokenForm from './BuyTokenForm';
 import NoiseOverlay from '../effects/noise';
 
 const WalletMainPage: React.FC = () => {
@@ -12,7 +13,8 @@ const WalletMainPage: React.FC = () => {
     const { data: activeWallet, setActive } = useActiveWallet();
 
     const [showCreateForm, setShowCreateForm] = useState(false);
-    const [showSendForm, setShowSendForm] = useState(false); 
+    const [showSendForm, setShowSendForm] = useState(false);
+    const [showBuyForm, setShowBuyForm] = useState(false);
 
     useEffect(() => {
         if (isInitialized) {
@@ -40,12 +42,18 @@ const WalletMainPage: React.FC = () => {
 
     const handleSendSuccess = () => {
         setShowSendForm(false);
-        fetchWallets(); 
+        fetchWallets();
     };
 
     const handleCancelSend = () => {
         setShowSendForm(false);
     };
+
+    const handleBuyClick = () => setShowBuyForm(true);
+    const handleBuySuccess = () => {
+        setShowBuyForm(false);
+    };
+    const handleCancelBuy = () => setShowBuyForm(false);
 
     const handleSelectWallet = async (publicKey: string) => {
         console.log("Attempting to set active wallet:", publicKey);
@@ -94,11 +102,24 @@ const WalletMainPage: React.FC = () => {
     if (showSendForm) {
         return (
             <div style={styles.container}>
-                <div style={styles.formContainer}> 
+                <div style={styles.formContainer}>
                     <button onClick={handleCancelSend} style={styles.backButton}>← Back</button>
                     <SendTokenForm
                         onSuccess={handleSendSuccess}
                         onCancel={handleCancelSend}
+                    />
+                </div>
+            </div>
+        );
+    }
+
+    if (showBuyForm) {
+        return (
+            <div style={styles.container}>
+                <div style={styles.formContainer}>
+                    <button onClick={handleCancelBuy} style={styles.backButton}>← Back</button>
+                    <BuyTokenForm
+                        onSuccess={handleBuySuccess}
                     />
                 </div>
             </div>
@@ -146,7 +167,7 @@ const WalletMainPage: React.FC = () => {
 
             {activeWallet && (
                 <div style={styles.activeWalletBanner}>
-                    <div style={styles.activeWalletContent}> 
+                    <div style={styles.activeWalletContent}>
                         <div>
                             <strong>Active wallet:</strong>
                             <div style={styles.walletAddress}>
@@ -156,14 +177,21 @@ const WalletMainPage: React.FC = () => {
                                 {WalletInfoHelpers.getPublicKey(activeWallet)}
                             </small>
                         </div>
-                        
+
                         <div style={styles.activeWalletActions}>
-                             <button 
-                                onClick={handleSendClick} 
-                                style={styles.sendButton} 
-                             >
+                            <button
+                                onClick={handleSendClick}
+                                style={styles.sendButton}
+                            >
                                 📤 Send
-                             </button>
+                            </button>
+
+                            <button
+                                onClick={handleBuyClick}
+                                style={styles.buyButton}
+                            >
+                                📥 Buy
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -259,7 +287,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     emptyIcon: { fontSize: '64px', marginBottom: '20px' },
     hint: { color: '#888', fontSize: '14px' },
     errorText: { color: '#ff6b6b', fontSize: '14px' },
-    
+
     primaryButton: {
         padding: '12px 24px',
         fontSize: '16px',
@@ -274,7 +302,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     sendButton: {
         padding: '10px 20px',
         fontSize: '14px',
-        backgroundColor: '#000', 
+        backgroundColor: '#000',
         color: '#00FFBD',
         border: '1px solid #00FFBD',
         borderRadius: '6px',
@@ -293,7 +321,7 @@ const styles: { [key: string]: React.CSSProperties } = {
         fontSize: '14px',
         padding: 0
     },
-    
+
     activeWalletBanner: {
         backgroundColor: 'rgba(0, 255, 189, 0.1)',
         border: '1px solid rgba(0, 255, 189, 0.3)',
@@ -303,14 +331,14 @@ const styles: { [key: string]: React.CSSProperties } = {
     },
     activeWalletContent: {
         display: 'flex',
-        justifyContent: 'space-between', 
+        justifyContent: 'space-between',
         alignItems: 'center',
     },
     activeWalletActions: {
         display: 'flex',
         gap: '10px'
     },
-    
+
     walletAddress: {
         fontSize: '18px',
         fontWeight: 'bold',
@@ -356,7 +384,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     },
     label: { color: '#888' },
     monospace: { fontFamily: 'monospace' },
-    
+
     // <--- Контейнер форми, який використовується і для Create, і для Send
     formContainer: {
         maxWidth: '500px',
@@ -367,13 +395,13 @@ const styles: { [key: string]: React.CSSProperties } = {
         border: '1px solid #333',
     },
     retryButton: {
-         padding: '12px 24px',
-         fontSize: '16px',
-         backgroundColor: '#00FFBD',
-         color: '#000',
-         border: 'none',
-         borderRadius: '8px',
-         cursor: 'pointer',
-         marginTop: '20px',
+        padding: '12px 24px',
+        fontSize: '16px',
+        backgroundColor: '#00FFBD',
+        color: '#000',
+        border: 'none',
+        borderRadius: '8px',
+        cursor: 'pointer',
+        marginTop: '20px',
     },
 };

@@ -29,8 +29,7 @@ const SendTokenForm: React.FC<SendTokenFormProps> = () => {
     const [priceOfInputMint, setPriceOfInputMint] = useState(0);
 
     const selectedToken = balances.find(t => t.mint === inputMint);
-
-    const walletBalanceReadable = selectedToken ? parseFloat(selectedToken.amount) : 0;
+    const walletBalanceReadable = selectedToken ? getReadableAmount(selectedToken.raw, selectedToken.decimals) : 0;
 
     const parsedAmount = parseFloat(amountInput);
     const isValidAmount = !isNaN(parsedAmount) && parsedAmount > 0;
@@ -89,26 +88,29 @@ const SendTokenForm: React.FC<SendTokenFormProps> = () => {
         }
     };
 
+    // --- Loading State ---
     if (walletLoading) {
-        return <div>Loading wallet information...</div>;
+        return <div id="wallet-loading-state">Loading wallet information...</div>;
     }
 
+    // --- Error State ---
     if (walletError) {
         return (
-            <div style={{ color: 'red' }}>
+            <div id="wallet-error-state" style={{ color: 'red' }}>
                 Error loading wallet: {walletError}
-                <button onClick={fetchActiveWallet}>Retry</button>
+                <button id="wallet-retry-btn" onClick={fetchActiveWallet}>Retry</button>
             </div>
         );
     }
 
+    // --- Success State ---
     if (data) {
         const solanaFmUrl = `https://solana.fm/tx/${data}`;
-
         return (
-            <div style={{ color: 'green', marginTop: '10px' }}>
-                <p>Transaction success!</p>
+            <div id="transaction-success-container" style={{ color: 'green', marginTop: '10px' }}>
+                <p id="success-message">Transaction success!</p>
                 <a
+                    id="explorer-link"
                     href={solanaFmUrl}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -120,9 +122,9 @@ const SendTokenForm: React.FC<SendTokenFormProps> = () => {
         );
     }
 
-
+    // --- Not Connected State ---
     if (!walletInfo) {
-        return <div>Please connect your wallet first</div>;
+        return <div id="connect-wallet-message">Please connect your wallet first</div>;
     }
 
     const isSendDisabled =
@@ -133,18 +135,21 @@ const SendTokenForm: React.FC<SendTokenFormProps> = () => {
         parsedAmount <= 0 ||
         !walletInfo;
 
+    // --- Main Form ---
     return (
-        <div>
-            <div>
-                <h2>Send Tokens</h2>
+        <div id="send-token-widget-wrapper">
+            <div id="send-token-form-card">
+                <h2 id="form-header">Send Tokens</h2>
 
-                <div style={{ marginBottom: '1rem', fontSize: '14px', color: '#666' }}>
-                    From: {walletInfo.wasmInfo.pubkey}
+                <div id="sender-info-display" style={{ marginBottom: '1rem', fontSize: '14px', color: '#666' }}>
+                    From: <span id="sender-pubkey">{walletInfo.wasmInfo.pubkey}</span>
                 </div>
 
-                <div style={{ marginBottom: '1rem' }}>
-                    <label>Recipient Address</label>
+                {/* Recipient Section */}
+                <div id="recipient-section" style={{ marginBottom: '1rem' }}>
+                    <label htmlFor="recipient-input">Recipient Address</label>
                     <input
+                        id="recipient-input"
                         type="text"
                         value={inputAddress}
                         onChange={(e) => setInputAddress(e.target.value)}
@@ -153,27 +158,28 @@ const SendTokenForm: React.FC<SendTokenFormProps> = () => {
                         style={{ width: '100%', padding: '8px' }}
                     />
                     {showAddressError && (
-                        <div style={{ color: 'red', fontSize: '12px', marginTop: '4px' }}>
+                        <div id="recipient-error-msg" style={{ color: 'red', fontSize: '12px', marginTop: '4px' }}>
                             Invalid Solana address
                         </div>
                     )}
                 </div>
 
-                <div style={{ marginBottom: '1rem' }}>
-                    <label>Amount</label>
-                    <div style={{ display: 'flex', gap: '8px' }}>
+                {/* Amount & Token Section */}
+                <div id="amount-token-section" style={{ marginBottom: '1rem' }}>
+                    <label htmlFor="amount-input">Amount</label>
+                    <div id="amount-input-group" style={{ display: 'flex', gap: '8px' }}>
                         <input
+                            id="amount-input"
                             type="text"
                             inputMode="decimal"
                             value={amountInput}
                             onChange={handleAmountChange}
                             disabled={isLoading}
                             placeholder="0.00"
-                            min="0"
-                            step="0.01"
                             style={{ flex: 1, padding: '8px' }}
                         />
                         <select
+                            id="token-select-dropdown"
                             value={inputMint}
                             onChange={(e) => setInputMint(e.target.value)}
                             disabled={isLoading}
@@ -183,10 +189,9 @@ const SendTokenForm: React.FC<SendTokenFormProps> = () => {
                             {balances.map((token) => {
                                 const tokenVal = getReadableAmount(token.raw, token.decimals);
                                 const formattedVal = formatBalance(tokenVal);
-
                                 return (
                                     <option key={token.mint} value={token.mint}>
-                                        {token.symbol} (Balance: {formattedVal})
+                                        {token.symbol} ({formattedVal})
                                     </option>
                                 );
                             })}
@@ -194,26 +199,30 @@ const SendTokenForm: React.FC<SendTokenFormProps> = () => {
                     </div>
                 </div>
 
+                {/* Price Estimation */}
                 {priceOfInputMint > 0 && (
-                    <div style={{ marginBottom: '1rem', fontSize: '14px' }}>
+                    <div id="price-estimation-display" style={{ marginBottom: '1rem', fontSize: '14px' }}>
                         ≈ ${priceOfInputMint.toFixed(2)}
                     </div>
                 )}
 
+                {/* Validation Errors */}
                 {isExceedsBalance && (
-                    <div style={{ color: 'red', fontSize: '12px', marginBottom: '1rem' }}>
+                    <div id="balance-error-msg" style={{ color: 'red', fontSize: '12px', marginBottom: '1rem' }}>
                         Insufficient balance. Maximum available: {formatBalance(walletBalanceReadable)}
                     </div>
                 )}
 
                 {error && (
-                    <div style={{ color: 'red', fontSize: '12px', marginBottom: '1rem' }}>
+                    <div id="transaction-error-msg" style={{ color: 'red', fontSize: '12px', marginBottom: '1rem' }}>
                         Error: {error}
                     </div>
                 )}
 
-                <div>
+                {/* Submit Button */}
+                <div id="submit-button-container">
                     <button
+                        id="send-tokens-btn"
                         onClick={handleSend}
                         disabled={isSendDisabled}
                         style={{
