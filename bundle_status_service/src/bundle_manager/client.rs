@@ -5,8 +5,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::broadcast;
 
-use crate::bundle_manager::domain::BundleStage;
-
+use crate::bundle_manager::bundle_tracker_api::bundle_stage_api::BundleStage;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserBundleUpdate {
@@ -32,14 +31,20 @@ pub struct UserStreamNotificationSystem {
     active_users: Arc<DashMap<String, UserStats>>,
 }
 
-impl UserStreamNotificationSystem {
-    pub fn new() -> Self {
+impl Default for UserStreamNotificationSystem {
+    fn default() -> Self {
         Self {
             user_streams: Arc::new(DashMap::new()),
             bundle_ownership: Arc::new(DashMap::new()),
             user_bundles: Arc::new(DashMap::new()),
             active_users: Arc::new(DashMap::new()),
         }
+    }
+}
+
+impl UserStreamNotificationSystem {
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn subscribe_to_user_stream(
@@ -169,9 +174,10 @@ impl UserStreamNotificationSystem {
 
     pub fn cleanup_bundle(&self, bundle_id: &str) {
         if let Some((_, user_id)) = self.bundle_ownership.remove(bundle_id)
-            && let Some(mut user_bundles) = self.user_bundles.get_mut(&user_id) {
-                user_bundles.remove(bundle_id);
-            }
+            && let Some(mut user_bundles) = self.user_bundles.get_mut(&user_id)
+        {
+            user_bundles.remove(bundle_id);
+        }
     }
 
     pub fn get_stats(&self) -> HashMap<String, usize> {
@@ -197,19 +203,4 @@ impl UserStreamNotificationSystem {
             .unwrap_or(0)
     }
 
-    // fn calculate_progress(&self, status: &str) -> String {
-    //     match status {
-    //         "Submitted" => "1/5".to_string(),
-    //         "InFlight" => "2/5".to_string(),
-    //         "Landed" => "3/5".to_string(),
-    //         "Confirmed" => "4/5".to_string(),
-    //         "Finalized" => "5/5".to_string(),
-    //         "Failed" => "".to_string(),
-    //         _ => "?/5".to_string(),
-    //     }
-    // }
-
-    // pub async fn get_current_user_bundle_statuses(&self, user_id: &str) -> Vec<UserBundleUpdate> {
-    //     vec![]
-    // }
 }

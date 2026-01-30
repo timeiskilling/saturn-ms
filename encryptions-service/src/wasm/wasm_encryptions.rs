@@ -45,6 +45,7 @@ impl std::convert::From<&str> for SecureString {
         Self::new(value.to_string())
     }
 }
+
 #[derive(Debug, Clone,Serialize,Deserialize)]
 pub struct EncryptionParams {
     pub argon2_memory_kib: u32,

@@ -24,7 +24,7 @@ struct BundleStatus {
 }
 
 //  Result<String, Box<dyn std::error::Error + Send + Sync>>
-pub async fn send_bundle(trader: Arc<JupiterTrader>) -> Result<()> {
+pub async fn send_bundle(_trader: Arc<JupiterTrader>) -> Result<()> {
     let solana_rpc = solana_client::nonblocking::rpc_client::RpcClient::new_with_commitment(
         "https://mainnet.helius-rpc.com/?api-key=bd7b24dd-d644-4612-a486-a5acb8427920".to_string(),
         CommitmentConfig::confirmed(),
@@ -344,3 +344,4 @@ fn print_transaction_url(bundle_status: &BundleStatus) {
         warn!("No transactions found in the bundle status.");
     }
 }
+

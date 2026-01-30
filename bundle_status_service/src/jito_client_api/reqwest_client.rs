@@ -8,7 +8,7 @@ use jupiter_trader_data::models::jupiter_models::{
     JupiterQuoteResponse, JupiterSwapInstructionsRsponse, JupiterSwapRequest, PriorityLevel,
     QuoteOptions,
 };
-use reqwest::{Client, header::HeaderValue};
+use reqwest::{Client};
 use solana_sdk::pubkey::Pubkey;
 use std::{
     num::NonZeroU32,
@@ -17,7 +17,7 @@ use std::{
 };
 use tokio::time::sleep;
 
-use crate::revork::{
+use crate::jito_client_api::{
     error_code::{JupiterReqestError, RpcError, SaturnTransactionsServiceError},
     retry_config::{RetryConfig, RpcMetrics, RpcStats},
 };
@@ -70,10 +70,16 @@ impl HttpManager {
         base_url: String,
         requests_per_second: u32,
         retry_config: RetryConfig,
-        uuid: Option<String>,
+        _uuid: Option<String>,
+        api_key: &str,
     ) -> Self {
+
+        let mut headers = reqwest::header::HeaderMap::new();
+        headers.insert("x-api-key", reqwest::header::HeaderValue::from_str(api_key).unwrap());
+
         let inner = Arc::new(
             reqwest::ClientBuilder::new()
+                .default_headers(headers)
                 .pool_max_idle_per_host(200)
                 .pool_idle_timeout(Duration::from_secs(120))
                 .timeout(Duration::from_secs(15))
@@ -189,10 +195,6 @@ impl HttpManager {
         headers.insert(
             "Accept",
             reqwest::header::HeaderValue::from_static("application/json"),
-        );
-        headers.insert(
-            "x-api-key",
-            reqwest::header::HeaderValue::from_static("02aaffb2-fd16-4030-9b4f-f9dd7e178a2c"),
         );
 
         let response = client

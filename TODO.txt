@@ -1,33 +1,5 @@
-✓ 1 transaction --> proto --> user --> proto --> status 
-✓ 2 blockhash/jito tip/ 
-✓ 3 ws pricing tokens 
-✓ 4 front 
---
-WALLET
-SendTransactions
-BuyTokens(By Saturn)
-Swap(By Saturn)
---
-Swift(Interface)
---
-SATURN
-Integrate(LayerZero)
---
-Smart Contracts
-Fee Taker Account with Transform into USDC
---
-REFACRING
-Delete unused comentet code
-Rewrite api Calls (with generics for exmpl)
---
-FOR future
-Buy Domain Name && Hostig
---
-Test All feature
---
-TS
-Wrote Interface with React + Next.Js also Web3.js We3Sol.js
---
-Realese
+--Config for API-key-- 
 
-Build docker for grpc testings
+Check workflow redis trackers
+
+Unit-tests 

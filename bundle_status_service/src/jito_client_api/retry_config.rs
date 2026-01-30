@@ -1,10 +1,10 @@
-use std::time::Duration;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::Duration;
 
 #[derive(Clone)]
 pub struct RetryConfig {
-    pub max_attempts : usize,
-    pub initial_backoff : Duration,
+    pub max_attempts: usize,
+    pub initial_backoff: Duration,
     pub backoff_multiplier: f64,
     pub max_backoff: Duration,
 }
@@ -19,7 +19,6 @@ impl Default for RetryConfig {
         }
     }
 }
-
 
 pub struct RpcMetrics {
     pub total_requests: AtomicU64,
@@ -52,6 +51,17 @@ impl RpcMetrics {
             failed: self.failed_requests.load(Ordering::Relaxed),
             rate_limited: self.rate_limited_requests.load(Ordering::Relaxed),
             retried: self.retried_requests.load(Ordering::Relaxed),
+        }
+    }
+}
+
+impl Default for RpcMetrics {
+    fn default() -> Self {
+        Self {
+            total_requests: AtomicU64::new(0),
+            failed_requests: AtomicU64::new(0),
+            rate_limited_requests: AtomicU64::new(0),
+            retried_requests: AtomicU64::new(0),
         }
     }
 }

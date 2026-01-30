@@ -32,6 +32,8 @@ pub struct Config {
     // pub jwt_expire_refresh_token_seconds: i64,
     // pub jwt_validation_leeway_seconds: i64,
     // pub jwt_enable_revoked_tokens: bool,
+    pub jupiter_api_key : String,
+    pub helius_api_key : String,
 
     pub jito_tip_redis_host : String,
     pub jito_tip_redis_port : u16,
@@ -56,6 +58,10 @@ impl Config {
 
     pub fn alt_redis_url(&self) -> String {
         format!("redis://{}:{}", self.alt_redis_host, self.alt_redis_port)
+    }
+
+    pub fn helius_url(&self) -> String {
+        format!("https://mainnet.helius-rpc.com/?api-key{}",self.helius_api_key)
     }
 
     // pub fn postgres_url(&self) -> String {
@@ -108,6 +114,8 @@ pub fn load() -> Config {
         jito_tip_redis_port: env_parse("JITO_TIP_REDIS_PORT"),
         alt_redis_host: env_get("ATL_REDIS_HOST"),
         alt_redis_port: env_parse("ATL_REDIS_PORT"),
+        jupiter_api_key: env_get("JUPITER_API_KEY"),
+        helius_api_key: env_get("HELIUS_API_KEY"),
     };
 
     tracing::trace!("configuration: {:#?}", config);

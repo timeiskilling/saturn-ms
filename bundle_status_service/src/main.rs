@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use config::{load};
 use proto_models::grpc::bundle_service_server::BundleServiceServer;
 use solana_client::nonblocking::rpc_client::RpcClient;
 use tokio::sync::Semaphore;
@@ -8,7 +9,7 @@ use tracing_subscriber::fmt::format::FmtSpan;
 
 use crate::{
     proto_service::{TransactionService, service_jupiter_status},
-    revork::{jito_http_manager::JitoHttpManager, reqwest_client::HttpManager, retry_config::RetryConfig},
+    jito_client_api::{jito_http_manager::JitoHttpManager, reqwest_client::HttpManager, retry_config::RetryConfig},
     trader::JupiterTrader,
 };
 
@@ -18,9 +19,9 @@ pub mod constant;
 pub mod custom_builder;
 pub mod proto_service;
 pub mod redis_con;
-pub mod revork;
 pub mod test;
 pub mod trader;
+pub mod jito_client_api;
 
 const SEMAPHORE_PERMITS: usize = 5;
 #[tokio::main]
@@ -31,6 +32,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_target(false)
         .init();
 
+    let config = load();
+    let helius_api_key = config.helius_api_key.clone();
     let addr = "127.0.0.1:3000".parse().unwrap();
     let redis_url = vec![
         "redis://localhost:6379".to_string(),
@@ -44,10 +47,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         None,
     ));
 
-    let http_client = Arc::new(HttpManager::new("https://api.jup.ag//swap/v1".to_string(), 50, RetryConfig::default(), None));
+    let http_client = Arc::new(HttpManager::new("https://api.jup.ag//swap/v1".to_string(), 50, RetryConfig::default(), None,&config.jupiter_api_key));
     let trader = Arc::new(
         JupiterTrader::new(
-            "https://mainnet.helius-rpc.com/?api-key=bd7b24dd-d644-4612-a486-a5acb8427920",
+            &helius_api_key.clone(),
             redis_url,
             jito_manager,
             http_client,
@@ -56,7 +59,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     let rpc_client = Arc::new(RpcClient::new(
-        "https://mainnet.helius-rpc.com/?api-key=bd7b24dd-d644-4612-a486-a5acb8427920".to_string(),
+        helius_api_key,
     ));
 
     let blockhash_cache = blockhash_data::BlockhashCache::new(rpc_client.clone());
