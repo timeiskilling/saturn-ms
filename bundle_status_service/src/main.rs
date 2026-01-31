@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use config::{load};
+use config::load;
 use proto_models::grpc::bundle_service_server::BundleServiceServer;
 use solana_client::nonblocking::rpc_client::RpcClient;
 use tokio::sync::Semaphore;
@@ -8,8 +8,10 @@ use tonic::{service::LayerExt, transport::Server};
 use tracing_subscriber::fmt::format::FmtSpan;
 
 use crate::{
+    jito_client_api::{
+        jito_http_manager::JitoHttpManager, reqwest_client::HttpManager, retry_config::RetryConfig,
+    },
     proto_service::{TransactionService, service_jupiter_status},
-    jito_client_api::{jito_http_manager::JitoHttpManager, reqwest_client::HttpManager, retry_config::RetryConfig},
     trader::JupiterTrader,
 };
 
@@ -17,11 +19,11 @@ pub mod blockhash_data;
 pub mod bundle_manager;
 pub mod constant;
 pub mod custom_builder;
+pub mod jito_client_api;
 pub mod proto_service;
 pub mod redis_con;
 pub mod test;
 pub mod trader;
-pub mod jito_client_api;
 
 const SEMAPHORE_PERMITS: usize = 5;
 #[tokio::main]
@@ -47,7 +49,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         None,
     ));
 
-    let http_client = Arc::new(HttpManager::new("https://api.jup.ag//swap/v1".to_string(), 50, RetryConfig::default(), None,&config.jupiter_api_key));
+    let http_client = Arc::new(HttpManager::new(
+        "https://api.jup.ag//swap/v1".to_string(),
+        50,
+        RetryConfig::default(),
+        None,
+        &config.jupiter_api_key,
+    ));
     let trader = Arc::new(
         JupiterTrader::new(
             &helius_api_key.clone(),
@@ -58,9 +66,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await,
     );
 
-    let rpc_client = Arc::new(RpcClient::new(
-        helius_api_key,
-    ));
+    let rpc_client = Arc::new(RpcClient::new(helius_api_key));
 
     let blockhash_cache = blockhash_data::BlockhashCache::new(rpc_client.clone());
 
@@ -98,6 +104,5 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .add_service(transaction_serve)
         .serve(addr)
         .await?;
-
     Ok(())
 }

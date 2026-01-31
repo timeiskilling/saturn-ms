@@ -1,0 +1,62 @@
+services:
+  # Node 1 (Port 16379)
+  redis_stress_1:
+    image: redis:7-alpine
+    container_name: stress_redis_1
+    ports:
+      - "16379:6379"
+    volumes:
+      - stress_redis_1:/data
+    restart: no
+    command: redis-server --save "" --appendonly no
+
+  # Node 2 (Port 16380)
+  redis_stress_2:
+    image: redis:7-alpine
+    container_name: stress_redis_2
+    ports:
+      - "16380:6379"
+    volumes:
+      - stress_redis_2:/data
+    restart: no
+    command: redis-server --save "" --appendonly no
+
+  # Node 3 (Port 16381)
+  redis_stress_3:
+    image: redis:7-alpine
+    container_name: stress_redis_3
+    ports:
+      - "16381:6379"
+    volumes:
+      - stress_redis_3:/data
+    restart: no
+    command: redis-server --save "" --appendonly no
+
+  # Node 4 (Port 16382)
+  redis_stress_4:
+    image: redis:7-alpine
+    container_name: stress_redis_4
+    ports:
+      - "16382:6379"
+    volumes:
+      - stress_redis_4:/data
+    restart: no
+    command: redis-server --save "" --appendonly no
+
+  # Node 5 (Port 16383)
+  redis_stress_5:
+    image: redis:7-alpine
+    container_name: stress_redis_5
+    ports:
+      - "16383:6379"
+    volumes:
+      - stress_redis_5:/data
+    restart: no
+    command: redis-server --save "" --appendonly no
+
+volumes:
+  stress_redis_1:
+  stress_redis_2:
+  stress_redis_3:
+  stress_redis_4:
+  stress_redis_5:

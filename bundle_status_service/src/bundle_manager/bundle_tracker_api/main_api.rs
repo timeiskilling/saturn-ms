@@ -1,14 +1,13 @@
 use crate::bundle_manager::bundle_tracker_api::bundle_stage_api::*;
-use crate::bundle_manager::client::{UserBundleUpdate};
+use crate::bundle_manager::client::UserBundleUpdate;
 use async_trait::async_trait;
 use redis::RedisResult;
-use std::{collections::HashMap, sync::Arc};
-use tokio::sync::Mutex;
+use std::collections::HashMap;
 use tokio::time::Duration;
 
 #[async_trait]
 pub trait BundleTracker: Send + Sync {
-    fn get_redis_connection(&self, index: usize) -> Arc<Mutex<redis::aio::MultiplexedConnection>>;
+    fn get_redis_connection(&self) -> redis::aio::MultiplexedConnection;
     async fn store_ownership(&self, bundle_id: &str, user_id: &str);
     async fn add_bundles(&self, bundle_ids: Vec<String>, user_id: String) -> RedisResult<()>;
     async fn start_tracking(&self) -> RedisResult<()>;

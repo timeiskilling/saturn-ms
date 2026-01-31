@@ -35,6 +35,17 @@ pub struct RpcStats {
     pub retried: u64,
 }
 
+impl Default for RpcStats {
+    fn default() -> Self {
+        Self {
+            total: 0,
+            failed: 0,
+            rate_limited: 0,
+            retried: 0,
+        }
+    }
+}
+
 impl RpcMetrics {
     pub fn new() -> Self {
         Self {

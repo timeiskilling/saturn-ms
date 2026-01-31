@@ -1,4 +1,4 @@
-use serde::{Serialize,Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Context {
@@ -66,6 +66,19 @@ impl std::fmt::Display for BundleStage {
     }
 }
 
+impl From<i32> for BundleStage {
+    fn from(value: i32) -> Self {
+        match value {
+            1 => BundleStage::Submitted,
+            2 => BundleStage::InFlight,
+            3 => BundleStage::Landed,
+            4 => BundleStage::Confirmed,
+            5 => BundleStage::Finalized,
+            6 => BundleStage::Failed,
+            _ => BundleStage::InFlight,
+        }
+    }
+}
 
 impl From<BundleStage> for i32 {
     fn from(value: BundleStage) -> Self {
@@ -79,7 +92,6 @@ impl From<BundleStage> for i32 {
         }
     }
 }
-
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct InflightBundleStatusResponse {

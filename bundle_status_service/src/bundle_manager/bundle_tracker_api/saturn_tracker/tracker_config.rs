@@ -2,7 +2,6 @@ use tokio::time::{Duration, Instant};
 
 use crate::bundle_manager::bundle_tracker_api::bundle_stage_api::BundleStage;
 
-
 #[derive(Debug, Clone)]
 pub struct TrackerConfig {
     pub update_interval: Duration,
@@ -24,8 +23,8 @@ impl Default for TrackerConfig {
             batch_size: 100,
             max_concurrent_batches: 10,
             redis_pool_size: 10,
-            cleanup_interval: Duration::from_secs(60),
-            completion_ttl: Duration::from_secs(120),
+            cleanup_interval: Duration::from_secs(10),
+            completion_ttl: Duration::from_secs(30),
             use_pipeline: true,
             use_lua_scripts: true,
             inflight_check_interval: Duration::from_secs(2),
