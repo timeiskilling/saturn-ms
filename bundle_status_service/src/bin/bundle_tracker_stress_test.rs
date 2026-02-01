@@ -19,23 +19,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let redis_urls = vec![
         "redis://127.0.0.1:16379".to_string(),
-        "redis://127.0.0.1:16380".to_string(),
-        "redis://127.0.0.1:16381".to_string(),
-        "redis://127.0.0.1:16382".to_string(),
-        "redis://127.0.0.1:16383".to_string(),
+        "redis://127.0.0.1:16379".to_string(),
+        "redis://127.0.0.1:16379".to_string(),
+        "redis://127.0.0.1:16379".to_string(),
+        "redis://127.0.0.1:16379".to_string(),
     ];
 
     let config = TrackerConfig {
-        // Перевіряємо статуси кожні 100 мс замість секунд
-        inflight_check_interval: Duration::from_millis(100),
-        landed_check_interval: Duration::from_millis(100),
-
-        // Очищаємо майже миттєво
-        cleanup_interval: Duration::from_millis(500),
-        // Не зберігаємо історію завершених бандлів для тесту (1 секунда замість 30)
+        inflight_check_interval: Duration::from_millis(500),
+        landed_check_interval: Duration::from_millis(500),
+        cleanup_interval: Duration::from_millis(2000),
         completion_ttl: Duration::from_secs(1),
-
-        // Збільшуємо розмір пакету, щоб обробляти більше за раз
         batch_size: 100,
         max_concurrent_batches: 50,
         ..TrackerConfig::default()
@@ -54,8 +48,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let total_batches = 15;
-    let bundles_per_batch = 1;
+    let total_batches = 10;
+    let bundles_per_batch = 10;
 
     info!("🚀 Starting Load Generator...");
     let start_time = Instant::now();
@@ -76,7 +70,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     loop {
         let metrics = tracker.get_metrics();
-        info!("Metrics: {:?}", metrics);
+        info!(
+            "Active: {:?} Operation : {:?}",
+            metrics.get("active_bundles").unwrap(),
+            metrics.get("api_calls").unwrap()
+        );
 
         if let Some(active) = metrics.get("active_bundles")
             && *active == 0
@@ -97,7 +95,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             break;
         }
 
-        sleep(Duration::from_secs(2)).await;
+        sleep(Duration::from_secs(5)).await;
     }
 
     Ok(())

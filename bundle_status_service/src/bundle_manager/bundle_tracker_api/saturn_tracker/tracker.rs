@@ -121,6 +121,7 @@ impl BundleTracker for SaturnBundleTracker {
                     bundle_id: status.bundle_id.clone(),
                     status: status.status.clone(),
                     timestamp: chrono::Utc::now().timestamp() as u64,
+                    last_checked: chrono::Utc::now().timestamp() as u64,
                     slot: None,
                     stage: BundleStage::InFlight,
                     version: 1,
@@ -137,6 +138,7 @@ impl BundleTracker for SaturnBundleTracker {
                     .arg(bundle_data.stage.to_string())
                     .arg(1)
                     .arg(self.config.completion_ttl.as_secs())
+                    .arg("true")
                     .invoke_async(&mut conn)
                     .await?;
 
@@ -448,11 +450,11 @@ impl BundleTracker for SaturnBundleTracker {
     ) -> RedisResult<()> {
         let current_version = self.get_current_version_safely(bundle_id).await.unwrap();
 
-        let old_status = self
-            .local_cache
-            .get(bundle_id)
-            .map(|cached| cached.status.clone())
-            .unwrap_or_else(|| "Unknown".to_string());
+        let (old_status, old_stage) = if let Some(cached) = self.local_cache.get(bundle_id) {
+            (cached.status.clone(), Some(cached.stage.clone()))
+        } else {
+            ("Unknown".to_string(), None)
+        };
 
         let new_version = current_version + 1;
 
@@ -466,16 +468,17 @@ impl BundleTracker for SaturnBundleTracker {
             bundle_id: bundle_id.to_string(),
             status: new_status.to_string(),
             timestamp: chrono::Utc::now().timestamp() as u64,
+            last_checked: chrono::Utc::now().timestamp() as u64,
             slot,
             stage: new_stage.clone(),
             version: new_version,
             user_id,
         };
 
-        if let Some(cached) = self.local_cache.get(bundle_id)
-            && !cached.stage.can_transition_to(&new_stage)
-        {
-            return Ok(());
+        if let Some(stage) = &old_stage {
+            if !stage.can_transition_to(&new_stage) {
+                return Ok(());
+            }
         }
 
         let serialized = serde_json::to_string(&bundle_update)?;
@@ -490,6 +493,7 @@ impl BundleTracker for SaturnBundleTracker {
             .arg(format!("{:?}", new_stage))
             .arg(new_version)
             .arg(self.config.completion_ttl.as_secs())
+            .arg("false")
             .invoke_async(&mut conn)
             .await?;
 
