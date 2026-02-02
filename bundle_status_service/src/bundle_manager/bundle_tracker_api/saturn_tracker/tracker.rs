@@ -475,10 +475,10 @@ impl BundleTracker for SaturnBundleTracker {
             user_id,
         };
 
-        if let Some(stage) = &old_stage {
-            if !stage.can_transition_to(&new_stage) {
-                return Ok(());
-            }
+        if let Some(stage) = &old_stage
+            && !stage.can_transition_to(&new_stage)
+        {
+            return Ok(());
         }
 
         let serialized = serde_json::to_string(&bundle_update)?;

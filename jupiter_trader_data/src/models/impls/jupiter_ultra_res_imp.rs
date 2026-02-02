@@ -1,26 +1,27 @@
-use crate::models::jupiter_models::{DynamicSlippageReport, JupiterUltraQuoteResponse, SwapMode, SwapType};
+use crate::models::jupiter_models::{DynamicSlippageReport, JupiterUltraQuoteResponse};
+use solana_sdk::pubkey::Pubkey;
 
 impl Default for JupiterUltraQuoteResponse {
     fn default() -> Self {
         Self {
-            input_mint: String::new(),
-            output_mint: String::new(),
+            input_mint: Pubkey::default(),
+            output_mint: Pubkey::default(),
             in_amount: String::new(),
             out_amount: String::new(),
             other_amount_threshold: String::new(),
-            swap_mode: SwapMode::ExactIn.to_string(),
+            swap_mode: String::new(),
             slippage_bps: 50,
             price_impact_pct: String::new(),
             route_plan: vec![],
             fee_bps: 50,
             prioritization_fee_lamports: 50,
-            swap_type: SwapType::Aggregator.to_string(),
+            swap_type: String::new(),
             transaction: None,
             gasless: false,
             request_id: String::new(),
             total_time: 1,
             taker: None,
-            quote_id : None,
+            quote_id: None,
             maker: None,
             expire_at: None,
             platform_fee: None,

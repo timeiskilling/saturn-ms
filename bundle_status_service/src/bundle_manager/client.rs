@@ -19,7 +19,7 @@ pub struct UserBundleUpdate {
 #[derive(Debug, Clone)]
 struct UserStats {
     bundles_count: usize,
-    last_activity: std::time::Instant,
+    last_activity: tokio::time::Instant,
     total_updates_sent: u64,
 }
 
@@ -62,10 +62,10 @@ impl UserStreamNotificationSystem {
 
         self.active_users
             .entry(user_id.clone())
-            .and_modify(|stats| stats.last_activity = std::time::Instant::now())
+            .and_modify(|stats| stats.last_activity = tokio::time::Instant::now())
             .or_insert_with(|| UserStats {
                 bundles_count: self.get_user_bundle_count(&user_id),
-                last_activity: std::time::Instant::now(),
+                last_activity: tokio::time::Instant::now(),
                 total_updates_sent: 0,
             });
 
@@ -86,7 +86,7 @@ impl UserStreamNotificationSystem {
     }
 
     pub async fn cleanup_inactive_users(&self) {
-        let cuttof = std::time::Instant::now() - Duration::from_secs(15);
+        let cuttof = tokio::time::Instant::now() - Duration::from_secs(300);
 
         let inactive_users: Vec<String> = self
             .active_users
@@ -105,6 +105,12 @@ impl UserStreamNotificationSystem {
 
         for user_id in inactive_users {
             self.user_streams.remove(&user_id);
+
+            if let Some((_, bundles)) = self.user_bundles.remove(&user_id) {
+                for bundle_id in bundles {
+                    self.bundle_ownership.remove(&bundle_id);
+                }
+            }
         }
     }
 
@@ -135,9 +141,10 @@ impl UserStreamNotificationSystem {
             if sender.send(update).is_err() {
                 tracing::debug!("No active listeners for user {}", user_id);
             } else {
-                self.active_users
-                    .entry(user_id)
-                    .and_modify(|stats| stats.total_updates_sent += 1);
+                self.active_users.entry(user_id).and_modify(|stats| {
+                    stats.total_updates_sent += 1;
+                    stats.last_activity = tokio::time::Instant::now();
+                });
             }
         }
     }
@@ -202,5 +209,4 @@ impl UserStreamNotificationSystem {
             .map(|bundles| bundles.len())
             .unwrap_or(0)
     }
-
 }

@@ -115,22 +115,22 @@ impl BundleService for TransactionService {
         let cloned_transactions = transactions.clone();
         let trader = self.trader.clone();
 
-        let _ = tokio::spawn(async move {
-            let continiue = trader
-                .send_transactions(cloned_transactions.transactions, &cloned_transactions.user_pk)
-                .await;
+        let continiue = trader
+            .send_transactions(
+                cloned_transactions.transactions,
+                &cloned_transactions.user_pk,
+            )
+            .await;
 
-            match continiue {
-                Ok(uuid) => {
-                    tracing::info!("Uuid bundle is {}", uuid);
-                    Ok(uuid)
-                },
-                Err(e) => {
-                    tracing::error!("ERROR in send_transaction {}", e);
-                    Err(Status::internal("Internal in send transaction error"))
-                }
+        match continiue {
+            Ok(uuid) => {
+                tracing::info!("Uuid bundle is {}", uuid);
             }
-        }).await;
+            Err(e) => {
+                tracing::error!("ERROR in send_transaction {}", e);
+                return Err(Status::internal("Internal in send transaction error"));
+            }
+        }
 
         let user_id_for_stream = transactions.user_pk.clone();
 

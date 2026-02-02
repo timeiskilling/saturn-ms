@@ -2699,6 +2699,7 @@ dependencies = [
  "proto_models",
  "serde",
  "serde_json",
+ "solana-sdk",
  "tracing",
  "tracing-subscriber",
 ]

@@ -1,7 +1,5 @@
 use base64::{Engine, engine::general_purpose};
 
-//2025-08-13T11:37:46.333106Z ERROR bundle_status_service::trader: Failed to fetch tip from Redis: Response was of incompatible type - TypeError: "Response type not convertible to numeric." (response was nil)
-
 use config::Config;
 use core::str;
 use dashmap::DashMap;
@@ -30,17 +28,25 @@ use tokio::sync::{Mutex, RwLock};
 use tracing::instrument;
 
 use crate::{
-    blockhash_data::BlockhashCache, bundle_manager::{
-        bundle_tracker_api::{main_api::BundleTracker, saturn_tracker::{
-            tracker::SaturnBundleTracker, tracker_config::TrackerConfig,
-        }},
+    blockhash_data::BlockhashCache,
+    bundle_manager::{
+        bundle_tracker_api::{
+            main_api::BundleTracker,
+            saturn_tracker::{tracker::SaturnBundleTracker, tracker_config::TrackerConfig},
+        },
         client::UserStreamNotificationSystem,
-    }, constant::{self, HEADER_SIZE, MIN_JITO_TIP_LAMPORTS}, jito_client_api::{
+    },
+    constant::{self, HEADER_SIZE, MIN_JITO_TIP_LAMPORTS},
+    jito_client_api::{
         error_code::{
             ATlError, BuildTransactionError, JitoEndpointErr, RedisErr,
             SaturnTransactionsServiceError,
-        }, jito_http_manager::JitoHttpManager, main_api::JitoClient, reqwest_client::JupiterProvider
-    }, redis_con
+        },
+        jito_http_manager::JitoHttpManager,
+        main_api::JitoClient,
+        reqwest_client::JupiterProvider,
+    },
+    redis_con,
 };
 
 // pub type SharedPriceState = Arc<Mutex<HashMap<String, DayTickerEvent>>>;
@@ -64,13 +70,13 @@ pub struct JupiterTrader {
 
 impl JupiterTrader {
     pub async fn new(
-        rpc_url: &str,
+        helius_api_key: &str,
         /*keypair: Keypair*/ redis_urls: Vec<String>,
         jito_manager: Arc<JitoHttpManager>,
         http_client: Arc<dyn JupiterProvider>,
     ) -> Self {
         let client = solana_client::nonblocking::rpc_client::RpcClient::new_with_commitment(
-            rpc_url.to_string(),
+            helius_api_key.to_string(),
             CommitmentConfig::confirmed(),
         );
         // let jito_endpoint = JitoJsonRpcSDK::new(
@@ -146,11 +152,6 @@ impl JupiterTrader {
             ))?);
         }
 
-        if let Some(token_leader) = &swap_response.token_ledger_instruction {
-            instructions.extend(convert_instruction_to_solana(std::slice::from_ref(
-                token_leader,
-            ))?);
-        }
         instructions.extend(convert_instruction_to_solana(std::slice::from_ref(
             &swap_response.swap_instruction,
         ))?);
@@ -258,63 +259,67 @@ impl JupiterTrader {
         alt_address: &[String],
     ) -> Result<Vec<AddressLookupTableAccount>, SaturnTransactionsServiceError> {
         use constant::TTL_FOR_ATL;
-        let mut con: redis::aio::MultiplexedConnection = self.alt_redis.clone();
-        let values: Vec<Option<Vec<u8>>> = con.mget(alt_address).await.map_err(|e| {
+
+        let mut con = self.alt_redis.clone();
+        let cached_data: Vec<Option<Vec<u8>>> = con.mget(alt_address).await.map_err(|e| {
             SaturnTransactionsServiceError::Redis(RedisErr::MgetALT {
                 redis_issue: e.to_string(),
             })
         })?;
 
-        let vec_pubkeys: Result<Vec<Pubkey>, _> = alt_address
-            .iter()
-            .map(|address| Pubkey::from_str(address))
-            .collect();
+        let mut results = vec![None; alt_address.len()];
+        let mut missing_indices = Vec::with_capacity(alt_address.len());
+        let mut missing_pubkeys = Vec::with_capacity(alt_address.len());
 
-        let vec_pubkeys = vec_pubkeys.map_err(|e| {
-            SaturnTransactionsServiceError::ATlError(ATlError::PubkeyConvertingErr {
-                bad_bytes: alt_address.join(", ").into_bytes(),
-                issue: e.to_string(),
-            })
-        })?;
+        for (i, (addr_str, cache_hit)) in alt_address.iter().zip(cached_data).enumerate() {
+            let pubkey = Pubkey::from_str(addr_str).map_err(|e| {
+                SaturnTransactionsServiceError::ATlError(ATlError::PubkeyConvertingErr {
+                    bad_bytes: addr_str.as_bytes().to_vec(),
+                    issue: e.to_string(),
+                })
+            })?;
 
-        let mut acc_data = vec![None; alt_address.len()];
-        let mut missing_data = Vec::with_capacity(alt_address.len());
-
-        for (idx, (data, pubkey)) in values.iter().zip(&vec_pubkeys).enumerate() {
-            match data {
+            match cache_hit {
                 Some(data) => {
-                    tracing::info!("SKIPPING from cache");
-                    acc_data[idx] = Some(data.to_owned());
+                    results[i] = Some(AddressLookupTableAccount {
+                        key: pubkey,
+                        addresses: self.parse_lookup_table(&data)?,
+                    });
                 }
                 None => {
-                    missing_data.push((idx, *pubkey));
+                    missing_indices.push(i);
+                    missing_pubkeys.push(pubkey);
                 }
             }
         }
 
-        if !missing_data.is_empty() {
-            let missing_pubkeys: Vec<Pubkey> =
-                missing_data.iter().map(|(_, pubkey)| *pubkey).collect();
+        if !missing_pubkeys.is_empty() {
+            tracing::info!("Fetching {} missing ALTs from RPC", missing_pubkeys.len());
 
             let accounts_data = self
                 .client
                 .get_multiple_accounts(&missing_pubkeys)
                 .await
-                .map_err(|_e| {
+                .map_err(|_| {
                     SaturnTransactionsServiceError::ATlError(ATlError::FetchALTs {
-                        alt_pubkeys: missing_pubkeys.iter().map(|f| f.to_string()).collect(),
+                        alt_pubkeys: missing_pubkeys.iter().map(|k| k.to_string()).collect(),
                     })
                 })?;
+            let mut pipe = redis::pipe();
 
-            let mut pype_line = redis::pipe();
-
-            for ((idx, pubkey), account_data) in missing_data.iter().zip(accounts_data.into_iter())
+            for ((&original_idx, pubkey), account_opt) in missing_indices
+                .iter()
+                .zip(&missing_pubkeys)
+                .zip(accounts_data)
             {
-                if let Some(acc) = account_data {
-                    pype_line.set_ex(pubkey.to_string(), &acc.data, TTL_FOR_ATL);
-                    acc_data[*idx] = Some(acc.data);
+                if let Some(account) = account_opt {
+                    pipe.set_ex(pubkey.to_string(), &account.data, TTL_FOR_ATL);
+
+                    results[original_idx] = Some(AddressLookupTableAccount {
+                        key: *pubkey,
+                        addresses: self.parse_lookup_table(&account.data)?,
+                    });
                 } else {
-                    tracing::warn!("Account not found: {}", pubkey);
                     return Err(SaturnTransactionsServiceError::ATlError(
                         ATlError::NotFound {
                             pubkey: pubkey.to_string(),
@@ -323,36 +328,25 @@ impl JupiterTrader {
                 }
             }
 
-            let _: () = pype_line.query_async(&mut con).await.map_err(|e| {
+            let _: () = pipe.query_async(&mut con).await.map_err(|e| {
                 SaturnTransactionsServiceError::Redis(RedisErr::QueryExecute {
                     issue: e.to_string(),
                 })
             })?;
-            tracing::info!("Added {} accounts into Redis ATL", missing_data.len());
         }
 
-        let parsed: Result<Vec<_>, SaturnTransactionsServiceError> = acc_data
+        let final_results: Result<Vec<_>, _> = results
             .into_iter()
-            .zip(vec_pubkeys.into_iter())
-            .filter_map(|(account_opt, pubkey)| {
-                account_opt.map(|data| {
-                    Ok(AddressLookupTableAccount {
-                        key: pubkey,
-                        addresses: self.parse_lookup_table(&data)?,
+            .map(|opt| {
+                opt.ok_or_else(|| {
+                    SaturnTransactionsServiceError::ATlError(ATlError::NotFound {
+                        pubkey: "Unknown error during ALT reconstruction".to_string(),
                     })
                 })
             })
             .collect();
 
-        tracing::info!("End Building ATL");
-
-        match parsed {
-            Ok(accounts) => Ok(accounts),
-            Err(err) => {
-                tracing::error!("Error parsing fetch_address_lookup_tables: {:?}", err);
-                Err(err)
-            }
-        }
+        final_results
     }
 
     //#[instrument(skip_all, level = "info")]
@@ -414,18 +408,16 @@ impl JupiterTrader {
     ) -> Result<Vec<String>, SaturnTransactionsServiceError> {
         let mut transactions: Vec<String> = Vec::with_capacity(6);
 
-        // let jito_tip_acc = Pubkey::from_str(&self.jito_endpoint.get_random_tip_account().await?)?;
-        let jito_tip_acc = Pubkey::from_str("96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5")
-            .map_err(|e| {
-                SaturnTransactionsServiceError::BuildTransaction(Box::new(
-                    BuildTransactionError::IvalidPubkey {
-                        pubkey: "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"
-                            .as_bytes()
-                            .to_vec(),
-                        issue: e.to_string(),
-                    },
-                ))
-            })?;
+        // Optimization: Use constant tip address
+        const JITO_TIP_STR: &str = "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5";
+        let jito_tip_acc = Pubkey::from_str(JITO_TIP_STR).map_err(|e| {
+            SaturnTransactionsServiceError::BuildTransaction(Box::new(
+                BuildTransactionError::IvalidPubkey {
+                    pubkey: JITO_TIP_STR.as_bytes().to_vec(),
+                    issue: e.to_string(),
+                },
+            ))
+        })?;
 
         let user_pubkey = Pubkey::from_str(pubkey).map_err(|e| {
             SaturnTransactionsServiceError::BuildTransaction(Box::new(
@@ -634,16 +626,14 @@ impl JupiterTrader {
         // if balance < 1_000_000_000 {
         //
         //     tracing::info!("Low balance, requesting airdrop...");
-
         //
         //     let airdrop_signature = self
         //         .client
         //         .request_airdrop(&user_pubkey, 2_000_000_000)
         //         .await?;
-
         //
         //     self.client.confirm_transaction(&airdrop_signature).await?;
-
+        //
         //     tracing::info!("Airdrop successful");
         // }
 
@@ -683,14 +673,7 @@ pub fn convert_instruction_to_solana(
     jupiter_instructions
         .iter()
         .map(|instruct| {
-            let program_id = Pubkey::from_str(&instruct.program_id).map_err(|e| {
-                SaturnTransactionsServiceError::BuildTransaction(Box::new(
-                    BuildTransactionError::IvalidPubkey {
-                        pubkey: instruct.program_id.as_bytes().to_vec(),
-                        issue: e.to_string(),
-                    },
-                ))
-            })?;
+            let program_id = instruct.program_id;
 
             let data = general_purpose::STANDARD
                 .decode(&instruct.data)
@@ -700,28 +683,19 @@ pub fn convert_instruction_to_solana(
                     ))
                 })?;
 
-            let accounts: Result<Vec<SolanaAccountMeta>, SaturnTransactionsServiceError> = instruct
+            let accounts: Vec<SolanaAccountMeta> = instruct
                 .accounts
                 .iter()
-                .map(|acc| {
-                    Ok::<SolanaAccountMeta, SaturnTransactionsServiceError>(SolanaAccountMeta {
-                        pubkey: Pubkey::from_str(&acc.pubkey).map_err(|e| {
-                            SaturnTransactionsServiceError::BuildTransaction(Box::new(
-                                BuildTransactionError::IvalidPubkey {
-                                    pubkey: acc.pubkey.as_bytes().to_vec(),
-                                    issue: e.to_string(),
-                                },
-                            ))
-                        })?,
-                        is_signer: acc.is_signer,
-                        is_writable: acc.is_writable,
-                    })
+                .map(|acc| SolanaAccountMeta {
+                    pubkey: acc.pubkey,
+                    is_signer: acc.is_signer,
+                    is_writable: acc.is_writable,
                 })
                 .collect();
 
             Ok(SolanaInstruction {
                 program_id,
-                accounts: accounts?,
+                accounts,
                 data,
             })
         })

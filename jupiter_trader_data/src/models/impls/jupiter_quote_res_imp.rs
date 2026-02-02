@@ -1,11 +1,12 @@
 use crate::models::jupiter_models::{JupiterQuoteResponse, SwapMode};
+use solana_sdk::pubkey::Pubkey;
 
 impl Default for JupiterQuoteResponse {
     fn default() -> Self {
         Self {
-            input_mint: String::new(),
+            input_mint: Pubkey::default(),
             in_amount: String::new(),
-            output_mint: String::new(),
+            output_mint: Pubkey::default(),
             out_amount: String::new(),
             other_amount_threshold: String::new(),
             swap_mode: SwapMode::ExactIn,

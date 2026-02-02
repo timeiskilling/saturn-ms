@@ -8,7 +8,7 @@ use jupiter_trader_data::models::jupiter_models::{
     JupiterQuoteResponse, JupiterSwapInstructionsRsponse, JupiterSwapRequest, PriorityLevel,
     QuoteOptions,
 };
-use reqwest::{Client};
+use reqwest::Client;
 use solana_sdk::pubkey::Pubkey;
 use std::{
     num::NonZeroU32,
@@ -73,9 +73,11 @@ impl HttpManager {
         _uuid: Option<String>,
         api_key: &str,
     ) -> Self {
-
         let mut headers = reqwest::header::HeaderMap::new();
-        headers.insert("x-api-key", reqwest::header::HeaderValue::from_str(api_key).unwrap());
+        headers.insert(
+            "x-api-key",
+            reqwest::header::HeaderValue::from_str(api_key).unwrap(),
+        );
 
         let inner = Arc::new(
             reqwest::ClientBuilder::new()
@@ -458,13 +460,8 @@ impl JupiterProvider for HttpManager {
         let pubkey_string = pubkey.to_string();
         let pubkey_bytes = pubkey.as_array().to_vec();
 
-        let swap_request = JupiterSwapRequest::new(
-            pubkey_string.clone(),
-            quote,
-            100_000_000,
-            PriorityLevel::VeryHigh,
-            true,
-        );
+        let swap_request =
+            JupiterSwapRequest::new(*pubkey, quote, 100_000_000, PriorityLevel::VeryHigh, true);
 
         tracing::info!(
             pubkey = %pubkey_string,

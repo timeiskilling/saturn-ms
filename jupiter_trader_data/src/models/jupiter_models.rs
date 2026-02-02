@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
+use solana_sdk::pubkey::Pubkey;
 
-#[derive(Debug, Serialize, Deserialize,Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct JupiterSwapInstructionsRsponse {
     #[serde(rename = "tokenLedgerInstruction")]
     pub token_ledger_instruction: Option<Instruction>,
@@ -39,19 +40,19 @@ pub struct JupiterSwapInstructionsRsponse {
     pub blockhash_with_metadata: BlockhashWithMetadata,
 }
 
-#[derive(Debug, Serialize, Deserialize,Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Instruction {
     #[serde(rename = "programId")]
-    pub program_id: String,
+    pub program_id: Pubkey,
 
     pub accounts: Vec<AccountMeta>,
 
     pub data: String,
 }
 
-#[derive(Debug, Serialize, Deserialize,Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AccountMeta {
-    pub pubkey: String,
+    pub pubkey: Pubkey,
 
     #[serde(rename = "isSigner")]
     pub is_signer: bool,
@@ -60,13 +61,13 @@ pub struct AccountMeta {
     pub is_writable: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize,Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PrioritizationType {
     #[serde(rename = "computeBudget")]
     pub compute_budget: ComputeBudget,
 }
 
-#[derive(Debug, Serialize, Deserialize,Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ComputeBudget {
     #[serde(rename = "microLamports")]
     pub micro_lamports: u64,
@@ -83,7 +84,7 @@ pub struct SimulationError {
     pub error: String,
 }
 
-#[derive(Debug, Serialize, Deserialize,Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct BlockhashWithMetadata {
     pub blockhash: Vec<u8>,
 
@@ -94,7 +95,7 @@ pub struct BlockhashWithMetadata {
     pub fetched_at: FetchedAt,
 }
 
-#[derive(Debug, Serialize, Deserialize,Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct FetchedAt {
     #[serde(rename = "secs_since_epoch")]
     pub secs_since_epoch: u64,
@@ -103,23 +104,22 @@ pub struct FetchedAt {
     pub nanos_since_epoch: u32,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct JupiterUltraQuoteRequest {
     #[serde(rename = "inputMint")]
-    pub input_mint: String,
+    pub input_mint: Pubkey,
 
     #[serde(rename = "outputMint")]
-    pub output_mint: String,
+    pub output_mint: Pubkey,
 
     #[serde(rename = "amount")]
     pub amount: String,
 
     #[serde(rename = "taker", skip_serializing_if = "Option::is_none")]
-    pub taker: Option<String>,
+    pub taker: Option<Pubkey>,
 
     #[serde(rename = "referralAccount", skip_serializing_if = "Option::is_none")]
-    pub referral_account: Option<String>,
+    pub referral_account: Option<Pubkey>,
 
     #[serde(rename = "referralFee", skip_serializing_if = "Option::is_none")]
     pub referral_fee: Option<u64>,
@@ -142,13 +142,13 @@ pub struct JupiterUltraQuoteResponse {
     pub slippage_bps: u64,
     pub price_impact_pct: String,
     pub route_plan: Vec<RoutePlan>,
-    pub input_mint: String,
-    pub output_mint: String,
+    pub input_mint: Pubkey,
+    pub output_mint: Pubkey,
     pub fee_bps: u64,
     pub prioritization_fee_lamports: u64,
     pub transaction: Option<String>,
     pub gasless: bool,
-    pub taker: Option<String>,
+    pub taker: Option<Pubkey>,
     pub in_usd_value: f64,
     pub out_usd_value: f64,
     pub price_impact: f64,
@@ -156,7 +156,7 @@ pub struct JupiterUltraQuoteResponse {
     pub total_time: u64,
 
     pub quote_id: Option<String>,
-    pub maker: Option<String>,
+    pub maker: Option<Pubkey>,
     pub expire_at: Option<String>,
     pub platform_fee: Option<PlatformFee>,
     pub dynamic_slippage_report: Option<DynamicSlippageReport>,
@@ -165,12 +165,12 @@ pub struct JupiterUltraQuoteResponse {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UltraSwapInfo {
     #[serde(rename = "ammKey")]
-    pub amm_key: String,
+    pub amm_key: Pubkey,
     pub label: String,
     #[serde(rename = "inputMint")]
-    pub input_mint: String,
+    pub input_mint: Pubkey,
     #[serde(rename = "outputMint")]
-    pub output_mint: String,
+    pub output_mint: Pubkey,
     #[serde(rename = "inAmount")]
     pub in_amount: String,
     #[serde(rename = "outAmount")]
@@ -178,13 +178,13 @@ pub struct UltraSwapInfo {
     #[serde(rename = "feeAmount")]
     pub fee_amount: String,
     #[serde(rename = "feeMint")]
-    pub fee_mint: String,
+    pub fee_mint: Pubkey,
 }
 
-#[derive(Debug, Serialize, Deserialize,Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct JupiterSwapRequest {
     #[serde(rename = "userPublicKey")]
-    pub user_public_key: String,
+    pub user_public_key: Pubkey,
     #[serde(rename = "quoteResponse")]
     pub quote_response: JupiterQuoteResponse,
     #[serde(rename = "prioritizationFeeLamports")]
@@ -195,7 +195,7 @@ pub struct JupiterSwapRequest {
     #[serde(rename = "wrapAndUnwrapSol", skip_serializing_if = "Option::is_none")]
     pub wrap_and_unwrap_sol: Option<bool>,
     #[serde(rename = "feeAccount", skip_serializing_if = "Option::is_none")]
-    pub fee_account: Option<String>,
+    pub fee_account: Option<Pubkey>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -223,11 +223,11 @@ pub struct JupiterSwapResponse {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct JupiterQuoteResponse {
     #[serde(rename = "inputMint")]
-    pub input_mint: String,
+    pub input_mint: Pubkey,
     #[serde(rename = "inAmount")]
     pub in_amount: String,
     #[serde(rename = "outputMint")]
-    pub output_mint: String,
+    pub output_mint: Pubkey,
     #[serde(rename = "outAmount")]
     pub out_amount: String,
     #[serde(rename = "otherAmountThreshold")]
@@ -244,13 +244,13 @@ pub struct JupiterQuoteResponse {
     pub route_plan: Vec<RoutePlan>,
 }
 
-#[derive(Debug, Serialize, Deserialize,Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PrioritizationFeeLamports {
     #[serde(rename = "priorityLevelWithMaxLamports")]
     pub priority_level_with_max_lamports: PriorityLevelWithMaxLamports,
 }
 
-#[derive(Debug, Serialize, Deserialize,Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PriorityLevelWithMaxLamports {
     #[serde(rename = "maxLamports")]
     pub max_lamports: u64,
@@ -276,12 +276,12 @@ pub struct RoutePlanUltra {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SwapInfo {
     #[serde(rename = "ammKey")]
-    pub amm_key: String,
+    pub amm_key: Pubkey,
     pub label: String,
     #[serde(rename = "inputMint")]
-    pub input_mint: String,
+    pub input_mint: Pubkey,
     #[serde(rename = "outputMint")]
-    pub output_mint: String,
+    pub output_mint: Pubkey,
     #[serde(rename = "inAmount")]
     pub in_amount: String,
     #[serde(rename = "outAmount")]
@@ -289,7 +289,7 @@ pub struct SwapInfo {
     #[serde(rename = "feeAmount")]
     pub fee_amount: String,
     #[serde(rename = "feeMint")]
-    pub fee_mint: String,
+    pub fee_mint: Pubkey,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -330,7 +330,7 @@ pub struct QuoteOptions {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct TokenNaming {
     pub symbol: String,
-    pub mint: String,
+    pub mint: Pubkey,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -339,7 +339,7 @@ pub enum SwapMode {
     ExactOut,
 }
 
-#[derive(Debug, Serialize, Deserialize,Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum PriorityLevel {
     #[serde(rename = "medium")]
     Medium,

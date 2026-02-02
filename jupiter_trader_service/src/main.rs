@@ -88,7 +88,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
         println!("WE HAVE QUOTE {}", quote_response.in_amount);
         let instruction: Vec<String> = match tracker
-            .create_swap_transaction(quote_response, &pubkey)
+            .create_swap_transaction(quote_response, pubkey)
             .await
         {
             Ok(instr) => {
@@ -214,17 +214,12 @@ impl JupiterTracker {
     async fn create_swap_transaction(
         &self,
         quote: JupiterQuoteResponse,
-        pubkey: &Pubkey,
+        pubkey: Pubkey,
     ) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>> {
         let url = format!("{}/swap-instructions", self.jupiter_base_url);
         tracing::info!("CREATING_TRANSACTION");
-        let swap_request = JupiterSwapRequest::new(
-            pubkey.to_string(),
-            quote,
-            100_000_000,
-            PriorityLevel::VeryHigh,
-            true,
-        );
+        let swap_request =
+            JupiterSwapRequest::new(pubkey, quote, 100_000_000, PriorityLevel::VeryHigh, true);
 
         let response = self
             .http_client

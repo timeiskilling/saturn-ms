@@ -1,8 +1,12 @@
-use crate::models::jupiter_models::{JupiterQuoteResponse, JupiterSwapRequest, PrioritizationFeeLamports, PriorityLevel, PriorityLevelWithMaxLamports, SwapMode};
+use crate::models::jupiter_models::{
+    JupiterQuoteResponse, JupiterSwapRequest, PrioritizationFeeLamports, PriorityLevel,
+    PriorityLevelWithMaxLamports, SwapMode,
+};
+use solana_sdk::pubkey::Pubkey;
 
 impl JupiterSwapRequest {
     pub fn new(
-        user_public_key: String,
+        user_public_key: Pubkey,
         quote_response: JupiterQuoteResponse,
         max_lamports: u64,
         priority_level: PriorityLevel,
@@ -28,7 +32,7 @@ impl JupiterSwapRequest {
         self
     }
 
-    pub fn with_fee_account(mut self, fee_account: String) -> Self {
+    pub fn with_fee_account(mut self, fee_account: Pubkey) -> Self {
         self.fee_account = Some(fee_account);
         self
     }
@@ -37,11 +41,11 @@ impl JupiterSwapRequest {
 impl Default for JupiterSwapRequest {
     fn default() -> Self {
         Self {
-            user_public_key: String::new(),
+            user_public_key: Pubkey::default(),
             quote_response: JupiterQuoteResponse {
-                input_mint: String::new(),
+                input_mint: Pubkey::default(),
                 in_amount: String::new(),
-                output_mint: String::new(),
+                output_mint: Pubkey::default(),
                 out_amount: String::new(),
                 other_amount_threshold: String::new(),
                 swap_mode: SwapMode::ExactIn,
