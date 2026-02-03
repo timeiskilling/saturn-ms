@@ -7,26 +7,13 @@ use jupiter_trader_data::models::jupiter_models::{
     Instruction, JupiterQuoteResponse, JupiterSwapInstructionsRsponse, QuoteOptions,
 };
 use redis::AsyncCommands;
-
-use serde_json::{Value, json};
 use solana_client::nonblocking::rpc_client::RpcClient;
-use solana_sdk::{
-    // address_lookup_table::{instruction::create_lookup_table, state::AddressLookupTable},
-    commitment_config::CommitmentConfig,
-    hash::Hash,
-    message::{
-        AddressLookupTableAccount, VersionedMessage,
-        v0::{self, Message},
-    },
-    pubkey::Pubkey,
-    signature::Signature,
-    system_instruction::transfer,
-    transaction::{Transaction, VersionedTransaction},
-};
-use std::{str::FromStr, sync::Arc};
-use tokio::sync::{Mutex, RwLock};
-use tracing::instrument;
+use solana_sdk::commitment_config::CommitmentConfig;
+use solana_sdk::message::v0::{self, Message};
+use solana_sdk::message::{AddressLookupTableAccount, VersionedMessage};
+use solana_sdk::system_instruction::transfer;
 
+use crate::prelude::*;
 use crate::{
     blockhash_data::BlockhashCache,
     bundle_manager::{
@@ -48,6 +35,7 @@ use crate::{
     },
     redis_con,
 };
+use solana_sdk::transaction::VersionedTransaction;
 
 // pub type SharedPriceState = Arc<Mutex<HashMap<String, DayTickerEvent>>>;
 

@@ -37,7 +37,7 @@ impl JitoClient for SimulatedJitoClient {
         let bundle_id = uuid.expect("BundleTracker must pass bundle_id");
         let tx_signature = format!("simulated_tx_{bundle_id}");
 
-        info!("📨 send_bundle: {bundle_id}");
+        info!("send_bundle: {bundle_id}");
 
         self.state.insert(
             bundle_id.clone(),

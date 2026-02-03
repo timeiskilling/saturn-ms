@@ -1,3 +1,4 @@
+use ahash::RandomState;
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -25,19 +26,19 @@ struct UserStats {
 
 #[derive(Debug, Clone)]
 pub struct UserStreamNotificationSystem {
-    user_streams: Arc<DashMap<String, broadcast::Sender<UserBundleUpdate>>>,
-    bundle_ownership: Arc<DashMap<String, String>>,
-    user_bundles: Arc<DashMap<String, HashSet<String>>>,
-    active_users: Arc<DashMap<String, UserStats>>,
+    user_streams: Arc<DashMap<String, broadcast::Sender<UserBundleUpdate>, RandomState>>,
+    bundle_ownership: Arc<DashMap<String, String, RandomState>>,
+    user_bundles: Arc<DashMap<String, HashSet<String>, RandomState>>,
+    active_users: Arc<DashMap<String, UserStats, RandomState>>,
 }
 
 impl Default for UserStreamNotificationSystem {
     fn default() -> Self {
         Self {
-            user_streams: Arc::new(DashMap::new()),
-            bundle_ownership: Arc::new(DashMap::new()),
-            user_bundles: Arc::new(DashMap::new()),
-            active_users: Arc::new(DashMap::new()),
+            user_streams: Arc::new(DashMap::with_hasher(RandomState::new())),
+            bundle_ownership: Arc::new(DashMap::with_hasher(RandomState::new())),
+            user_bundles: Arc::new(DashMap::with_hasher(RandomState::new())),
+            active_users: Arc::new(DashMap::with_hasher(RandomState::new())),
         }
     }
 }

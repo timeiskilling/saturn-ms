@@ -1,3 +1,4 @@
+use crate::prelude::*;
 use async_trait::async_trait;
 use governor::{
     Quota, RateLimiter,
@@ -9,12 +10,7 @@ use jupiter_trader_data::models::jupiter_models::{
     QuoteOptions,
 };
 use reqwest::Client;
-use solana_sdk::pubkey::Pubkey;
-use std::{
-    num::NonZeroU32,
-    sync::{Arc, atomic::Ordering},
-    time::Duration,
-};
+use std::{num::NonZeroU32, sync::atomic::Ordering, time::Duration};
 use tokio::time::sleep;
 
 use crate::jito_client_api::{
@@ -372,47 +368,6 @@ impl HttpManager {
             }
         }
     }
-
-    // pub async fn get_quote_with_options(
-    //     &self,
-    //     input_mint: &str,
-    //     output_mint: &str,
-    //     amount: u64,
-    //     slippage_bps: u16,
-    //     options: QuoteOptions,
-    // ) -> Result<serde_json::Value, RpcError> {
-    //     self.execute_with_retry("get_quote_with_options", || {
-    //         let inner = self.inner.clone();
-    //         let ids = bundle_ids.clone();
-    //         async move { get_in_flight_bundle_statuses(ids).await }
-    //     })
-    //     .await
-    // }
-
-    // pub async fn send_bundle(
-    //     &self,
-    //     params: Option<serde_json::Value>,
-    //     uuid: Option<&str>,
-    // ) -> Result<serde_json::Value, RpcError> {
-    //     self.execute_with_retry("send_bundle", || {
-    //         let inner = self.inner.clone();
-    //         let params = params.clone();
-    //         async move { inner.send_bundle(params, uuid).await }
-    //     })
-    //     .await
-    // }
-
-    // pub async fn get_bundle_statuses(
-    //     &self,
-    //     bundle_ids: Vec<String>,
-    // ) -> Result<serde_json::Value, RpcError> {
-    //     self.execute_with_retry("get_bundle_statuses", || {
-    //         let inner = self.inner.clone();
-    //         let ids = bundle_ids.clone();
-    //         async move { inner.get_bundle_statuses(ids).await }
-    //     })
-    //     .await
-    // }
 }
 
 #[async_trait]
