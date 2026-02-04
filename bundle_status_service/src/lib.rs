@@ -8,5 +8,6 @@ pub mod proto_service;
 pub mod redis_con;
 pub mod test;
 pub mod trader;
+pub mod transactions_builder;
 
 pub const SEMAPHORE_PERMITS: usize = 5;

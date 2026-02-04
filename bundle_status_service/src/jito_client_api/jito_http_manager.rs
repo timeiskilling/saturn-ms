@@ -1,20 +1,23 @@
-use jito_sdk_rust::JitoJsonRpcSDK;
+use crate::{
+    jito_client_api::main_api::JitoClient,
+    jito_client_api::{
+        error_code::RpcError,
+        retry_config::{RetryConfig, RpcMetrics, RpcStats},
+    },
+};
 use async_trait::async_trait;
+use governor::{
+    Quota, RateLimiter,
+    clock::DefaultClock,
+    state::{InMemoryState, NotKeyed},
+};
+use jito_sdk_rust::JitoJsonRpcSDK;
 use std::{
     num::NonZeroU32,
     sync::{Arc, atomic::Ordering},
     time::Duration,
 };
 use tokio::time::sleep;
-use governor::{
-    Quota, RateLimiter,
-    clock::DefaultClock,
-    state::{InMemoryState, NotKeyed},
-};
-use crate::{jito_client_api::main_api::JitoClient, jito_client_api::{
-    error_code::RpcError,
-    retry_config::{RetryConfig, RpcMetrics, RpcStats},
-}};
 
 pub struct JitoHttpManager {
     inner: Arc<JitoJsonRpcSDK>,
@@ -59,7 +62,9 @@ impl JitoHttpManager {
                 timeout_ms: 30_000,
             };
         }
-        if let Some(status) = error.status() && status == 429 {
+        if let Some(status) = error.status()
+            && status == 429
+        {
             return RpcError::RateLimitExceeded {
                 retry_after_seconds: None,
             };
@@ -80,7 +85,9 @@ impl JitoHttpManager {
                 endpoint: "JitoEndpoint".to_string(),
                 timeout_ms: 30_000,
             }
-        } else if error_str.to_lowercase().contains("429") || error_str.to_lowercase().contains("rate limit") {
+        } else if error_str.to_lowercase().contains("429")
+            || error_str.to_lowercase().contains("rate limit")
+        {
             RpcError::RateLimitExceeded {
                 retry_after_seconds: None,
             }
@@ -98,7 +105,7 @@ impl JitoHttpManager {
         operation: F,
     ) -> Result<T, RpcError>
     where
-        F: Fn() -> Fut + Send + Sync, 
+        F: Fn() -> Fut + Send + Sync,
         Fut: std::future::Future<Output = Result<T, anyhow::Error>> + Send,
         T: Send,
     {
@@ -109,24 +116,29 @@ impl JitoHttpManager {
         loop {
             attempt += 1;
             while self.rate_limiter.check().is_err() {
-                self.metrics.rate_limited_requests.fetch_add(1, Ordering::Relaxed);
+                self.metrics
+                    .rate_limited_requests
+                    .fetch_add(1, Ordering::Relaxed);
                 sleep(Duration::from_millis(50)).await;
             }
 
             match operation().await {
                 Ok(result) => {
                     if attempt > 1 {
-                        self.metrics.retried_requests.fetch_add(1, Ordering::Relaxed);
+                        self.metrics
+                            .retried_requests
+                            .fetch_add(1, Ordering::Relaxed);
                     }
                     return Ok(result);
                 }
                 Err(e) => {
-                    let is_retryable = if let Some(reqwest_err) = e.downcast_ref::<reqwest::Error>() {
+                    let is_retryable = if let Some(reqwest_err) = e.downcast_ref::<reqwest::Error>()
+                    {
                         self.is_retryable_error(reqwest_err)
                     } else {
-                         let error_str = e.to_string().to_lowercase();
-                         error_str.contains("timeout") 
-                            || error_str.contains("connection") 
+                        let error_str = e.to_string().to_lowercase();
+                        error_str.contains("timeout")
+                            || error_str.contains("connection")
                             || error_str.contains("429")
                             || error_str.contains("503")
                             || error_str.contains("502")
@@ -155,10 +167,12 @@ impl JitoHttpManager {
     }
 }
 
-
 #[async_trait]
 impl JitoClient for JitoHttpManager {
-    async fn get_in_flight_bundle_statuses(&self, bundle_ids: Vec<String>) -> Result<serde_json::Value, RpcError> {
+    async fn get_in_flight_bundle_statuses(
+        &self,
+        bundle_ids: Vec<String>,
+    ) -> Result<serde_json::Value, RpcError> {
         self.execute_with_retry("get_in_flight_bundle_statuses", || {
             let inner = self.inner.clone();
             let ids = bundle_ids.clone();
@@ -167,20 +181,27 @@ impl JitoClient for JitoHttpManager {
         .await
     }
 
-    async fn send_bundle(&self, params: Option<serde_json::Value>, uuid: Option<String>) -> Result<serde_json::Value, RpcError> {
+    async fn send_bundle(
+        &self,
+        params: Option<serde_json::Value>,
+        uuid: Option<String>,
+    ) -> Result<serde_json::Value, RpcError> {
         self.execute_with_retry("send_bundle", || {
             let inner = self.inner.clone();
             let params = params.clone();
             let uuid = uuid.clone();
-            async move { 
+            async move {
                 let uuid_ref = uuid.as_deref();
-                inner.send_bundle(params, uuid_ref).await 
+                inner.send_bundle(params, uuid_ref).await
             }
         })
         .await
     }
 
-    async fn get_bundle_statuses(&self, bundle_ids: Vec<String>) -> Result<serde_json::Value, RpcError> {
+    async fn get_bundle_statuses(
+        &self,
+        bundle_ids: Vec<String>,
+    ) -> Result<serde_json::Value, RpcError> {
         self.execute_with_retry("get_bundle_statuses", || {
             let inner = self.inner.clone();
             let ids = bundle_ids.clone();

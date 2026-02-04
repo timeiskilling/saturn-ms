@@ -19,7 +19,7 @@ pub struct UserBundleUpdate {
 
 #[derive(Debug, Clone)]
 struct UserStats {
-    bundles_count: usize,
+    // bundles_count: usize,
     last_activity: tokio::time::Instant,
     total_updates_sent: u64,
 }
@@ -65,7 +65,6 @@ impl UserStreamNotificationSystem {
             .entry(user_id.clone())
             .and_modify(|stats| stats.last_activity = tokio::time::Instant::now())
             .or_insert_with(|| UserStats {
-                bundles_count: self.get_user_bundle_count(&user_id),
                 last_activity: tokio::time::Instant::now(),
                 total_updates_sent: 0,
             });
@@ -204,10 +203,10 @@ impl UserStreamNotificationSystem {
         stats
     }
 
-    fn get_user_bundle_count(&self, user_id: &str) -> usize {
-        self.user_bundles
-            .get(user_id)
-            .map(|bundles| bundles.len())
-            .unwrap_or(0)
-    }
+    // fn get_user_bundle_count(&self, user_id: &str) -> usize {
+    //     self.user_bundles
+    //         .get(user_id)
+    //         .map(|bundles| bundles.len())
+    //         .unwrap_or(0)
+    // }
 }

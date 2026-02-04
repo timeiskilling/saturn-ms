@@ -27,23 +27,12 @@ pub struct RpcMetrics {
     pub retried_requests: AtomicU64,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct RpcStats {
     pub total: u64,
     pub failed: u64,
     pub rate_limited: u64,
     pub retried: u64,
-}
-
-impl Default for RpcStats {
-    fn default() -> Self {
-        Self {
-            total: 0,
-            failed: 0,
-            rate_limited: 0,
-            retried: 0,
-        }
-    }
 }
 
 impl RpcMetrics {

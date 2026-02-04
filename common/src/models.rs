@@ -115,4 +115,3 @@ pub struct DayTickerEvent {
     #[serde(rename = "n")]
     pub num_trades: u64,
 }
-

@@ -44,27 +44,29 @@ pub enum JitoEndpointErr {
 
 #[derive(Debug)]
 pub enum BuildTransactionError {
+    BincodeTransactionSerializetion {
+        data: solana_sdk::transaction::Transaction,
+        issue: String,
+    },
+    BincodeVersionedTransactionSerializetion {
+        data: solana_sdk::transaction::VersionedTransaction,
+        issue: String,
+    },
     ConvertToSolana {
         instruction_metadata: Instruction,
     },
     InvalidDecode {
         decode_err: base64::DecodeError,
     },
+
     IvalidPubkey {
         pubkey: Vec<u8>,
         issue: String,
     },
+
     V0message(CompileError),
 
-    BincodeVersionedTransactionSerializetion {
-        data: solana_sdk::transaction::VersionedTransaction,
-        issue: String,
-    },
-
-    BincodeTransactionSerializetion {
-        data: solana_sdk::transaction::Transaction,
-        issue: String,
-    },
+    General(String),
 }
 
 #[derive(Debug)]
@@ -866,6 +868,7 @@ impl fmt::Display for BuildTransactionError {
                     data, issue
                 )
             }
+            BuildTransactionError::General(issue) => write!(f, "{}", issue),
         }
     }
 }

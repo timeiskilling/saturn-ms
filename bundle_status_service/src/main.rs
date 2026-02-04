@@ -13,6 +13,7 @@ use crate::{
     },
     proto_service::{TransactionService, service_jupiter_status},
     trader::JupiterTrader,
+    transactions_builder::solana::instruction_parser::JupiterSolanaParser,
 };
 
 pub mod blockhash_data;
@@ -25,6 +26,7 @@ pub mod proto_service;
 pub mod redis_con;
 pub mod test;
 pub mod trader;
+pub mod transactions_builder;
 
 const SEMAPHORE_PERMITS: usize = 5;
 #[tokio::main]
@@ -57,6 +59,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         None,
         &config.jupiter_api_key,
     ));
+    let solana = JupiterSolanaParser;
     let trader = Arc::new(
         JupiterTrader::new(
             &helius_api_key.clone(),
