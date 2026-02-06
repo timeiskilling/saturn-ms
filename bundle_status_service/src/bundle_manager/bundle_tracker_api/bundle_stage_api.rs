@@ -15,13 +15,14 @@ pub struct BundleStatusResponse {
 pub struct BundleStatusUpdate {
     pub bundle_id: String,
     pub status: String,
+    #[serde(default)]
+    pub old_status: Option<String>,
     pub timestamp: u64,
     #[serde(default)]
     pub last_checked: u64,
     pub slot: Option<u64>,
     pub stage: BundleStage,
     pub version: u64,
-    pub user_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

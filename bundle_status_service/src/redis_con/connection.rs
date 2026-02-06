@@ -1,61 +1,59 @@
 use config::Config;
 use redis::aio::MultiplexedConnection;
 
-pub async fn redis_conn(config : &Config) -> MultiplexedConnection {
+pub async fn redis_conn(config: &Config) -> MultiplexedConnection {
     match redis::Client::open(config.redis_url()) {
-        Ok(redis) => match redis.get_multiplexed_tokio_connection().await {
+        Ok(redis) => match redis.get_multiplexed_async_connection().await {
             Ok(conn) => {
                 tracing::info!("connect to redis");
                 conn
-            },
+            }
             Err(e) => {
-                tracing::error!("Cloud not connect to redis {}",e);
+                tracing::error!("Cloud not connect to redis {}", e);
                 std::process::exit(1);
-            },
+            }
         },
         Err(e) => {
             tracing::error!("Cloud not open redis {}", e);
             std::process::exit(1);
-        },
+        }
     }
 }
 
-
-pub async fn jito_tip_redis_conn(config : &Config) -> MultiplexedConnection {
+pub async fn jito_tip_redis_conn(config: &Config) -> MultiplexedConnection {
     match redis::Client::open(config.jito_tip_redis_url()) {
-        Ok(redis) => match redis.get_multiplexed_tokio_connection().await {
+        Ok(redis) => match redis.get_multiplexed_async_connection().await {
             Ok(conn) => {
                 tracing::info!("connect to redis");
                 conn
-            },
+            }
             Err(e) => {
-                tracing::error!("Cloud not connect to redis jito {}",e);
+                tracing::error!("Cloud not connect to redis jito {}", e);
                 std::process::exit(1);
-            },
+            }
         },
         Err(e) => {
             tracing::error!("Cloud not open redis jito {}", e);
             std::process::exit(1);
-        },
+        }
     }
 }
 
-
-pub async fn atl_redis_conn(config : &Config) -> MultiplexedConnection {
+pub async fn atl_redis_conn(config: &Config) -> MultiplexedConnection {
     match redis::Client::open(config.alt_redis_url()) {
-        Ok(redis) => match redis.get_multiplexed_tokio_connection().await {
+        Ok(redis) => match redis.get_multiplexed_async_connection().await {
             Ok(conn) => {
                 tracing::info!("connect to redis");
                 conn
-            },
+            }
             Err(e) => {
-                tracing::error!("Cloud not connect to redis jito {}",e);
+                tracing::error!("Cloud not connect to redis jito {}", e);
                 std::process::exit(1);
-            },
+            }
         },
         Err(e) => {
             tracing::error!("Cloud not open redis jito {}", e);
             std::process::exit(1);
-        },
+        }
     }
 }

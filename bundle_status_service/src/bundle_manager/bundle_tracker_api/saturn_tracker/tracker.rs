@@ -12,16 +12,13 @@ use tokio::time::Duration;
 use tokio::{sync::Semaphore, time::Instant};
 use tracing::{debug, error, info, warn};
 
-use crate::bundle_manager::{
-    bundle_tracker_api::{
-        main_api::BundleTracker,
-        saturn_tracker::{
-            lua_scripts::LuaScripts,
-            tracker_config::{CachedBundle, TrackerConfig},
-            tracker_metrics::TrackerMetrics,
-        },
+use crate::bundle_manager::bundle_tracker_api::{
+    main_api::BundleTracker,
+    saturn_tracker::{
+        lua_scripts::LuaScripts,
+        tracker_config::{CachedBundle, TrackerConfig},
+        tracker_metrics::TrackerMetrics,
     },
-    client::{UserBundleUpdate, UserStreamNotificationSystem},
 };
 
 pub struct SaturnBundleTracker {
@@ -33,7 +30,6 @@ pub struct SaturnBundleTracker {
     batch_semaphore: Arc<Semaphore>,
     lua_scripts: LuaScripts,
     metrics: Arc<TrackerMetrics>,
-    notification_system: Option<Arc<UserStreamNotificationSystem>>,
 }
 
 impl SaturnBundleTracker {
@@ -62,16 +58,7 @@ impl SaturnBundleTracker {
             local_cache: Arc::new(DashMap::new()),
             config,
             metrics: Arc::new(TrackerMetrics::default()),
-            notification_system: None,
         })
-    }
-
-    pub fn with_notifications(
-        mut self,
-        notification_system: Arc<UserStreamNotificationSystem>,
-    ) -> Self {
-        self.notification_system = Some(notification_system);
-        self
     }
 }
 
@@ -83,13 +70,7 @@ impl BundleTracker for SaturnBundleTracker {
         self.redis_pool[pool_index].clone()
     }
 
-    async fn store_ownership(&self, bundle_id: &str, user_id: &str) {
-        if let Some(notification_system) = &self.notification_system {
-            notification_system.register_user_bundle(user_id, bundle_id);
-        }
-    }
-
-    async fn add_bundles(&self, bundle_ids: Vec<String>, user_id: String) -> RedisResult<()> {
+    async fn add_bundles(&self, bundle_ids: Vec<String>) -> RedisResult<()> {
         let chunks: Vec<_> = bundle_ids.chunks(self.config.batch_size).collect();
 
         for chunk in chunks.iter() {
@@ -125,7 +106,7 @@ impl BundleTracker for SaturnBundleTracker {
                     slot: None,
                     stage: BundleStage::InFlight,
                     version: 1,
-                    user_id: Some(user_id.clone()),
+                    old_status: None,
                 };
 
                 let serialized = serde_json::to_string(&bundle_data)?;
@@ -156,7 +137,6 @@ impl BundleTracker for SaturnBundleTracker {
                         },
                     );
                 }
-                self.store_ownership(&status.bundle_id, &user_id).await;
             }
         }
 
@@ -327,7 +307,7 @@ impl BundleTracker for SaturnBundleTracker {
                     .errors
                     .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                 return Err(redis::RedisError::from((
-                    redis::ErrorKind::IoError,
+                    redis::ErrorKind::Io,
                     "Jito API error",
                     e.to_string(),
                 )));
@@ -337,7 +317,10 @@ impl BundleTracker for SaturnBundleTracker {
         let response: InflightBundleStatusResponse = serde_json::from_value(status_response)
             .map_err(|e| {
                 error!("Failed to parse inflight response: {}", e);
-                redis::RedisError::from((redis::ErrorKind::TypeError, "JSON parse error"))
+                redis::RedisError::from((
+                    redis::ErrorKind::UnexpectedReturnType,
+                    "JSON parse error",
+                ))
             })?;
 
         for status in response.value.into_iter().flatten() {
@@ -395,7 +378,7 @@ impl BundleTracker for SaturnBundleTracker {
                     .errors
                     .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                 return Err(redis::RedisError::from((
-                    redis::ErrorKind::IoError,
+                    redis::ErrorKind::Io,
                     "Jito API error",
                     e.to_string(),
                 )));
@@ -405,7 +388,10 @@ impl BundleTracker for SaturnBundleTracker {
         let response: BundleStatusResponse =
             serde_json::from_value(status_response).map_err(|e| {
                 error!("Failed to parse bundle status response: {}", e);
-                redis::RedisError::from((redis::ErrorKind::TypeError, "JSON parse error"))
+                redis::RedisError::from((
+                    redis::ErrorKind::UnexpectedReturnType,
+                    "JSON parse error",
+                ))
             })?;
 
         for status in response.value.into_iter().flatten() {
@@ -458,21 +444,15 @@ impl BundleTracker for SaturnBundleTracker {
 
         let new_version = current_version + 1;
 
-        let user_id = if let Some(notification_system) = &self.notification_system {
-            notification_system.get_user_id(bundle_id)
-        } else {
-            None
-        };
-
         let bundle_update = BundleStatusUpdate {
             bundle_id: bundle_id.to_string(),
             status: new_status.to_string(),
+            old_status: Some(old_status.clone()),
             timestamp: chrono::Utc::now().timestamp() as u64,
             last_checked: chrono::Utc::now().timestamp() as u64,
             slot,
             stage: new_stage.clone(),
             version: new_version,
-            user_id,
         };
 
         if let Some(stage) = &old_stage
@@ -512,17 +492,6 @@ impl BundleTracker for SaturnBundleTracker {
                     },
                 );
 
-                if let Some(notification_system) = &self.notification_system
-                    && old_status != new_status
-                {
-                    notification_system.notify_bundle_change(
-                        bundle_id,
-                        old_status,
-                        new_stage.clone(),
-                        slot,
-                    );
-                }
-
                 self.metrics
                     .stage_transitions
                     .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
@@ -541,29 +510,6 @@ impl BundleTracker for SaturnBundleTracker {
             }
         }
         Ok(())
-    }
-
-    async fn get_user_bundle_statuses(&self, user_id: &str) -> Vec<UserBundleUpdate> {
-        if let Some(notification_system) = &self.notification_system {
-            let user_bundles = notification_system.get_user_bundles(user_id);
-
-            let mut results = Vec::new();
-            for bundle_id in user_bundles {
-                if let Some(cached) = self.local_cache.get(&bundle_id) {
-                    let update = UserBundleUpdate {
-                        bundle_id: bundle_id.clone(),
-                        old_status: cached.status.to_string(),
-                        new_status: cached.stage.clone(),
-                        timestamp: chrono::Utc::now().timestamp_millis() as u64,
-                        slot: cached.slot,
-                    };
-                    results.push(update);
-                }
-            }
-            results
-        } else {
-            vec![]
-        }
     }
 
     async fn cleanup_completed_bundles(&self) -> RedisResult<()> {

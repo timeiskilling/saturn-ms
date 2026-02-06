@@ -88,7 +88,15 @@ impl JupiterTrader {
                 redis_con::connection::jito_tip_redis_conn(&config).await,
             )),
             config,
-            notification_system: Arc::new(UserStreamNotificationSystem::new()),
+            notification_system: {
+                let ns = Arc::new(UserStreamNotificationSystem::new());
+                if let Some(url) = redis_urls.first()
+                    && let Ok(client) = redis::Client::open(url.as_str())
+                {
+                    ns.start_redis_subscription(client).await;
+                }
+                ns
+            },
             bundle_status: Arc::new(
                 SaturnBundleTracker::new(redis_urls, tracker_config, jito_manager)
                     .await
@@ -246,7 +254,7 @@ impl JupiterTrader {
                         tracing::info!("Bundle sent successfully with UUID: {}", bundle_uuid);
                         if let Err(e) = self
                             .bundle_status
-                            .add_bundles(vec![bundle_uuid.to_string()], user_pbk.to_string())
+                            .add_bundles(vec![bundle_uuid.to_string()])
                             .await
                         {
                             tracing::error!("Failed to save bundle {}: {}", bundle_uuid, e);

@@ -1,5 +1,4 @@
 use crate::bundle_manager::bundle_tracker_api::bundle_stage_api::*;
-use crate::bundle_manager::client::UserBundleUpdate;
 use async_trait::async_trait;
 use redis::RedisResult;
 use std::collections::HashMap;
@@ -8,8 +7,7 @@ use tokio::time::Duration;
 #[async_trait]
 pub trait BundleTracker: Send + Sync {
     fn get_redis_connection(&self) -> redis::aio::MultiplexedConnection;
-    async fn store_ownership(&self, bundle_id: &str, user_id: &str);
-    async fn add_bundles(&self, bundle_ids: Vec<String>, user_id: String) -> RedisResult<()>;
+    async fn add_bundles(&self, bundle_ids: Vec<String>) -> RedisResult<()>;
     async fn start_tracking(&self) -> RedisResult<()>;
     async fn process_inflight_stage(&self);
     async fn process_landed_stage(&self);
@@ -32,7 +30,6 @@ pub trait BundleTracker: Send + Sync {
         slot: Option<u64>,
     ) -> RedisResult<()>;
 
-    async fn get_user_bundle_statuses(&self, user_id: &str) -> Vec<UserBundleUpdate>;
     async fn cleanup_completed_bundles(&self) -> RedisResult<()>;
     fn get_metrics(&self) -> HashMap<String, u64>;
 }

@@ -1,12 +1,15 @@
 use ahash::RandomState;
 use dashmap::DashMap;
+use futures::StreamExt;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::broadcast;
 
-use crate::bundle_manager::bundle_tracker_api::bundle_stage_api::BundleStage;
+use crate::bundle_manager::bundle_tracker_api::bundle_stage_api::{
+    BundleStage, BundleStatusUpdate,
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserBundleUpdate {
@@ -81,6 +84,70 @@ impl UserStreamNotificationSystem {
             loop {
                 interval.tick().await;
                 cleanup_system.cleanup_inactive_users().await;
+            }
+        });
+    }
+
+    pub async fn start_redis_subscription(&self, redis_client: redis::Client) {
+        let notification_system = self.clone();
+        tokio::spawn(async move {
+            let mut conn = match redis_client.get_async_pubsub().await {
+                Ok(conn) => conn,
+                Err(e) => {
+                    tracing::error!("Failed to connect to Redis for subscription: {}", e);
+                    return;
+                }
+            };
+
+            if let Err(e) = conn.subscribe("bundle_status_updates").await {
+                tracing::error!("Failed to subscribe to bundle_status_updates: {}", e);
+                return;
+            }
+
+            let mut stream = conn.on_message();
+
+            while let Some(msg) = stream.next().await {
+                let payload: String = match msg.get_payload() {
+                    Ok(p) => p,
+                    Err(e) => {
+                        tracing::error!("Failed to get payload from redis msg: {}", e);
+                        continue;
+                    }
+                };
+
+                if let Ok(bundle_update) = serde_json::from_str::<BundleStatusUpdate>(&payload) {
+                    let user_id = if let Some(owner) = notification_system
+                        .bundle_ownership
+                        .get(&bundle_update.bundle_id)
+                    {
+                        owner.value().clone()
+                    } else {
+                        continue;
+                    };
+
+                    if notification_system.user_streams.contains_key(&user_id) {
+                        let update = UserBundleUpdate {
+                            bundle_id: bundle_update.bundle_id,
+                            old_status: bundle_update
+                                .old_status
+                                .unwrap_or_else(|| "Unknown".to_string()),
+                            new_status: bundle_update.stage,
+                            timestamp: bundle_update.timestamp,
+                            slot: bundle_update.slot,
+                        };
+
+                        if let Some(sender) = notification_system.user_streams.get(&user_id) {
+                            let _ = sender.send(update);
+                            notification_system
+                                .active_users
+                                .entry(user_id)
+                                .and_modify(|stats| {
+                                    stats.total_updates_sent += 1;
+                                    stats.last_activity = tokio::time::Instant::now();
+                                });
+                        }
+                    }
+                }
             }
         });
     }

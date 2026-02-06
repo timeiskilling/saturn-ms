@@ -59,9 +59,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .map(|j| format!("stress_bundle_{i}_{j}"))
             .collect();
 
-        let user_id = format!("user_{}", i % 5);
-
-        tracker.add_bundles(bundle_ids, user_id).await?;
+        tracker.add_bundles(bundle_ids).await?;
 
         sleep(Duration::from_millis(50)).await;
     }
