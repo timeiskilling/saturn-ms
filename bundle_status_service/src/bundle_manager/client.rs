@@ -1,4 +1,5 @@
 use ahash::RandomState;
+use common::bundle_stage_api::{BundleStage, BundleStatusUpdate};
 use dashmap::DashMap;
 use futures::StreamExt;
 use serde::{Deserialize, Serialize};
@@ -6,10 +7,6 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::broadcast;
-
-use crate::bundle_manager::bundle_tracker_api::bundle_stage_api::{
-    BundleStage, BundleStatusUpdate,
-};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserBundleUpdate {

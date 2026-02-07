@@ -4246,6 +4246,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "saturn-bundle-tracker"
+version = "0.1.0"
+dependencies = [
+ "ahash",
+ "anyhow",
+ "async-trait",
+ "base64 0.22.1",
+ "bincode",
+ "chrono",
+ "common",
+ "dashmap 6.1.0",
+ "futures",
+ "governor 0.10.2",
+ "jito-sdk-rust",
+ "jupiter_trader_data",
+ "redis 1.0.3",
+ "reqwest 0.12.26",
+ "serde",
+ "serde_json",
+ "solana-sdk",
+ "tokio",
+ "tower",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "schannel"
 version = "0.1.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"

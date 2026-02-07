@@ -6,6 +6,7 @@ pub mod jito_client_api;
 pub mod prelude;
 pub mod proto_service;
 pub mod redis_con;
+pub mod reqwest_client;
 pub mod test;
 pub mod trader;
 pub mod transactions_builder;

@@ -8,10 +8,9 @@ use tonic::{service::LayerExt, transport::Server};
 use tracing_subscriber::fmt::format::FmtSpan;
 
 use crate::{
-    jito_client_api::{
-        jito_http_manager::JitoHttpManager, reqwest_client::HttpManager, retry_config::RetryConfig,
-    },
+    jito_client_api::{jito_http_manager::JitoHttpManager, retry_config::RetryConfig},
     proto_service::{TransactionService, service_jupiter_status},
+    reqwest_client::HttpManager,
     trader::JupiterTrader,
     transactions_builder::solana::instruction_parser::JupiterSolanaParser,
 };
@@ -24,6 +23,7 @@ pub mod jito_client_api;
 pub mod prelude;
 pub mod proto_service;
 pub mod redis_con;
+pub mod reqwest_client;
 pub mod test;
 pub mod trader;
 pub mod transactions_builder;

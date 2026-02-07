@@ -14,6 +14,7 @@ members = [
     "encryptions-service",
     "wallet_models",
     "helius_data",
+    "saturn-bundle-tracker",
 ]
 
 exclude = [

@@ -1,3 +1,4 @@
+use crate::reqwest_client::JupiterProvider;
 use crate::transactions_builder::solana::instruction_parser::JupiterSolanaParser;
 use crate::transactions_builder::solana::transaction_builder::SolanaTransactionsBuilder;
 use common::traits::TransactionBuilder;
@@ -27,7 +28,6 @@ use crate::{
         error_code::{BuildTransactionError, JitoEndpointErr, SaturnTransactionsServiceError},
         jito_http_manager::JitoHttpManager,
         main_api::JitoClient,
-        reqwest_client::JupiterProvider,
     },
     redis_con,
 };
