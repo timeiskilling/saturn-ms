@@ -1,3 +1,4 @@
+use crate::bundle_client::UserStreamNotificationSystem;
 use crate::reqwest_client::JupiterProvider;
 use crate::transactions_builder::solana::instruction_parser::JupiterSolanaParser;
 use crate::transactions_builder::solana::transaction_builder::SolanaTransactionsBuilder;
@@ -16,13 +17,6 @@ use solana_sdk::system_instruction::transfer;
 use crate::prelude::*;
 use crate::{
     blockhash_data::BlockhashCache,
-    bundle_manager::{
-        bundle_tracker_api::{
-            main_api::BundleTracker,
-            saturn_tracker::{tracker::SaturnBundleTracker, tracker_config::TrackerConfig},
-        },
-        client::UserStreamNotificationSystem,
-    },
     constant::MIN_JITO_TIP_LAMPORTS,
     jito_client_api::{
         error_code::{BuildTransactionError, JitoEndpointErr, SaturnTransactionsServiceError},
@@ -47,7 +41,6 @@ pub struct JupiterTrader {
     jito_tip_redis: Arc<Mutex<redis::aio::MultiplexedConnection>>,
     // pub atl_pubkey: Pubkey,
     notification_system: Arc<UserStreamNotificationSystem>,
-    pub bundle_status: Arc<SaturnBundleTracker>,
     pub coin_naming: Arc<DashMap<String, String>>,
 }
 
@@ -69,7 +62,6 @@ impl JupiterTrader {
         //     None,
         // );
 
-        let tracker_config = TrackerConfig::default();
         let config = config::load();
         let transaction_builder = SolanaTransactionsBuilder::new(
             client.clone(),
@@ -97,11 +89,6 @@ impl JupiterTrader {
                 }
                 ns
             },
-            bundle_status: Arc::new(
-                SaturnBundleTracker::new(redis_urls, tracker_config, jito_manager)
-                    .await
-                    .unwrap(),
-            ),
             coin_naming: Arc::new(DashMap::new()),
             tip_cache: Arc::new(RwLock::new(None)),
         }
@@ -201,6 +188,11 @@ impl JupiterTrader {
         Ok(transactions)
     }
 
+    async fn queue_bundle_for_tracking(&self, bundle_id: &str) -> Result<(), redis::RedisError> {
+        let mut conn = self.redis.lock().await;
+        conn.rpush("queue:bundles_to_track", bundle_id).await
+    }
+
     pub async fn send_transactions(
         &self,
         transaction: Vec<String>,
@@ -252,12 +244,12 @@ impl JupiterTrader {
                 match response_json["result"].as_str() {
                     Some(bundle_uuid) => {
                         tracing::info!("Bundle sent successfully with UUID: {}", bundle_uuid);
-                        if let Err(e) = self
-                            .bundle_status
-                            .add_bundles(vec![bundle_uuid.to_string()])
-                            .await
-                        {
-                            tracing::error!("Failed to save bundle {}: {}", bundle_uuid, e);
+
+                        self.notification_system
+                            .register_user_bundle(user_pbk, bundle_uuid);
+
+                        if let Err(e) = self.queue_bundle_for_tracking(bundle_uuid).await {
+                            tracing::error!("Failed to queue bundle {}: {}", bundle_uuid, e);
                         }
                         Ok(bundle_uuid.to_string())
                     }

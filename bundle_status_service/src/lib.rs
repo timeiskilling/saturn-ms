@@ -1,5 +1,5 @@
 pub mod blockhash_data;
-pub mod bundle_manager;
+pub mod bundle_client;
 pub mod constant;
 pub mod custom_builder;
 pub mod jito_client_api;
@@ -10,5 +10,4 @@ pub mod reqwest_client;
 pub mod test;
 pub mod trader;
 pub mod transactions_builder;
-
 pub const SEMAPHORE_PERMITS: usize = 5;

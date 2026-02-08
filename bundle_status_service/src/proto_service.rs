@@ -1,3 +1,4 @@
+use crate::bundle_client::UserBundleUpdate;
 use crate::prelude::*;
 use futures::future::join_all;
 use futures::stream::StreamExt;
@@ -6,7 +7,7 @@ use tonic_health::server::HealthReporter;
 
 use crate::blockhash_data::BlockhashCache;
 use crate::constant;
-use crate::{bundle_manager::client, trader::JupiterTrader};
+use crate::trader::JupiterTrader;
 use proto_models::grpc::bundle_service_server::{BundleService, BundleServiceServer};
 use proto_models::grpc::{SignedTransactions, TransactionsBuld, TransactionsToSign};
 use tokio_stream::{Stream, wrappers::BroadcastStream};
@@ -162,8 +163,8 @@ impl BundleService for TransactionService {
     }
 }
 
-impl From<client::UserBundleUpdate> for proto_models::grpc::UserBundleUpdate {
-    fn from(internal: client::UserBundleUpdate) -> Self {
+impl From<UserBundleUpdate> for proto_models::grpc::UserBundleUpdate {
+    fn from(internal: UserBundleUpdate) -> Self {
         proto_models::grpc::UserBundleUpdate {
             bundle_id: internal.bundle_id,
             old_status: internal.old_status,

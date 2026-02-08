@@ -61,6 +61,32 @@ impl SaturnBundleTracker {
             metrics: Arc::new(TrackerMetrics::default()),
         })
     }
+
+    pub async fn process_incoming_queue(&self) {
+        let mut interval = tokio::time::interval(tokio::time::Duration::from_millis(50));
+        loop {
+            interval.tick().await;
+            let mut conn = self.get_redis_connection();
+            // Use redis::cmd to avoid requiring AsyncCommands trait import
+            let result: redis::RedisResult<Option<String>> = redis::cmd("LPOP")
+                .arg("queue:bundles_to_track")
+                .query_async(&mut conn)
+                .await;
+
+            match result {
+                Ok(Some(bundle_id)) => {
+                    info!("Processing incoming bundle: {}", bundle_id);
+                    if let Err(e) = self.add_bundles(vec![bundle_id]).await {
+                        error!("Failed to add bundle from queue: {}", e);
+                    }
+                }
+                Ok(None) => {}
+                Err(e) => {
+                    error!("Error popping from queue: {}", e);
+                }
+            }
+        }
+    }
 }
 
 #[async_trait]
@@ -155,23 +181,32 @@ impl BundleTracker for SaturnBundleTracker {
         let mut inflight_timer = tokio::time::interval(self.config.inflight_check_interval);
         let mut landed_timer = tokio::time::interval(self.config.landed_check_interval);
 
-        loop {
-            tokio::select! {
-                _ = inflight_timer.tick() => {
-
-                    self.process_inflight_stage().await;
-                }
-                _ = landed_timer.tick() => {
-
-                    self.process_landed_stage().await;
-                }
-                _ = cleanup_timer.tick() => {
-                    if let Err(e) = self.cleanup_completed_bundles().await {
-                        error!("Cleanup failed: {}", e);
+        let timer_loop = async {
+            loop {
+                tokio::select! {
+                    _ = inflight_timer.tick() => {
+                        self.process_inflight_stage().await;
+                    }
+                    _ = landed_timer.tick() => {
+                        self.process_landed_stage().await;
+                    }
+                    _ = cleanup_timer.tick() => {
+                        if let Err(e) = self.cleanup_completed_bundles().await {
+                            error!("Cleanup failed: {}", e);
+                        }
                     }
                 }
             }
+        };
+
+        let queue_loop = self.process_incoming_queue();
+
+        tokio::select! {
+            _ = timer_loop => {},
+            _ = queue_loop => {},
         }
+
+        Ok(())
     }
 
     async fn process_inflight_stage(&self) {

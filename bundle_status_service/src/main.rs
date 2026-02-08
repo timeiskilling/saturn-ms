@@ -12,11 +12,9 @@ use crate::{
     proto_service::{TransactionService, service_jupiter_status},
     reqwest_client::HttpManager,
     trader::JupiterTrader,
-    transactions_builder::solana::instruction_parser::JupiterSolanaParser,
 };
-
 pub mod blockhash_data;
-pub mod bundle_manager;
+pub mod bundle_client;
 pub mod constant;
 pub mod custom_builder;
 pub mod jito_client_api;
@@ -59,7 +57,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         None,
         &config.jupiter_api_key,
     ));
-    let solana = JupiterSolanaParser;
     let trader = Arc::new(
         JupiterTrader::new(
             &helius_api_key.clone(),
