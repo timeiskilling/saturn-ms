@@ -1,8 +1,7 @@
-use crate::jito_client_api::error_code::RpcError;
-use crate::jito_client_api::{main_api::JitoClient, retry_config::RpcStats};
-
 use async_trait::async_trait;
+use common::jito_client_api::{main_api::JitoClient, retry_config::RpcStats};
 use dashmap::DashMap;
+use saturn_errors::error::RpcError;
 use serde_json::json;
 use std::sync::Arc;
 use tokio::time::{Duration, Instant, sleep};

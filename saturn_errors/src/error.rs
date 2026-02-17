@@ -1,4 +1,4 @@
-use jupiter_trader_data::models::jupiter_models::Instruction;
+use crate::models::Instruction;
 use solana_sdk::message::CompileError;
 use std::fmt::{self};
 

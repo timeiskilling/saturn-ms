@@ -1,7 +1,8 @@
-use crate::jito_client_api::error_code::{BuildTransactionError, SaturnTransactionsServiceError};
 use base64::{Engine, engine::general_purpose};
 use common::traits::InstructionParser;
-use jupiter_trader_data::models::jupiter_models::{Instruction, JupiterSwapInstructionsRsponse};
+use jupiter_trader_data::models::jupiter_models::JupiterSwapInstructionsRsponse;
+use saturn_errors::error::{BuildTransactionError, SaturnTransactionsServiceError};
+use saturn_errors::models::Instruction;
 use solana_sdk::instruction::{AccountMeta as SolanaAccountMeta, Instruction as SolanaInstruction};
 
 pub struct JupiterSolanaParser;

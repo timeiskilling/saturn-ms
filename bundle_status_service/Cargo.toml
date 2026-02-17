@@ -18,6 +18,7 @@ common = { path = "../common" }
 config = {path = "../config"}
 jupiter_trader_data = {path = "../jupiter_trader_data"}
 proto_models = {path = "../proto_models"}
+saturn_errors = { path = "../saturn_errors" }
 
 jito-sdk-rust = "0.3.2"
 dashmap = "6.1.0"

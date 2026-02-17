@@ -1,14 +1,12 @@
-use crate::jito_client_api::retry_config::RetryConfig;
-use crate::prelude::*;
-use crate::{
-    bundle_manager::bundle_tracker_api::{
-        main_api::BundleTracker,
-        saturn_tracker::{tracker::SaturnBundleTracker, tracker_config::TrackerConfig},
-    },
-    jito_client_api::jito_http_manager::JitoHttpManager,
+use crate::bundle_manager::bundle_tracker_api::{
+    main_api::BundleTracker,
+    saturn_tracker::{tracker::SaturnBundleTracker, tracker_config::TrackerConfig},
 };
+use crate::prelude::*;
+use common::jito_client_api::jito_http_manager::JitoHttpManager;
+use common::jito_client_api::retry_config::RetryConfig;
 pub mod bundle_manager;
-pub mod jito_client_api;
+pub mod health;
 pub mod prelude;
 
 #[tokio::main]
@@ -34,7 +32,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         RetryConfig::default(),
         None,
     ));
-    let bundle_tracker = SaturnBundleTracker::new(redis_urls, config, jito_manager).await?;
+
+    let worker_id = uuid::Uuid::new_v4().to_string();
+
+    let bundle_tracker =
+        Arc::new(SaturnBundleTracker::new(redis_urls, config, jito_manager, worker_id).await?);
+
+    let tracker_clone = bundle_tracker.clone();
+    tokio::spawn(async move {
+        health::start_health_server(tracker_clone, 3001).await;
+    });
 
     info!("Tracker loop started");
     if let Err(e) = bundle_tracker.start_tracking().await {

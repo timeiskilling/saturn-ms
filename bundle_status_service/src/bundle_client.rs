@@ -112,6 +112,8 @@ impl UserStreamNotificationSystem {
                     }
                 };
 
+                tracing::info!("Received Redis Update: {}", payload);
+
                 if let Ok(bundle_update) = serde_json::from_str::<BundleStatusUpdate>(&payload) {
                     let user_id = if let Some(owner) = notification_system
                         .bundle_ownership
@@ -119,6 +121,7 @@ impl UserStreamNotificationSystem {
                     {
                         owner.value().clone()
                     } else {
+                        tracing::error!("Failed to deserialize update: {}", payload);
                         continue;
                     };
 
@@ -177,42 +180,7 @@ impl UserStreamNotificationSystem {
             }
         }
     }
-
-    pub fn notify_bundle_change(
-        &self,
-        bundle_id: &str,
-        old_status: String,
-        new_status: BundleStage,
-        slot: Option<u64>,
-    ) {
-        let user_id = match self.bundle_ownership.get(bundle_id) {
-            Some(owner) => owner.value().clone(),
-            None => {
-                tracing::warn!("Bundle {} has no owner", bundle_id);
-                return;
-            }
-        };
-
-        let update = UserBundleUpdate {
-            bundle_id: bundle_id.to_string(),
-            old_status,
-            new_status,
-            timestamp: chrono::Utc::now().timestamp_millis() as u64,
-            slot,
-        };
-
-        if let Some(sender) = self.user_streams.get(&user_id) {
-            if sender.send(update).is_err() {
-                tracing::debug!("No active listeners for user {}", user_id);
-            } else {
-                self.active_users.entry(user_id).and_modify(|stats| {
-                    stats.total_updates_sent += 1;
-                    stats.last_activity = tokio::time::Instant::now();
-                });
-            }
-        }
-    }
-
+    
     pub fn register_user_bundle(&self, user_id: &str, bundle_id: &str) {
         self.bundle_ownership
             .insert(bundle_id.to_string(), user_id.to_string());

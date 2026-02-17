@@ -1,0 +1,10 @@
+[package]
+name = "saturn_errors"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+solana-sdk = "2.3.1"
+base64 = "0.22.0"
+thiserror = "2"
+serde = { version = "1.0", features = ["derive"] }

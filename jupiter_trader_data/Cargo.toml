@@ -11,3 +11,4 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 common = { path = "../common" }
 proto_models = {path = "../proto_models"}
 solana-sdk = "2.3.1"
+saturn_errors = { path = "../saturn_errors" }

@@ -13,10 +13,7 @@ use reqwest::Client;
 use std::{num::NonZeroU32, sync::atomic::Ordering, time::Duration};
 use tokio::time::sleep;
 
-use crate::jito_client_api::{
-    error_code::{JupiterReqestError, RpcError, SaturnTransactionsServiceError},
-    retry_config::{RetryConfig, RpcMetrics, RpcStats},
-};
+use saturn_errors::error::{JupiterReqestError, RpcError, SaturnTransactionsServiceError};
 
 #[derive(Clone)]
 struct QuoteRequestParams {

@@ -2,6 +2,8 @@ use crate::bundle_client::UserStreamNotificationSystem;
 use crate::reqwest_client::JupiterProvider;
 use crate::transactions_builder::solana::instruction_parser::JupiterSolanaParser;
 use crate::transactions_builder::solana::transaction_builder::SolanaTransactionsBuilder;
+use common::jito_client_api::jito_http_manager::JitoHttpManager;
+use common::jito_client_api::main_api::JitoClient;
 use common::traits::TransactionBuilder;
 use config::Config;
 use core::str;
@@ -10,21 +12,15 @@ use jupiter_trader_data::models::jupiter_models::{
     JupiterQuoteResponse, JupiterSwapInstructionsRsponse, QuoteOptions,
 };
 use redis::AsyncCommands;
+use saturn_errors::error::{
+    BuildTransactionError, JitoEndpointErr, SaturnTransactionsServiceError,
+};
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::commitment_config::CommitmentConfig;
 use solana_sdk::system_instruction::transfer;
 
 use crate::prelude::*;
-use crate::{
-    blockhash_data::BlockhashCache,
-    constant::MIN_JITO_TIP_LAMPORTS,
-    jito_client_api::{
-        error_code::{BuildTransactionError, JitoEndpointErr, SaturnTransactionsServiceError},
-        jito_http_manager::JitoHttpManager,
-        main_api::JitoClient,
-    },
-    redis_con,
-};
+use crate::{blockhash_data::BlockhashCache, constant::MIN_JITO_TIP_LAMPORTS, redis_con};
 
 // pub type SharedPriceState = Arc<Mutex<HashMap<String, DayTickerEvent>>>;
 

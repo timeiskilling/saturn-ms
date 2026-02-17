@@ -1,10 +1,3 @@
-use crate::{
-    jito_client_api::main_api::JitoClient,
-    jito_client_api::{
-        error_code::RpcError,
-        retry_config::{RetryConfig, RpcMetrics, RpcStats},
-    },
-};
 use async_trait::async_trait;
 use governor::{
     Quota, RateLimiter,
@@ -12,12 +5,18 @@ use governor::{
     state::{InMemoryState, NotKeyed},
 };
 use jito_sdk_rust::JitoJsonRpcSDK;
+use saturn_errors::error::RpcError;
 use std::{
     num::NonZeroU32,
     sync::{Arc, atomic::Ordering},
     time::Duration,
 };
 use tokio::time::sleep;
+
+use crate::jito_client_api::{
+    main_api::JitoClient,
+    retry_config::{RetryConfig, RpcMetrics, RpcStats},
+};
 
 pub struct JitoHttpManager {
     inner: Arc<JitoJsonRpcSDK>,

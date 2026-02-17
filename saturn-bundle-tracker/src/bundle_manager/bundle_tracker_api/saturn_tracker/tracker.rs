@@ -1,8 +1,8 @@
-use crate::jito_client_api::main_api::JitoClient;
 use async_trait::async_trait;
 use common::bundle_stage_api::{
     BundleStage, BundleStatusResponse, BundleStatusUpdate, InflightBundleStatusResponse,
 };
+use common::jito_client_api::main_api::JitoClient;
 use dashmap::DashMap;
 use futures::future::try_join_all;
 use redis::{AsyncCommands, RedisResult};
@@ -31,6 +31,7 @@ pub struct SaturnBundleTracker {
     batch_semaphore: Arc<Semaphore>,
     lua_scripts: LuaScripts,
     metrics: Arc<TrackerMetrics>,
+    worker_id: String,
 }
 
 impl SaturnBundleTracker {
@@ -38,6 +39,7 @@ impl SaturnBundleTracker {
         redis_urls: Vec<String>,
         config: TrackerConfig,
         jito_manager: Arc<dyn JitoClient>,
+        worker_id: String,
     ) -> RedisResult<Self> {
         let connection_futures = redis_urls.into_iter().map(|url| async move {
             let client = redis::Client::open(url)?;
@@ -59,6 +61,7 @@ impl SaturnBundleTracker {
             local_cache: Arc::new(DashMap::new()),
             config,
             metrics: Arc::new(TrackerMetrics::default()),
+            worker_id,
         })
     }
 
@@ -67,7 +70,6 @@ impl SaturnBundleTracker {
         loop {
             interval.tick().await;
             let mut conn = self.get_redis_connection();
-            // Use redis::cmd to avoid requiring AsyncCommands trait import
             let result: redis::RedisResult<Option<String>> = redis::cmd("LPOP")
                 .arg("queue:bundles_to_track")
                 .query_async(&mut conn)
@@ -263,6 +265,9 @@ impl BundleTracker for SaturnBundleTracker {
         let stage_str = format!("{:?}", stage);
 
         let cutoff_time = std::time::SystemTime::now() - min_age;
+
+        let lock_duration_ms = 30_000;
+
         let last_checked_before = cutoff_time
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
@@ -275,6 +280,7 @@ impl BundleTracker for SaturnBundleTracker {
                 .arg(&stage_str)
                 .arg(self.config.batch_size)
                 .arg(last_checked_before)
+                .arg(lock_duration_ms)
                 .invoke_async(&mut conn)
                 .await?;
 

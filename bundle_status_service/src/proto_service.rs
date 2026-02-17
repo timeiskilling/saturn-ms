@@ -175,19 +175,25 @@ impl From<UserBundleUpdate> for proto_models::grpc::UserBundleUpdate {
     }
 }
 
-pub async fn service_jupiter_status(reporter: HealthReporter) {
-    let http_client = reqwest::Client::builder().build().unwrap();
+pub async fn service_jupiter_status(reporter: HealthReporter, api_key: String) {
+    let mut headers = reqwest::header::HeaderMap::new();
+    headers.insert("Accept", "application/json".parse().unwrap());
+    headers.insert(
+        "x-api-key",
+        reqwest::header::HeaderValue::from_str(&api_key).unwrap(),
+    );
+    let http_client = reqwest::Client::builder()
+        .default_headers(headers)
+        .build()
+        .unwrap();
     let mut interval = tokio::time::interval(std::time::Duration::from_secs(
         constant::GRPC_HEALTH_CHECK_INTERVAL,
     ));
     let params = [("ids", "So11111111111111111111111111111111111111112")];
     loop {
         interval.tick().await;
-        let mut headers = reqwest::header::HeaderMap::new();
-        headers.insert("Accept", "application/json".parse().unwrap());
         let response = http_client
-            .get("https://lite-api.jup.ag/price/v3")
-            .headers(headers)
+            .get("https://api.jup.ag/price/v3")
             .query(&params)
             .send()
             .await;

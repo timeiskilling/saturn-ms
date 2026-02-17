@@ -1,7 +1,8 @@
 use async_trait::async_trait;
+use saturn_errors::error::RpcError;
 use serde_json::Value;
 
-use crate::jito_client_api::{error_code::RpcError, retry_config::RpcStats};
+use crate::jito_client_api::retry_config::RpcStats;
 
 #[async_trait]
 pub trait JitoClient: Send + Sync {

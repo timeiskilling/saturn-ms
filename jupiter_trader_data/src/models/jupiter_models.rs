@@ -1,3 +1,4 @@
+use saturn_errors::models::Instruction;
 use serde::{Deserialize, Serialize};
 use solana_sdk::pubkey::Pubkey;
 
@@ -38,16 +39,6 @@ pub struct JupiterSwapInstructionsRsponse {
 
     #[serde(rename = "blockhashWithMetadata")]
     pub blockhash_with_metadata: BlockhashWithMetadata,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Instruction {
-    #[serde(rename = "programId")]
-    pub program_id: Pubkey,
-
-    pub accounts: Vec<AccountMeta>,
-
-    pub data: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

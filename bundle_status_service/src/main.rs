@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use bundle_status_service::prelude::RetryConfig;
+use common::jito_client_api::jito_http_manager::JitoHttpManager;
 use config::load;
 use proto_models::grpc::bundle_service_server::BundleServiceServer;
 use solana_client::nonblocking::rpc_client::RpcClient;
@@ -8,16 +10,15 @@ use tonic::{service::LayerExt, transport::Server};
 use tracing_subscriber::fmt::format::FmtSpan;
 
 use crate::{
-    jito_client_api::{jito_http_manager::JitoHttpManager, retry_config::RetryConfig},
     proto_service::{TransactionService, service_jupiter_status},
     reqwest_client::HttpManager,
     trader::JupiterTrader,
 };
+
 pub mod blockhash_data;
 pub mod bundle_client;
 pub mod constant;
 pub mod custom_builder;
-pub mod jito_client_api;
 pub mod prelude;
 pub mod proto_service;
 pub mod redis_con;
@@ -68,13 +69,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     let rpc_client = Arc::new(RpcClient::new(helius_api_key));
-
     let blockhash_cache = blockhash_data::BlockhashCache::new(rpc_client.clone());
 
     let trader_clone = trader.clone();
-
-    // let data = send_bundle(trader_clone).await;
-
     tokio::spawn(async move {
         trader_clone.jito_tip_listener().await;
     });
@@ -92,12 +89,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .named_layer(BundleServiceServer::new(transaction_serve));
 
     println!("GreeterServer listening on {addr}");
+
     let (health_reporter, health_service) = tonic_health::server::health_reporter();
     health_reporter
         .set_serving::<BundleServiceServer<TransactionService>>()
         .await;
 
-    tokio::spawn(service_jupiter_status(health_reporter.clone()));
+    tokio::spawn(service_jupiter_status(
+        health_reporter.clone(),
+        config.jupiter_api_key.clone(),
+    ));
 
     Server::builder()
         .accept_http1(true)
