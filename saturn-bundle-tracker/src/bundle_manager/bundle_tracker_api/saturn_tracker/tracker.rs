@@ -277,8 +277,9 @@ impl BundleTracker for SaturnBundleTracker {
             let bundles_data: Vec<String> = self
                 .lua_scripts
                 .get_bundles_by_stage
-                .arg(&stage_str)
+                .key(stage_str)
                 .arg(self.config.batch_size)
+                .arg(&self.worker_id)
                 .arg(last_checked_before)
                 .arg(lock_duration_ms)
                 .invoke_async(&mut conn)
