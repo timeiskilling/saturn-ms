@@ -35,8 +35,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let worker_id = uuid::Uuid::new_v4().to_string();
 
-    let bundle_tracker =
-        Arc::new(SaturnBundleTracker::new(redis_urls, config, jito_manager, worker_id).await?);
+    let bundle_tracker = Arc::new(
+        SaturnBundleTracker::new(
+            redis_urls,
+            String::from("master"),
+            config,
+            jito_manager,
+            worker_id,
+        )
+        .await?,
+    );
 
     let tracker_clone = bundle_tracker.clone();
     tokio::spawn(async move {

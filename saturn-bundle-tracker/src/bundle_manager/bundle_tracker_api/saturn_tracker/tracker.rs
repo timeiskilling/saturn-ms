@@ -5,6 +5,7 @@ use common::bundle_stage_api::{
 use common::jito_client_api::main_api::JitoClient;
 use dashmap::DashMap;
 use futures::future::try_join_all;
+use redis::sentinel::{Sentinel, SentinelClient};
 use redis::{AsyncCommands, RedisResult};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -37,16 +38,20 @@ pub struct SaturnBundleTracker {
 impl SaturnBundleTracker {
     pub async fn new(
         redis_urls: Vec<String>,
+        master_name: String,
         config: TrackerConfig,
         jito_manager: Arc<dyn JitoClient>,
         worker_id: String,
     ) -> RedisResult<Self> {
-        let connection_futures = redis_urls.into_iter().map(|url| async move {
-            let client = redis::Client::open(url)?;
-            client.get_multiplexed_async_connection().await
-        });
-        let redis_pool = try_join_all(connection_futures).await?;
+        let mut sentinel = Sentinel::build(redis_urls)?;
+        let master_client = sentinel.async_master_for(&master_name, None).await?;
 
+        let mut redis_pool = Vec::with_capacity(5);
+
+        for _ in 0..5 {
+            let conn = master_client.get_multiplexed_async_connection().await?;
+            redis_pool.push(conn);
+        }
         info!(
             "Successfully initialized {} Redis connections pool",
             redis_pool.len()
