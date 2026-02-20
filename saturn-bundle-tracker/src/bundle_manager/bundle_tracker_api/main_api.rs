@@ -1,12 +1,14 @@
 use async_trait::async_trait;
 use common::bundle_stage_api::{BundleStage, BundleStatusUpdate};
-use redis::RedisResult;
+use redis::{RedisError, RedisResult};
 use std::collections::HashMap;
 use tokio::time::Duration;
 
 #[async_trait]
 pub trait BundleTracker: Send + Sync {
-    fn get_redis_connection(&self) -> redis::aio::MultiplexedConnection;
+    async fn get_redis_connection(
+        &self,
+    ) -> Result<deadpool_redis::sentinel::Connection, RedisError>;
     async fn add_bundles(&self, bundle_ids: Vec<String>) -> RedisResult<()>;
     async fn start_tracking(&self) -> RedisResult<()>;
     async fn process_inflight_stage(&self);

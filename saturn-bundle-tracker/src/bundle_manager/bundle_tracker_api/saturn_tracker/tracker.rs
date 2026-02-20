@@ -1,31 +1,38 @@
+use crate::bundle_manager::bundle_tracker_api::{main_api::BundleTracker, saturn_tracker::*};
+use crate::prelude::*;
 use async_trait::async_trait;
 use common::bundle_stage_api::{
     BundleStage, BundleStatusResponse, BundleStatusUpdate, InflightBundleStatusResponse,
 };
 use common::jito_client_api::main_api::JitoClient;
 use dashmap::DashMap;
-use futures::future::try_join_all;
-use redis::sentinel::{Sentinel, SentinelClient};
-use redis::{AsyncCommands, RedisResult};
-use std::collections::HashMap;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use tokio::time::Duration;
-use tokio::{sync::Semaphore, time::Instant};
-use tracing::{debug, error, info, warn};
 
-use crate::bundle_manager::bundle_tracker_api::{
-    main_api::BundleTracker,
-    saturn_tracker::{
-        lua_scripts::LuaScripts,
-        tracker_config::{CachedBundle, TrackerConfig},
-        tracker_metrics::TrackerMetrics,
-    },
+use deadpool_redis::Runtime;
+use deadpool_redis::sentinel::{Config, Pool};
+
+use futures::future::try_join_all;
+use redis::{AsyncCommands, RedisError, RedisResult};
+use std::collections::HashMap;
+use std::time::Instant;
+use tokio::sync::Semaphore;
+
+use self::{
+    lua_scripts::LuaScripts, tracker_config::TrackerConfig, tracker_metrics::TrackerMetrics,
 };
 
+#[derive(Debug, Clone)]
+struct CachedBundle {
+    _bundle_id: String,
+    status: String,
+    stage: BundleStage,
+    last_updated: Instant,
+    last_checked: Instant,
+    _version: u64,
+    _slot: Option<u64>,
+}
+
 pub struct SaturnBundleTracker {
-    redis_pool: Arc<Vec<redis::aio::MultiplexedConnection>>,
-    connection_counter: AtomicUsize,
+    // sentinel_client: Arc<Mutex<SentinelClient>>,
     jito_manager: Arc<dyn JitoClient>,
     config: TrackerConfig,
     local_cache: Arc<DashMap<String, CachedBundle>>,
@@ -33,33 +40,29 @@ pub struct SaturnBundleTracker {
     lua_scripts: LuaScripts,
     metrics: Arc<TrackerMetrics>,
     worker_id: String,
+    redis_pool: Pool,
 }
 
 impl SaturnBundleTracker {
     pub async fn new(
-        redis_urls: Vec<String>,
+        sentinel_urls: Vec<String>,
         master_name: String,
         config: TrackerConfig,
         jito_manager: Arc<dyn JitoClient>,
         worker_id: String,
     ) -> RedisResult<Self> {
-        let mut sentinel = Sentinel::build(redis_urls)?;
-        let master_client = sentinel.async_master_for(&master_name, None).await?;
+        let cfg = Config {
+            urls: Some(sentinel_urls),
+            server_type: deadpool_redis::sentinel::SentinelServerType::Master,
+            master_name,
+            ..Default::default()
+        };
 
-        let mut redis_pool = Vec::with_capacity(5);
-
-        for _ in 0..5 {
-            let conn = master_client.get_multiplexed_async_connection().await?;
-            redis_pool.push(conn);
-        }
-        info!(
-            "Successfully initialized {} Redis connections pool",
-            redis_pool.len()
-        );
+        let pool = cfg
+            .create_pool(Some(Runtime::Tokio1))
+            .expect("Failed to create Redis Sentinel pool");
 
         Ok(Self {
-            redis_pool: Arc::new(redis_pool),
-            connection_counter: AtomicUsize::new(0),
             jito_manager,
             batch_semaphore: Arc::new(Semaphore::new(config.max_concurrent_batches)),
             lua_scripts: LuaScripts::new(),
@@ -67,6 +70,7 @@ impl SaturnBundleTracker {
             config,
             metrics: Arc::new(TrackerMetrics::default()),
             worker_id,
+            redis_pool: pool,
         })
     }
 
@@ -74,22 +78,28 @@ impl SaturnBundleTracker {
         let mut interval = tokio::time::interval(tokio::time::Duration::from_millis(50));
         loop {
             interval.tick().await;
-            let mut conn = self.get_redis_connection();
-            let result: redis::RedisResult<Option<String>> = redis::cmd("LPOP")
-                .arg("queue:bundles_to_track")
-                .query_async(&mut conn)
-                .await;
+            match self.get_redis_connection().await {
+                Ok(mut conn) => {
+                    let result: redis::RedisResult<Option<String>> = redis::cmd("LPOP")
+                        .arg("queue:bundles_to_track")
+                        .query_async(&mut conn)
+                        .await;
 
-            match result {
-                Ok(Some(bundle_id)) => {
-                    info!("Processing incoming bundle: {}", bundle_id);
-                    if let Err(e) = self.add_bundles(vec![bundle_id]).await {
-                        error!("Failed to add bundle from queue: {}", e);
+                    match result {
+                        Ok(Some(bundle_id)) => {
+                            info!("Processing incoming bundle: {}", bundle_id);
+                            if let Err(e) = self.add_bundles(vec![bundle_id]).await {
+                                error!("Failed to add bundle from queue: {}", e);
+                            }
+                        }
+                        Ok(None) => {}
+                        Err(e) => {
+                            error!("Error popping from queue: {}", e);
+                        }
                     }
                 }
-                Ok(None) => {}
                 Err(e) => {
-                    error!("Error popping from queue: {}", e);
+                    error!("Failed to get redis connection: {}", e);
                 }
             }
         }
@@ -98,18 +108,19 @@ impl SaturnBundleTracker {
 
 #[async_trait]
 impl BundleTracker for SaturnBundleTracker {
-    fn get_redis_connection(&self) -> redis::aio::MultiplexedConnection {
-        let index = self.connection_counter.fetch_add(1, Ordering::Relaxed);
-        let pool_index = index % self.redis_pool.len();
-        self.redis_pool[pool_index].clone()
+    async fn get_redis_connection(
+        &self,
+    ) -> Result<deadpool_redis::sentinel::Connection, RedisError> {
+        self.redis_pool
+            .get()
+            .await
+            .map_err(|e| RedisError::from((redis::ErrorKind::Io, "Pool error", e.to_string())))
     }
 
     async fn add_bundles(&self, bundle_ids: Vec<String>) -> RedisResult<()> {
         let chunks: Vec<_> = bundle_ids.chunks(self.config.batch_size).collect();
-
+        let mut conn = self.get_redis_connection().await?;
         for chunk in chunks.iter() {
-            let mut conn = self.get_redis_connection();
-
             let status_response = match self
                 .jito_manager
                 .get_in_flight_bundle_statuses(chunk.to_vec())
@@ -161,13 +172,13 @@ impl BundleTracker for SaturnBundleTracker {
                     self.local_cache.insert(
                         status.bundle_id.clone(),
                         CachedBundle {
-                            bundle_id: status.bundle_id.clone(),
+                            _bundle_id: status.bundle_id.clone(),
                             status: bundle_data.status,
                             stage: BundleStage::InFlight,
                             last_updated: Instant::now(),
                             last_checked: Instant::now(),
-                            version: 1,
-                            slot: None,
+                            _version: 1,
+                            _slot: None,
                         },
                     );
                 }
@@ -265,7 +276,7 @@ impl BundleTracker for SaturnBundleTracker {
         stage: BundleStage,
         min_age: Duration,
     ) -> RedisResult<Vec<BundleStatusUpdate>> {
-        let mut conn = self.get_redis_connection();
+        let mut conn = self.get_redis_connection().await?;
 
         let stage_str = format!("{:?}", stage);
 
@@ -464,7 +475,7 @@ impl BundleTracker for SaturnBundleTracker {
     }
 
     async fn get_current_version_safely(&self, bundle_id: &str) -> RedisResult<u64> {
-        let mut conn = self.get_redis_connection();
+        let mut conn = self.get_redis_connection().await?;
 
         if let Ok(bundle_data) = conn.hget::<_, _, String>("bundle_tracker", bundle_id).await
             && let Ok(bundle) = serde_json::from_str::<BundleStatusUpdate>(&bundle_data)
@@ -511,7 +522,7 @@ impl BundleTracker for SaturnBundleTracker {
 
         let serialized = serde_json::to_string(&bundle_update)?;
 
-        let mut conn = self.get_redis_connection();
+        let mut conn = self.get_redis_connection().await?;
 
         let result: i32 = self
             .lua_scripts
@@ -530,13 +541,13 @@ impl BundleTracker for SaturnBundleTracker {
                 self.local_cache.insert(
                     bundle_id.to_string(),
                     CachedBundle {
-                        bundle_id: bundle_id.to_string(),
+                        _bundle_id: bundle_id.to_string(),
                         status: new_status.to_string(),
                         stage: new_stage.clone(),
                         last_updated: Instant::now(),
                         last_checked: Instant::now(),
-                        version: new_version,
-                        slot,
+                        _version: new_version,
+                        _slot: slot,
                     },
                 );
 
@@ -563,7 +574,7 @@ impl BundleTracker for SaturnBundleTracker {
     async fn cleanup_completed_bundles(&self) -> RedisResult<()> {
         let cutoff_timestamp =
             chrono::Utc::now().timestamp() as u64 - self.config.completion_ttl.as_secs();
-        let mut conn = self.get_redis_connection();
+        let mut conn = self.get_redis_connection().await?;
 
         let removed: i32 = self
             .lua_scripts

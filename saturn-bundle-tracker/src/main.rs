@@ -38,7 +38,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let bundle_tracker = Arc::new(
         SaturnBundleTracker::new(
             redis_urls,
-            String::from("master"),
+            String::from("mymaster"),
             config,
             jito_manager,
             worker_id,
