@@ -19,5 +19,6 @@ members = [
 ]
 
 exclude = [
-    "saturn-wallet"
+    "saturn-wallet",
+    "saturn-trader"
 ]
