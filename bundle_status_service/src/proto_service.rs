@@ -9,9 +9,12 @@ use crate::blockhash_data::BlockhashCache;
 use crate::constant;
 use crate::trader::JupiterTrader;
 use proto_models::grpc::bundle_service_server::{BundleService, BundleServiceServer};
-use proto_models::grpc::{SignedTransactions, TransactionsBuld, TransactionsToSign};
+use proto_models::grpc::{
+    BuiltTransaction, BundleDelta, SignedTransactions, TransactionsBuld, TransactionsToSign,
+};
 use tokio_stream::{Stream, wrappers::BroadcastStream};
 use tonic::{Request, Response, Status};
+
 pub struct TransactionService {
     pub trader: Arc<JupiterTrader>,
     pub rpc_semaphore: Arc<Semaphore>,
@@ -26,8 +29,24 @@ impl BundleService for TransactionService {
         request: Request<TransactionsBuld>,
     ) -> Result<Response<TransactionsToSign>, Status> {
         let transactions_req = request.into_inner().transactions;
-        let mut tasks: Vec<tokio::task::JoinHandle<Result<Vec<String>, Status>>> =
-            Vec::with_capacity(transactions_req.len());
+        let mut tasks = Vec::with_capacity(transactions_req.len());
+
+        let user_pk = transactions_req
+            .first()
+            .ok_or_else(|| Status::invalid_argument("No transactions provided"))?
+            .user_pk
+            .clone();
+
+        let (tip_tx_str, jito_tip_lamports, tip_fee) = self
+            .trader
+            .build_tip_transaction(&user_pk)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        let tip_tx = BuiltTransaction {
+            id: "jito-tip".to_string(),
+            transaction_base64: tip_tx_str,
+        };
 
         for transaction in transactions_req {
             let trader = self.trader.clone();
@@ -60,31 +79,43 @@ impl BundleService for TransactionService {
                         Status::internal("Failed to get a quote for one of the transactions.")
                     })?;
 
-                let transactions = trader
+                let id = transaction.id.clone();
+                let tx_res = trader
                     .create_transactions(&transaction.user_pk, quote, &block_hash)
                     .await
-                    .map_err(|e| {
-                        tracing::error!("Failed to create transaction: {:?}", e);
-                        Status::internal("Failed to create a transaction from the quote.")
-                    })?;
-                Ok(transactions)
+                    .map_err(|e| Status::internal(e.to_string()));
+
+                tx_res.map(|(swap_tx_str, swap_fee, mut delta)| {
+                    delta.id = id.clone();
+                    let built_tx = BuiltTransaction {
+                        id,
+                        transaction_base64: swap_tx_str,
+                    };
+                    (built_tx, swap_fee, delta)
+                })
             }));
         }
         let results = join_all(tasks).await;
 
-        let mut transactions_to_sign = Vec::new();
+        let mut all_transactions = vec![];
+        let mut all_deltas = Vec::new();
+        let mut total_swap_fees: u64 = 0;
 
         for result in results {
             match result {
-                Ok(transaction_result) => match transaction_result {
-                    Ok(transactions) => {
-                        transactions_to_sign.extend(transactions);
-                    }
-                    Err(status) => {
-                        tracing::error!("A sub-task failed with status: {}", status.message());
-                        return Err(status);
-                    }
-                },
+                Ok(Ok((built_tx, swap_fee, delta))) => {
+                    all_transactions.push(built_tx);
+                    total_swap_fees += swap_fee;
+                    all_deltas.push(delta);
+                }
+
+                Ok(Err(e)) => {
+                    tracing::error!("A task panicked: {:?}", e);
+                    return Err(Status::internal(
+                        "A critical error occurred while processing transactions.",
+                    ));
+                }
+
                 Err(e) => {
                     tracing::error!("A task panicked: {:?}", e);
                     return Err(Status::internal(
@@ -94,8 +125,17 @@ impl BundleService for TransactionService {
             }
         }
 
+        all_transactions.push(tip_tx);
+
+        let total_network_fee = tip_fee + total_swap_fees;
+
         Ok(Response::new(TransactionsToSign {
-            transactions: transactions_to_sign,
+            transactions: all_transactions,
+            delta: Some(BundleDelta {
+                swaps: all_deltas,
+                jito_tip_lamports,
+                total_network_fee_lamports: total_network_fee,
+            }),
         }))
     }
 

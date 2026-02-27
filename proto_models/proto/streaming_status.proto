@@ -3,13 +3,12 @@ syntax = "proto3";
 package streaming;
 
 service BundleService {
-    // rpc GetStatusesStream (AddBundlesRequest) returns (stream UserBundleUpdate) {};
-    // rpc CoinsInformation (Empty) returns (stream CoinsData) {};
-    // rpc UserPubK (UserPk) returns (Response);
-    rpc CreateTransactions (TransactionsBuld) returns (TransactionsToSign) {};
-    rpc SendTransactions (SignedTransactions) returns (stream UserBundleUpdate) {};
+  // rpc GetStatusesStream (AddBundlesRequest) returns (stream UserBundleUpdate) {};
+  // rpc CoinsInformation (Empty) returns (stream CoinsData) {};
+  // rpc UserPubK (UserPk) returns (Response);
+  rpc CreateTransactions(TransactionsBuld) returns (TransactionsToSign) {}
+  rpc SendTransactions(SignedTransactions) returns (stream UserBundleUpdate) {}
 }
-
 
 // pub struct WebTakeQoute {
 //     pub input_mint: String,
@@ -20,63 +19,88 @@ service BundleService {
 // }
 
 message SignedTransactions {
-    repeated string transactions = 1;
-    string user_pk = 2;
+  repeated string transactions = 1;
+  string user_pk = 2;
+}
+
+message BuiltTransaction {
+  string id = 1;
+  string transaction_base64 = 2;
 }
 
 message TransactionsToSign {
-    repeated string transactions = 1;
+  repeated BuiltTransaction transactions = 1;
+  BundleDelta delta = 2;
+}
+
+message BundleDelta {
+  repeated TransactionDelta swaps = 1;
+  uint64 jito_tip_lamports = 2;
+  uint64 total_network_fee_lamports = 3;
 }
 
 message TransactionsBuld {
-    repeated TrasnactionInstruction transactions = 1;
+  repeated TrasnactionInstruction transactions = 1;
+}
+
+message TransactionDelta {
+  string input_mint = 1;
+  uint64 input_amount = 2;
+  string output_mint = 3;
+  uint64 expected_output = 4;
+  uint64 minimum_output = 5;
+  uint64 jito_tip_lamports = 6;
+  uint64 network_fee_lamports = 7;
+  uint32 platform_fee_bps = 8;
+  string id = 9;
 }
 
 message TrasnactionInstruction {
-    string input_mint = 1;
-    string output_mint = 2;
-    uint64 amount = 3;
-    uint32 slippage_bps = 4;
-    QuoteOptions options = 5;
-    string user_pk = 6;
+  string input_mint = 1;
+  string output_mint = 2;
+  uint64 amount = 3;
+  uint32 slippage_bps = 4;
+  QuoteOptions options = 5;
+  string user_pk = 6;
+  string id = 7;
 }
 
 message QuoteOptions {
-    optional uint32 swap_mode = 1;
-    repeated string dexes = 2;
-    repeated string exclude_dexes = 3; 
-    optional bool dynamic_slippage = 4;
+  optional uint32 swap_mode = 1;
+  repeated string dexes = 2;
+  repeated string exclude_dexes = 3;
+  optional bool dynamic_slippage = 4;
 }
 
 message Empty {}
 
 message CoinsData {
-    string price = 1;
-    string change_percent = 2;
-    string image_url = 3;
-    optional uint32 rank = 4;
-    string coin_name = 5;
+  string price = 1;
+  string change_percent = 2;
+  string image_url = 3;
+  optional uint32 rank = 4;
+  string coin_name = 5;
 }
 
 message AddBundlesRequest {
-    repeated string bundle_ids = 1;
-    string user_id = 2;
+  repeated string bundle_ids = 1;
+  string user_id = 2;
 }
 
 message UserBundleUpdate {
-    string bundle_id = 1;
-    string old_status = 2;
-    BundleStage new_status = 3;
-    uint64 timestamp = 4;
-    optional uint64 slot = 5;
+  string bundle_id = 1;
+  string old_status = 2;
+  BundleStage new_status = 3;
+  uint64 timestamp = 4;
+  optional uint64 slot = 5;
 }
 
 enum BundleStage {
-  BUNDLE_STAGE_UNSPECIFIED = 0;  
-  BUNDLE_STAGE_SUBMITTED = 1;    
-  BUNDLE_STAGE_IN_FLIGHT = 2;    
-  BUNDLE_STAGE_LANDED = 3;       
-  BUNDLE_STAGE_CONFIRMED = 4;    
-  BUNDLE_STAGE_FINALIZED = 5;    
-  BUNDLE_STAGE_FAILED = 6;       
+  BUNDLE_STAGE_UNSPECIFIED = 0;
+  BUNDLE_STAGE_SUBMITTED = 1;
+  BUNDLE_STAGE_IN_FLIGHT = 2;
+  BUNDLE_STAGE_LANDED = 3;
+  BUNDLE_STAGE_CONFIRMED = 4;
+  BUNDLE_STAGE_FINALIZED = 5;
+  BUNDLE_STAGE_FAILED = 6;
 }

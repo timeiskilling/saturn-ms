@@ -1,4 +1,5 @@
 use crate::bundle_client::UserStreamNotificationSystem;
+use crate::constant::JITO_TIP_STR;
 use crate::reqwest_client::JupiterProvider;
 use crate::transactions_builder::solana::instruction_parser::JupiterSolanaParser;
 use crate::transactions_builder::solana::transaction_builder::SolanaTransactionsBuilder;
@@ -8,12 +9,14 @@ use common::traits::TransactionBuilder;
 use config::Config;
 use core::str;
 use dashmap::DashMap;
+use proto_models::grpc::TransactionDelta;
+
 use jupiter_trader_data::models::jupiter_models::{
     JupiterQuoteResponse, JupiterSwapInstructionsRsponse, QuoteOptions,
 };
 use redis::AsyncCommands;
 use saturn_errors::error::{
-    BuildTransactionError, JitoEndpointErr, SaturnTransactionsServiceError,
+    BuildTransactionError, JitoEndpointErr, SaturnTransactionsServiceError, ValidationError,
 };
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::commitment_config::CommitmentConfig;
@@ -117,7 +120,7 @@ impl JupiterTrader {
         swap_response: JupiterSwapInstructionsRsponse,
         blockhash: Hash,
         pubkey: &Pubkey,
-    ) -> Result<String, SaturnTransactionsServiceError> {
+    ) -> Result<(String, u64), SaturnTransactionsServiceError> {
         self.transaction_builder
             .build_transaction(swap_response, (blockhash, *pubkey))
             .await
@@ -129,20 +132,7 @@ impl JupiterTrader {
         pubkey: &str,
         quote: JupiterQuoteResponse,
         blockhash: &BlockhashCache,
-    ) -> Result<Vec<String>, SaturnTransactionsServiceError> {
-        let mut transactions: Vec<String> = Vec::with_capacity(6);
-
-        // Optimization: Use constant tip address
-        const JITO_TIP_STR: &str = "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5";
-        let jito_tip_acc = Pubkey::from_str(JITO_TIP_STR).map_err(|e| {
-            SaturnTransactionsServiceError::BuildTransaction(Box::new(
-                BuildTransactionError::IvalidPubkey {
-                    pubkey: JITO_TIP_STR.as_bytes().to_vec(),
-                    issue: e.to_string(),
-                },
-            ))
-        })?;
-
+    ) -> Result<(String, u64, TransactionDelta), SaturnTransactionsServiceError> {
         let user_pubkey = Pubkey::from_str(pubkey).map_err(|e| {
             SaturnTransactionsServiceError::BuildTransaction(Box::new(
                 BuildTransactionError::IvalidPubkey {
@@ -152,36 +142,109 @@ impl JupiterTrader {
             ))
         })?;
 
-        let data = *self.tip_cache.read().await;
-        let tip_instruction = transfer(
-            &user_pubkey,
-            &jito_tip_acc,
-            data.unwrap_or(MIN_JITO_TIP_LAMPORTS as f64) as u64,
-        );
+        let blockhash = blockhash.get().await.blockhash;
 
-        let tip_transaction = Transaction::new_with_payer(&[tip_instruction], Some(&user_pubkey));
+        let delta = self.build_delta(&quote, 0, 0)?;
 
-        let tip_encoded = bs58::encode(bincode::serialize(&tip_transaction).map_err(|e| {
+        let (swap_transaction, swap_fee) = self
+            .create_swap_transaction(quote, blockhash, &user_pubkey)
+            .await?;
+
+        Ok((swap_transaction, swap_fee, delta))
+    }
+
+    pub async fn build_tip_transaction(
+        &self,
+        pubkey: &str,
+    ) -> Result<(String, u64, u64), SaturnTransactionsServiceError> {
+        let user_pubkey = Pubkey::from_str(pubkey).map_err(|e| {
+            SaturnTransactionsServiceError::BuildTransaction(Box::new(
+                BuildTransactionError::IvalidPubkey {
+                    pubkey: pubkey.as_bytes().to_vec(),
+                    issue: e.to_string(),
+                },
+            ))
+        })?;
+
+        let jito_tip_lamports = self
+            .tip_cache
+            .read()
+            .await
+            .unwrap_or(MIN_JITO_TIP_LAMPORTS as f64) as u64;
+
+        let jito_tip_acc = Pubkey::from_str(JITO_TIP_STR).map_err(|e| {
+            SaturnTransactionsServiceError::BuildTransaction(Box::new(
+                BuildTransactionError::IvalidPubkey {
+                    pubkey: JITO_TIP_STR.as_bytes().to_vec(),
+                    issue: e.to_string(),
+                },
+            ))
+        })?;
+        let tip_ix = transfer(&user_pubkey, &jito_tip_acc, jito_tip_lamports);
+
+        let tip_tx = Transaction::new_with_payer(&[tip_ix], Some(&user_pubkey));
+
+        let tip_fee = self
+            .client
+            .get_fee_for_message(&tip_tx.message)
+            .await
+            .map_err(|err| {
+                SaturnTransactionsServiceError::Rpc(
+                    saturn_errors::error::RpcError::InvalidResponse {
+                        expected: "Expected tip fee".to_string(),
+                        got: err.to_string(),
+                    },
+                )
+            })?;
+
+        let encoded = bs58::encode(bincode::serialize(&tip_tx).map_err(|e| {
             SaturnTransactionsServiceError::BuildTransaction(Box::new(
                 BuildTransactionError::BincodeTransactionSerializetion {
-                    data: tip_transaction,
+                    data: tip_tx,
                     issue: e.to_string(),
                 },
             ))
         })?)
         .into_string();
 
-        transactions.push(tip_encoded);
+        Ok((encoded, jito_tip_lamports, tip_fee))
+    }
 
-        let blockhash = blockhash.get().await.blockhash;
+    pub fn build_delta(
+        &self,
+        quote: &JupiterQuoteResponse,
+        jito_tip_lamports: u64,
+        network_tips: u64,
+    ) -> Result<TransactionDelta, SaturnTransactionsServiceError> {
+        let delta = TransactionDelta {
+            id: String::new(),
+            input_mint: quote.input_mint.to_string(),
+            input_amount: quote.in_amount.parse().map_err(|_| {
+                SaturnTransactionsServiceError::Validation(ValidationError::InvalidAmount {
+                    value: quote.in_amount.clone(),
+                    reason: "Invalid Parisng in_amount".to_string(),
+                })
+            })?,
+            output_mint: quote.output_mint.to_string(),
+            expected_output: quote.out_amount.parse().map_err(|_| {
+                SaturnTransactionsServiceError::Validation(ValidationError::InvalidAmount {
+                    value: quote.out_amount.clone(),
+                    reason: "Invalid Parisng out_amount".to_string(),
+                })
+            })?,
+            minimum_output: quote.other_amount_threshold.parse().map_err(|_| {
+                SaturnTransactionsServiceError::Validation(ValidationError::InvalidAmount {
+                    value: quote.other_amount_threshold.clone(),
+                    reason: "Invalid Parisng other_amount_threshold".to_string(),
+                })
+            })?,
+            jito_tip_lamports,
 
-        let swap_transaction = self
-            .create_swap_transaction(quote, blockhash, &user_pubkey)
-            .await?;
+            network_fee_lamports: network_tips,
+            platform_fee_bps: 20,
+        };
 
-        transactions.push(swap_transaction);
-
-        Ok(transactions)
+        Ok(delta)
     }
 
     async fn queue_bundle_for_tracking(&self, bundle_id: &str) -> Result<(), redis::RedisError> {
@@ -191,53 +254,31 @@ impl JupiterTrader {
 
     pub async fn send_transactions(
         &self,
-        transaction: Vec<String>,
+        transactions: Vec<String>,
         user_pbk: &str,
     ) -> Result<String, SaturnTransactionsServiceError> {
-        tracing::info!("Prepearung sending transactions");
-        // let transactions = json!(transaction);
-        // let params = json!([
-        //     transactions,
-        //     { "encoding": "base64" }
-        // ]);
-        let params = json!([transaction]);
+        tracing::info!("Preparing sending transactions");
+        let params = json!([
+            transactions,
+            { "encoding": "base64" }
+        ]);
 
-        let mut bundle_result = None;
-
-        match self
-            .jito_manager
-            .send_bundle(Some(params.clone()), None)
-            .await
-        {
+        match self.jito_manager.send_bundle(Some(params), None).await {
             Ok(response) => {
-                if response.get("error").is_some() {
-                    tracing::error!(
-                        "Jito returned an error in the response body: {:?}",
-                        response
-                    );
-                } else {
-                    tracing::info!("Bundle submitted successfully!");
-                    bundle_result = Some(response);
+                if let Some(error) = response.get("error") {
+                    let error_msg =
+                        format!("Jito returned an error in the response body: {:?}", error);
+                    tracing::error!("{}", error_msg);
+                    return Err(SaturnTransactionsServiceError::Jito(
+                        JitoEndpointErr::JitoErrResponse {
+                            response: error_msg,
+                        },
+                    ));
                 }
-            }
-            Err(e) => {
-                if e.to_string().contains("429 Too Many Requests") {
-                    tracing::warn!("Rate limited. Retrying in ...")
-                } else {
-                    tracing::error!("Failed to send bundle with non-retriable error: {}", e);
-                    return Err(SaturnTransactionsServiceError::Rpc(e));
-                }
-            }
-        }
 
-        // tokio::time::sleep(Duration::from_secs(10)).await;
-        let bundle_result = bundle_result.ok_or("Invalid request");
+                tracing::info!("Full Jito response: {:?}", response);
 
-        match bundle_result {
-            Ok(response_json) => {
-                tracing::info!("Full Jito response: {:?}", response_json);
-
-                match response_json["result"].as_str() {
+                match response["result"].as_str() {
                     Some(bundle_uuid) => {
                         tracing::info!("Bundle sent successfully with UUID: {}", bundle_uuid);
 
@@ -247,39 +288,31 @@ impl JupiterTrader {
                         if let Err(e) = self.queue_bundle_for_tracking(bundle_uuid).await {
                             tracing::error!("Failed to queue bundle {}: {}", bundle_uuid, e);
                         }
+
                         Ok(bundle_uuid.to_string())
                     }
                     None => {
-                        if let Some(error) = response_json["error"].as_object() {
-                            let error_msg = format!("Jito error: {:?}", error);
-                            tracing::error!("{}", error_msg);
-                            Err(SaturnTransactionsServiceError::Jito(
-                                JitoEndpointErr::JitoErrResponse {
-                                    response: error_msg,
-                                },
-                            ))
-                        } else {
-                            let error_msg = format!(
-                                "Failed to get bundle UUID from response JSON: {:?}",
-                                response_json
-                            );
-                            tracing::error!("{}", error_msg);
-                            Err(SaturnTransactionsServiceError::Jito(
-                                JitoEndpointErr::JitoErrResponse {
-                                    response: error_msg,
-                                },
-                            ))
-                        }
+                        let error_msg = format!(
+                            "Failed to get bundle UUID from response JSON: {:?}",
+                            response
+                        );
+                        tracing::error!("{}", error_msg);
+                        Err(SaturnTransactionsServiceError::Jito(
+                            JitoEndpointErr::JitoErrResponse {
+                                response: error_msg,
+                            },
+                        ))
                     }
                 }
             }
-            Err(_) => {
-                tracing::error!("Failed to send bundle");
-                Err(SaturnTransactionsServiceError::Jito(
-                    JitoEndpointErr::JitoErrResponse {
-                        response: "Failed to send bundle".to_string(),
-                    },
-                ))
+            Err(e) => {
+                if e.to_string().contains("429 Too Many Requests") {
+                    tracing::warn!("Rate limited. Retrying in ...");
+                    Err(SaturnTransactionsServiceError::Rpc(e))
+                } else {
+                    tracing::error!("Failed to send bundle with non-retriable error: {}", e);
+                    Err(SaturnTransactionsServiceError::Rpc(e))
+                }
             }
         }
     }
@@ -290,7 +323,7 @@ impl JupiterTrader {
         quote: JupiterQuoteResponse,
         blockhash: solana_sdk::hash::Hash,
         pubkey: &Pubkey,
-    ) -> Result<String, SaturnTransactionsServiceError> {
+    ) -> Result<(String, u64), SaturnTransactionsServiceError> {
         let swap_instructions = self
             .http_client
             .create_swap_transaction(quote, pubkey)
@@ -385,7 +418,7 @@ impl JupiterTrader {
             .create_swap_transaction(quote, blockhash, &user_pubkey)
             .await?;
 
-        transactions.push(swap_transaction);
+        transactions.push(swap_transaction.0);
 
         Ok(transactions)
     }

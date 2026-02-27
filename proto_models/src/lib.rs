@@ -2,7 +2,6 @@ pub mod grpc {
     tonic::include_proto!("streaming");
 }
 
-
 // use std::future::Future;
 // use std::net::SocketAddr;
 // use std::pin::Pin;

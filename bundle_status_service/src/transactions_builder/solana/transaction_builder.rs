@@ -235,7 +235,7 @@ where
         + Send
         + Sync,
 {
-    type Output = String;
+    type Output = (String, u64);
     type Error = SaturnTransactionsServiceError;
 
     async fn build_transaction(
@@ -272,6 +272,19 @@ where
             )
             .await?;
 
+        let tips = self
+            .rpc_client
+            .get_fee_for_message(&message)
+            .await
+            .map_err(|err| {
+                SaturnTransactionsServiceError::Rpc(
+                    saturn_errors::error::RpcError::InvalidResponse {
+                        expected: "Expected tip fee".to_string(),
+                        got: err.to_string(),
+                    },
+                )
+            })?;
+
         let versioned_message = VersionedMessage::V0(message);
 
         let num_required = match &versioned_message {
@@ -294,6 +307,6 @@ where
         })?;
         let base58_tx = bs58::encode(serialized_tx).into_string();
 
-        Ok(base58_tx)
+        Ok((base58_tx, tips))
     }
 }

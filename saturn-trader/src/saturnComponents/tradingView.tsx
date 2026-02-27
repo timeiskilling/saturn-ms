@@ -25,7 +25,7 @@ export function TradingViewWidget() {
       locale: "en",
       save_image: true,
       style: "1",
-      symbol: "BITSTAMP:BTCUSD",
+      symbol: "COINBASE:SOLUSD",
       theme: "dark",
       timezone: "Etc/UTC",
       backgroundColor: "#0F0F0F",
@@ -51,14 +51,10 @@ export function TradingViewWidget() {
 
   return (
     <div
-      className="tradingview-widget-container"
+      className="tradingview-widget-container relative h-full w-full"
       ref={container}
-      style={{ height: "100%", width: "100%" }}
     >
-      <div
-        className="tradingview-widget-container__widget"
-        style={{ height: "100%", width: "100%" }}
-      />
+      <div className="tradingview-widget-container__widget absolute inset-0" />
     </div>
   );
 }
