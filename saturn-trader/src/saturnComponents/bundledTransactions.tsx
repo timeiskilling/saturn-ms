@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Plus, Trash2, Save, Layers, CircleDashed, Rocket } from "lucide-react";
 import { TemplateSidebar } from "./bundledTransactions/TemplateSidebar";
 import { TransactionItem } from "./bundledTransactions/TransactionItem";
@@ -19,7 +19,6 @@ export function BundledTransactions() {
   const activeTemplate =
     templates.find((t) => t.id === activeTemplateId) || templates[0] || null;
 
-  // --- UI Handlers ---
   const handleAddTemplate = () => {
     const newTemplate: Template = {
       id: `t_${Date.now()}`,

@@ -1,11 +1,8 @@
 import React from "react";
 import { ArrowRight, Zap, Trash2 } from "lucide-react";
 import { BasicCard } from "../card";
-import {
-  POPULAR_TOKENS,
-  type TransactionInstruction,
-  type QuoteOptions,
-} from "./types";
+import { type TransactionInstruction, type QuoteOptions } from "./types";
+import { TokenSelect } from "./TokenSelect";
 
 interface TransactionItemProps {
   tx: TransactionInstruction;
@@ -43,7 +40,7 @@ export function TransactionItem({
       </div>
 
       {/* Transaction Card */}
-      <BasicCard className="flex-1 bg-zinc-900/80 border-zinc-800 hover:border-zinc-700 transition-colors shadow-lg shadow-black/20 group-hover:shadow-black/40 overflow-hidden">
+      <BasicCard className="flex-1 bg-zinc-900/80 border-zinc-800 hover:border-zinc-700 transition-colors shadow-lg shadow-black/20 group-hover:shadow-black/40 overflow-visible">
         <div className="p-5">
           {/* Top Row: Mints */}
           <div className="flex items-center gap-4 mb-5">
@@ -51,20 +48,11 @@ export function TransactionItem({
               <label className="block text-xs font-medium text-zinc-500 mb-1.5">
                 Input Mint (From)
               </label>
-              <select
+              <TokenSelect
                 value={tx.inputMint}
-                onChange={(e) =>
-                  handleUpdateTx(tx.id, "inputMint", e.target.value)
-                }
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-zinc-100 outline-none focus:border-blue-500 transition-colors appearance-none cursor-pointer"
-              >
-                {POPULAR_TOKENS.map((t) => (
-                  <option key={t.mint} value={t.mint}>
-                    {t.symbol} - {t.mint.slice(0, 8)}...
-                  </option>
-                ))}
-                <option value="custom">Custom Address...</option>
-              </select>
+                onChange={(value) => handleUpdateTx(tx.id, "inputMint", value)}
+                isInput={true}
+              />
             </div>
 
             <div className="mt-6">
@@ -75,20 +63,10 @@ export function TransactionItem({
               <label className="block text-xs font-medium text-zinc-500 mb-1.5">
                 Output Mint (To)
               </label>
-              <select
+              <TokenSelect
                 value={tx.outputMint}
-                onChange={(e) =>
-                  handleUpdateTx(tx.id, "outputMint", e.target.value)
-                }
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-zinc-100 outline-none focus:border-blue-500 transition-colors appearance-none cursor-pointer"
-              >
-                {POPULAR_TOKENS.map((t) => (
-                  <option key={t.mint} value={t.mint}>
-                    {t.symbol} - {t.mint.slice(0, 8)}...
-                  </option>
-                ))}
-                <option value="custom">Custom Address...</option>
-              </select>
+                onChange={(value) => handleUpdateTx(tx.id, "outputMint", value)}
+              />
             </div>
           </div>
 
