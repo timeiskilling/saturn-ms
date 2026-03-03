@@ -110,7 +110,7 @@ export function BundledTransactions() {
   };
 
   return (
-    <div className="flex h-full w-full bg-zinc-950 text-zinc-200">
+    <div className="select-none flex h-full w-full bg-zinc-950 text-zinc-200">
       {/* Left Sidebar - Templates List */}
       <TemplateSidebar
         templates={templates}
@@ -140,8 +140,8 @@ export function BundledTransactions() {
         ) : (
           <>
             {/* Editor Header */}
-            <div className="px-8 py-5 border-b border-zinc-800 flex items-center justify-between bg-zinc-950/50 backdrop-blur-sm shrink-0">
-              <div className="flex flex-col">
+            <div className="px-8 py-5 border-b border-zinc-800 flex flex-wrap items-center justify-between gap-4 bg-zinc-950/50 backdrop-blur-sm shrink-0">
+              <div className="flex flex-col min-w-60">
                 <input
                   value={activeTemplate.name}
                   onChange={(e) =>
@@ -158,7 +158,7 @@ export function BundledTransactions() {
                   atomically.
                 </p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <button
                   onClick={() => handleDeleteTemplate(activeTemplate.id)}
                   className="flex items-center gap-2 px-3 py-2 bg-zinc-900 hover:bg-red-500/10 border border-zinc-800 hover:border-red-500/30 text-zinc-400 hover:text-red-400 rounded-lg text-sm font-medium transition-colors"

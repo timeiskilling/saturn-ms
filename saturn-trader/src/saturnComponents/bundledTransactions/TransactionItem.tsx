@@ -43,8 +43,8 @@ export function TransactionItem({
       <BasicCard className="flex-1 bg-zinc-900/80 border-zinc-800 hover:border-zinc-700 transition-colors shadow-lg shadow-black/20 group-hover:shadow-black/40 overflow-visible">
         <div className="p-5">
           {/* Top Row: Mints */}
-          <div className="flex items-center gap-4 mb-5">
-            <div className="flex-1">
+          <div className="flex flex-wrap items-center gap-4 mb-5">
+            <div className="flex-1 min-w-60">
               <label className="block text-xs font-medium text-zinc-500 mb-1.5">
                 Input Mint (From)
               </label>
@@ -55,11 +55,11 @@ export function TransactionItem({
               />
             </div>
 
-            <div className="mt-6">
+            <div className="mt-6 shrink-0 hidden sm:block">
               <ArrowRight className="w-5 h-5 text-zinc-600" />
             </div>
 
-            <div className="flex-1">
+            <div className="flex-1 min-w-60">
               <label className="block text-xs font-medium text-zinc-500 mb-1.5">
                 Output Mint (To)
               </label>
@@ -71,8 +71,8 @@ export function TransactionItem({
           </div>
 
           {/* Bottom Row: Details */}
-          <div className="flex items-end gap-4 bg-zinc-950/50 p-4 rounded-xl border border-zinc-800/50">
-            <div className="flex-1">
+          <div className="flex flex-wrap items-end gap-4 bg-zinc-950/50 p-4 rounded-xl border border-zinc-800/50">
+            <div className="flex-1 min-w-37.5">
               <label className="block text-xs font-medium text-zinc-500 mb-1.5">
                 Amount (Raw Units)
               </label>
@@ -92,7 +92,7 @@ export function TransactionItem({
               />
             </div>
 
-            <div className="w-32">
+            <div className="w-32 shrink-0">
               <label
                 className={`block text-xs font-medium mb-1.5 transition-colors ${
                   tx.options?.dynamicSlippage
@@ -137,7 +137,7 @@ export function TransactionItem({
             </div>
 
             <div
-              className="flex items-center gap-2 h-9.5 px-3 bg-zinc-900 border border-zinc-800 rounded-lg cursor-pointer hover:bg-zinc-800 transition-colors"
+              className="flex shrink-0 items-center gap-2 h-9.5 px-3 bg-zinc-900 border border-zinc-800 rounded-lg cursor-pointer hover:bg-zinc-800 transition-colors"
               onClick={() =>
                 handleUpdateOptions(
                   tx.id,
@@ -164,7 +164,7 @@ export function TransactionItem({
 
             <button
               onClick={() => handleRemoveTx(tx.id)}
-              className="h-9.5 px-3 flex items-center justify-center text-zinc-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors ml-auto"
+              className="h-9.5 px-3 flex shrink-0 items-center justify-center text-zinc-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors ml-auto"
               title="Remove Transaction"
             >
               <Trash2 className="w-4 h-4" />
