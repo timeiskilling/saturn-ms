@@ -1,8 +1,35 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { ArrowRight, Zap, Trash2 } from "lucide-react";
 import { BasicCard } from "../card";
-import { type TransactionInstruction, type QuoteOptions } from "./types";
+import {
+  type TransactionInstruction,
+  type QuoteOptions,
+  POPULAR_TOKENS,
+} from "./types";
 import { TokenSelect } from "./TokenSelect";
+import { useTokenAccounts } from "@/hooks/useTokenAccounts";
+
+function formatDecimalInput(value: string, maxDecimals: number): string {
+  let val = value.replace(/[^0-9.,]/g, "").replace(/,/g, ".");
+  let parts = val.split(".");
+  if (parts.length > 2) {
+    const intPart = parts[0] ?? "0";
+    val = intPart + "." + parts.slice(1).join("");
+    parts = val.split(".");
+  }
+  if (parts.length === 2) {
+    const integerPart = parts[0] === "" ? "0" : (parts[0] ?? "0");
+    const fractionalPart = parts[1] ?? "";
+    if (maxDecimals === 0) {
+      val = integerPart;
+    } else if (fractionalPart.length > maxDecimals) {
+      val = integerPart + "." + fractionalPart.slice(0, maxDecimals);
+    } else if (parts[0] === "") {
+      val = "0." + fractionalPart;
+    }
+  }
+  return val;
+}
 
 interface TransactionItemProps {
   tx: TransactionInstruction;
@@ -29,6 +56,26 @@ export function TransactionItem({
   handleUpdateOptions,
   handleRemoveTx,
 }: TransactionItemProps) {
+  const { tokens: ownedTokens } = useTokenAccounts();
+  const maxDecimals =
+    POPULAR_TOKENS.find((t) => t.mint === tx.inputMint)?.decimals ??
+    ownedTokens?.find((t) => t.mint === tx.inputMint)?.decimals ??
+    9;
+
+  const [slippageStr, setSlippageStr] = useState(
+    (tx.slippageBps / 100).toString(),
+  );
+
+  useEffect(() => {
+    setSlippageStr((prev) => {
+      const parsed = parseFloat(prev) || 0;
+      if (Math.round(parsed * 100) !== tx.slippageBps) {
+        return (tx.slippageBps / 100).toString();
+      }
+      return prev;
+    });
+  }, [tx.slippageBps]);
+
   return (
     <div className="relative flex group">
       {/* Step Number Line */}
@@ -74,21 +121,18 @@ export function TransactionItem({
           <div className="flex flex-wrap items-end gap-4 bg-zinc-950/50 p-4 rounded-xl border border-zinc-800/50">
             <div className="flex-1 min-w-37.5">
               <label className="block text-xs font-medium text-zinc-500 mb-1.5">
-                Amount (Raw Units)
+                Amount
               </label>
               <input
                 type="text"
-                inputMode="numeric"
+                inputMode="decimal"
                 value={tx.amount}
-                onChange={(e) =>
-                  handleUpdateTx(
-                    tx.id,
-                    "amount",
-                    e.target.value.replace(/[^0-9]/g, ""),
-                  )
-                }
+                onChange={(e) => {
+                  const val = formatDecimalInput(e.target.value, maxDecimals);
+                  handleUpdateTx(tx.id, "amount", val);
+                }}
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-100 outline-none focus:border-blue-500 transition-colors font-mono"
-                placeholder="e.g. 1000000"
+                placeholder="e.g. 1.25"
               />
             </div>
 
@@ -100,29 +144,30 @@ export function TransactionItem({
                     : "text-zinc-500"
                 }`}
               >
-                Slippage (BPS)
+                Slippage (%)
               </label>
               <div className="relative">
                 <input
                   type="text"
-                  inputMode="numeric"
+                  inputMode="decimal"
                   disabled={!!tx.options?.dynamicSlippage}
-                  value={
-                    tx.options?.dynamicSlippage ? "" : String(tx.slippageBps)
-                  }
-                  onChange={(e) =>
+                  value={tx.options?.dynamicSlippage ? "" : slippageStr}
+                  onChange={(e) => {
+                    const val = formatDecimalInput(e.target.value, 2);
+                    setSlippageStr(val);
+                    const parsed = parseFloat(val);
                     handleUpdateTx(
                       tx.id,
                       "slippageBps",
-                      parseInt(e.target.value.replace(/[^0-9]/g, ""), 10) || 0,
-                    )
-                  }
+                      !isNaN(parsed) ? Math.round(parsed * 100) : 0,
+                    );
+                  }}
                   className={`w-full border rounded-lg pl-3 pr-8 py-2 text-sm outline-none transition-colors font-mono ${
                     tx.options?.dynamicSlippage
                       ? "bg-zinc-950/50 border-zinc-800/50 text-zinc-600 cursor-not-allowed"
                       : "bg-zinc-900 border-zinc-800 text-zinc-100 focus:border-blue-500"
                   }`}
-                  placeholder={tx.options?.dynamicSlippage ? "Auto" : "0"}
+                  placeholder={tx.options?.dynamicSlippage ? "Auto" : "0.5"}
                 />
                 <span
                   className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs transition-colors ${
