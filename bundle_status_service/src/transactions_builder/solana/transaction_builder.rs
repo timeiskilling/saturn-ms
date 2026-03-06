@@ -274,7 +274,7 @@ where
 
         let tips = self
             .rpc_client
-            .get_fee_for_message(&message)
+            .get_fee_for_message(&crate::msg_wrapper::MsgWrapper(&message))
             .await
             .map_err(|err| {
                 SaturnTransactionsServiceError::Rpc(
@@ -288,9 +288,10 @@ where
         let versioned_message = VersionedMessage::V0(message);
 
         let num_required = match &versioned_message {
-            VersionedMessage::Legacy(m) => m.header.num_required_signatures as usize,
-            VersionedMessage::V0(m) => m.header.num_required_signatures as usize,
-        };
+            VersionedMessage::Legacy(m) => m.header.num_required_signatures,
+            VersionedMessage::V0(m) => m.header.num_required_signatures,
+            VersionedMessage::V1(m) => m.header.num_required_signatures,
+        } as usize;
 
         let transaction = VersionedTransaction {
             signatures: vec![Signature::default(); num_required],

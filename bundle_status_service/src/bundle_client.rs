@@ -180,7 +180,7 @@ impl UserStreamNotificationSystem {
             }
         }
     }
-    
+
     pub fn register_user_bundle(&self, user_id: &str, bundle_id: &str) {
         self.bundle_ownership
             .insert(bundle_id.to_string(), user_id.to_string());

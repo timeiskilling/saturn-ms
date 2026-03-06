@@ -4,7 +4,7 @@ use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::hash::Hash;
 use tokio::sync::RwLock;
 
-const DELAY_UPDATE_BLOCKHASH : u64 = 10;
+const DELAY_UPDATE_BLOCKHASH: u64 = 10;
 
 #[derive(Default, Clone)]
 pub struct CashedBlockHash {

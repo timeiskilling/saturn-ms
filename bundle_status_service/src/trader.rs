@@ -19,8 +19,8 @@ use saturn_errors::error::{
     BuildTransactionError, JitoEndpointErr, SaturnTransactionsServiceError, ValidationError,
 };
 use solana_client::nonblocking::rpc_client::RpcClient;
-use solana_sdk::commitment_config::CommitmentConfig;
-use solana_sdk::system_instruction::transfer;
+use solana_commitment_config::CommitmentConfig;
+use solana_system_interface::instruction::transfer;
 
 use crate::prelude::*;
 use crate::{blockhash_data::BlockhashCache, constant::MIN_JITO_TIP_LAMPORTS, redis_con};
@@ -186,7 +186,7 @@ impl JupiterTrader {
 
         let tip_fee = self
             .client
-            .get_fee_for_message(&tip_tx.message)
+            .get_fee_for_message(&crate::msg_wrapper::MsgWrapper(&tip_tx.message))
             .await
             .map_err(|err| {
                 SaturnTransactionsServiceError::Rpc(

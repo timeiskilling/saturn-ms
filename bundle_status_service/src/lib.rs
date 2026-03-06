@@ -2,6 +2,7 @@ pub mod blockhash_data;
 pub mod bundle_client;
 pub mod constant;
 pub mod custom_builder;
+pub mod msg_wrapper;
 pub mod prelude;
 pub mod proto_service;
 pub mod redis_con;
