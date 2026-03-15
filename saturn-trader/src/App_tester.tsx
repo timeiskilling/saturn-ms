@@ -12,8 +12,8 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState<"trading" | "bundles">("trading");
 
   return (
-    <div className="flex flex-col h-screen w-full overflow-x-auto overflow-y-hidden">
-      <div className="flex flex-col `min-w-5xl h-full">
+    <div className="flex flex-col h-screen w-full overflow-x-auto overflow-y-hidden bg-zinc-950">
+      <div className="flex flex-col w-full h-full min-w-5xl">
         <div className="shrink-0 flex items-center justify-between border-b border-zinc-800 bg-zinc-950 pr-4">
           <BasicCard
             title="Saturn Trader"
@@ -43,20 +43,31 @@ function AppContent() {
           </div>
         </div>
 
-        <div className="flex flex-1 overflow-hidden">
-          {activeTab === "trading" && <WalletSidebar />}
-
-          <div className="flex flex-1 flex-col overflow-hidden w-full bg-zinc-950">
-            {activeTab === "trading" ? (
-              <>
+        <div className="flex flex-1 overflow-hidden relative w-full">
+          <div
+            className={`flex w-full h-full transition-transform duration-300 ease-in-out ${
+              activeTab === "trading" ? "translate-x-0" : "-translate-x-full"
+            }`}
+          >
+            {/* Terminal Page */}
+            <div className="flex w-full h-full shrink-0">
+              <div className="h-full shrink-0 z-10">
+                <WalletSidebar />
+              </div>
+              <div className="flex flex-1 flex-col overflow-hidden w-full bg-zinc-950">
                 <div className="flex-1 min-h-0 w-full h-full pr-3">
                   <TradingViewWidget />
                 </div>
                 <BottomPanel />
-              </>
-            ) : (
-              <BundledTransactions />
-            )}
+              </div>
+            </div>
+
+            {/* Bundles Page */}
+            <div className="flex w-full h-full shrink-0">
+              <div className="flex flex-1 flex-col overflow-hidden w-full bg-zinc-950">
+                <BundledTransactions />
+              </div>
+            </div>
           </div>
         </div>
       </div>

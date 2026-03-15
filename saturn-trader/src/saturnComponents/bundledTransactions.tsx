@@ -117,6 +117,7 @@ export function BundledTransactions() {
         activeTemplateId={activeTemplateId}
         setActiveTemplateId={setActiveTemplateId}
         handleAddTemplate={handleAddTemplate}
+        handleDeleteTemplate={handleDeleteTemplate}
       />
 
       {/* Main Content - Template Editor */}
@@ -159,21 +160,7 @@ export function BundledTransactions() {
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-3">
-                <button
-                  onClick={() => handleDeleteTemplate(activeTemplate.id)}
-                  className="flex items-center gap-2 px-3 py-2 bg-zinc-900 hover:bg-red-500/10 border border-zinc-800 hover:border-red-500/30 text-zinc-400 hover:text-red-400 rounded-lg text-sm font-medium transition-colors"
-                  title="Delete Template"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-                <button className="flex items-center gap-2 px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-lg text-sm font-medium transition-colors">
-                  <Save className="w-4 h-4 text-zinc-400" />
-                  Save Layout
-                </button>
-                <button className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-bold shadow-[0_0_15px_rgba(37,99,235,0.3)] transition-all hover:scale-105 active:scale-95">
-                  <Rocket className="w-4 h-4" />
-                  Execute Bundle
-                </button>
+                {/* TODO */}
               </div>
             </div>
 

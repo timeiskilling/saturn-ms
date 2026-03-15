@@ -153,9 +153,13 @@ export function TransactionItem({
                   disabled={!!tx.options?.dynamicSlippage}
                   value={tx.options?.dynamicSlippage ? "" : slippageStr}
                   onChange={(e) => {
-                    const val = formatDecimalInput(e.target.value, 2);
+                    let val = formatDecimalInput(e.target.value, 2);
+                    let parsed = parseFloat(val);
+                    if (!isNaN(parsed) && parsed > 100) {
+                      val = "100";
+                      parsed = 100;
+                    }
                     setSlippageStr(val);
-                    const parsed = parseFloat(val);
                     handleUpdateTx(
                       tx.id,
                       "slippageBps",

@@ -42,7 +42,6 @@ export function TokenSelect({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Format SOL as a token if we have balance
   const solToken = {
     mint: "So11111111111111111111111111111111111111112",
     symbol: "SOL",
@@ -50,7 +49,6 @@ export function TokenSelect({
     decimals: 9,
   };
 
-  // Combine owned tokens
   const allOwnedTokens = [
     ...(solBalance !== null && solBalance > 0 ? [solToken] : []),
     ...ownedTokens.map((t) => {

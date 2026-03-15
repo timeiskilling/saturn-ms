@@ -1,12 +1,14 @@
-import React from "react";
-import { Layers, Plus, ArrowRight } from "lucide-react";
+import React, { useState } from "react";
+import { Layers, Plus, ArrowRight, Play, Trash2 } from "lucide-react";
 import { type Template, POPULAR_TOKENS } from "./types";
+import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 
 interface TemplateSidebarProps {
   templates: Template[];
   activeTemplateId: string | null;
   setActiveTemplateId: (id: string) => void;
   handleAddTemplate: () => void;
+  handleDeleteTemplate?: (id: string) => void;
 }
 
 export function TemplateSidebar({
@@ -14,13 +16,18 @@ export function TemplateSidebar({
   activeTemplateId,
   setActiveTemplateId,
   handleAddTemplate,
+  handleDeleteTemplate,
 }: TemplateSidebarProps) {
+  const [templateToDelete, setTemplateToDelete] = useState<Template | null>(
+    null,
+  );
+
   const getTokenSymbol = (mint: string) => {
     return POPULAR_TOKENS.find((t) => t.mint === mint)?.symbol || "Custom";
   };
 
   return (
-    <div className="w-72 shrink-0 border-r border-zinc-800 bg-zinc-950 flex flex-col">
+    <div className="relative w-72 shrink-0 border-r border-zinc-800 bg-zinc-950 flex flex-col">
       <div className="p-4 border-b border-zinc-800 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Layers className="w-5 h-5 text-blue-500" />
@@ -35,6 +42,18 @@ export function TemplateSidebar({
         </button>
       </div>
 
+      <DeleteConfirmationModal
+        isOpen={!!templateToDelete}
+        onClose={() => setTemplateToDelete(null)}
+        onConfirm={() => {
+          if (templateToDelete && handleDeleteTemplate) {
+            handleDeleteTemplate(templateToDelete.id);
+          }
+        }}
+        title="Delete Template"
+        message={`Are you sure you want to delete "${templateToDelete?.name}"?`}
+      />
+
       <div className="flex-1 overflow-y-auto p-3 space-y-2">
         {templates.map((template) => (
           <div
@@ -46,14 +65,37 @@ export function TemplateSidebar({
                 : "bg-zinc-900/50 border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900"
             }`}
           >
-            <div className="flex justify-between items-start mb-1">
+            <div className="flex justify-between items-center mb-1">
               <h3 className="text-sm font-semibold text-zinc-100 truncate pr-2">
                 {template.name}
               </h3>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setTemplateToDelete(template);
+                  }}
+                  className="p-1.5 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-md transition-colors shrink-0"
+                  title="Delete Template"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // TODO: implement execution logic
+                    console.log(`Executing template ${template.id}`);
+                  }}
+                  className="p-1.5 text-blue-500 hover:bg-blue-500/10 rounded-md transition-colors shrink-0"
+                  title="Execute Bundle"
+                >
+                  <Play className="w-4 h-4 fill-current" />
+                </button>
+              </div>
             </div>
 
             {/* Visual mini-indicator of the bundle flow */}
-            <div className="flex items-center gap-1.5 mt-2 overflow-hidden">
+            <div className="flex items-center gap-1.5 mt-1 overflow-hidden">
               {template.transactions.length === 0 && (
                 <span className="text-xs text-zinc-600">Empty template</span>
               )}
