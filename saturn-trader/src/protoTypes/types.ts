@@ -7,7 +7,7 @@ export interface SignedTransactions {
 
 export interface BuiltTransaction {
   id: string;
-  transactionBase64: string;
+  transactionBase58: string;
 }
 
 export interface TransactionsToSign {

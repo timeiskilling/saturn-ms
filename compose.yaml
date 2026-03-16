@@ -5,21 +5,28 @@ services:
       - "6379:6379"
     volumes:
       - redis_main:/data
-      
+
   redis_jito:
     image: redis:7-alpine
     ports:
       - "6380:6379"
     volumes:
       - redis_jito:/data
-  
+
+  redis_notification:
+    image: redis:7-alpine
+    ports:
+      - "6381:6379"
+    volumes:
+      - redis_notification:/data
+
   redis_atl:
     image: redis:7-alpine
     ports:
       - "6382:6379"
     volumes:
       - redis_atl:/data
-      
+
   bundle_status_service:
     build:
       context: .
@@ -37,7 +44,7 @@ services:
       - JITO_TIP_REDIS_HOST=redis_jito
       - ATL_REDIS_HOST=redis_atl
       - RUST_BACKTRACE=1
-  
+
   jito_tip_service:
     build:
       context: .
@@ -49,15 +56,15 @@ services:
     environment:
       - REDIS_URL=redis://redis_jito:6379
       - RUST_BACKTRACE=1
-  
-  price_service:
-    build:
-      context: .
-      dockerfile: price_service/Dockerfile
-    env_file:
-      - .env
-    environment:
-      - RUST_BACKTRACE=1
+
+  # price_service:
+  #   build:
+  #     context: .
+  #     dockerfile: price_service/Dockerfile
+  #   env_file:
+  #     - .env
+  #   environment:
+  #     - RUST_BACKTRACE=1
 
 volumes:
   redis_main:

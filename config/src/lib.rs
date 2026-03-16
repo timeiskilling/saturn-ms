@@ -32,14 +32,17 @@ pub struct Config {
     // pub jwt_expire_refresh_token_seconds: i64,
     // pub jwt_validation_leeway_seconds: i64,
     // pub jwt_enable_revoked_tokens: bool,
-    pub jupiter_api_key : String,
-    pub helius_api_key : String,
+    pub jupiter_api_key: String,
+    pub helius_api_key: String,
 
-    pub jito_tip_redis_host : String,
-    pub jito_tip_redis_port : u16,
+    pub jito_tip_redis_host: String,
+    pub jito_tip_redis_port: u16,
 
-    pub alt_redis_host : String,
-    pub alt_redis_port : u16,
+    pub notification_redis_host: String,
+    pub notification_redis_port: u16,
+
+    pub alt_redis_host: String,
+    pub alt_redis_port: u16,
 }
 
 impl Config {
@@ -52,8 +55,15 @@ impl Config {
         format!("redis://{}:{}", self.redis_host, self.redis_port)
     }
 
+    pub fn notification_redis_url(&self) -> String {
+        format!("redis://{}:{}", self.alt_redis_host, self.alt_redis_port)
+    }
+
     pub fn jito_tip_redis_url(&self) -> String {
-        format!("redis://{}:{}", self.jito_tip_redis_host, self.jito_tip_redis_port)
+        format!(
+            "redis://{}:{}",
+            self.jito_tip_redis_host, self.jito_tip_redis_port
+        )
     }
 
     pub fn alt_redis_url(&self) -> String {
@@ -61,7 +71,10 @@ impl Config {
     }
 
     pub fn helius_url(&self) -> String {
-        format!("https://mainnet.helius-rpc.com/?api-key{}",self.helius_api_key)
+        format!(
+            "https://mainnet.helius-rpc.com/?api-key={}",
+            self.helius_api_key
+        )
     }
 
     // pub fn postgres_url(&self) -> String {
@@ -116,6 +129,9 @@ pub fn load() -> Config {
         alt_redis_port: env_parse("ATL_REDIS_PORT"),
         jupiter_api_key: env_get("JUPITER_API_KEY"),
         helius_api_key: env_get("HELIUS_API_KEY"),
+
+        notification_redis_host: env_get("NOTIFICATION_REDIS_HOST"),
+        notification_redis_port: env_parse("NOTIFICATION_REDIS_PORT"),
     };
 
     tracing::trace!("configuration: {:#?}", config);
@@ -160,8 +176,8 @@ fn env_get_or(key: &str, default: &str) -> String {
 #[inline]
 fn env_parse<T: std::str::FromStr>(key: &str) -> T {
     env_get(key).parse().unwrap_or_else(|_| {
-            let msg = format!("failed to parse {}", key);
-            tracing::error!(msg);
-            panic!("{msg}");
-        })
+        let msg = format!("failed to parse {}", key);
+        tracing::error!(msg);
+        panic!("{msg}");
+    })
 }

@@ -369,7 +369,7 @@ export const streaming = $root.streaming = (() => {
          * @memberof streaming
          * @interface IBuiltTransaction
          * @property {string|null} [id] BuiltTransaction id
-         * @property {string|null} [transactionBase64] BuiltTransaction transactionBase64
+         * @property {string|null} [transactionBase58] BuiltTransaction transactionBase58
          */
 
         /**
@@ -396,12 +396,12 @@ export const streaming = $root.streaming = (() => {
         BuiltTransaction.prototype.id = "";
 
         /**
-         * BuiltTransaction transactionBase64.
-         * @member {string} transactionBase64
+         * BuiltTransaction transactionBase58.
+         * @member {string} transactionBase58
          * @memberof streaming.BuiltTransaction
          * @instance
          */
-        BuiltTransaction.prototype.transactionBase64 = "";
+        BuiltTransaction.prototype.transactionBase58 = "";
 
         /**
          * Creates a new BuiltTransaction instance using the specified properties.
@@ -429,8 +429,8 @@ export const streaming = $root.streaming = (() => {
                 writer = $Writer.create();
             if (message.id != null && Object.hasOwnProperty.call(message, "id"))
                 writer.uint32(/* id 1, wireType 2 =*/10).string(message.id);
-            if (message.transactionBase64 != null && Object.hasOwnProperty.call(message, "transactionBase64"))
-                writer.uint32(/* id 2, wireType 2 =*/18).string(message.transactionBase64);
+            if (message.transactionBase58 != null && Object.hasOwnProperty.call(message, "transactionBase58"))
+                writer.uint32(/* id 2, wireType 2 =*/18).string(message.transactionBase58);
             return writer;
         };
 
@@ -472,7 +472,7 @@ export const streaming = $root.streaming = (() => {
                         break;
                     }
                 case 2: {
-                        message.transactionBase64 = reader.string();
+                        message.transactionBase58 = reader.string();
                         break;
                     }
                 default:
@@ -513,9 +513,9 @@ export const streaming = $root.streaming = (() => {
             if (message.id != null && message.hasOwnProperty("id"))
                 if (!$util.isString(message.id))
                     return "id: string expected";
-            if (message.transactionBase64 != null && message.hasOwnProperty("transactionBase64"))
-                if (!$util.isString(message.transactionBase64))
-                    return "transactionBase64: string expected";
+            if (message.transactionBase58 != null && message.hasOwnProperty("transactionBase58"))
+                if (!$util.isString(message.transactionBase58))
+                    return "transactionBase58: string expected";
             return null;
         };
 
@@ -533,8 +533,8 @@ export const streaming = $root.streaming = (() => {
             let message = new $root.streaming.BuiltTransaction();
             if (object.id != null)
                 message.id = String(object.id);
-            if (object.transactionBase64 != null)
-                message.transactionBase64 = String(object.transactionBase64);
+            if (object.transactionBase58 != null)
+                message.transactionBase58 = String(object.transactionBase58);
             return message;
         };
 
@@ -553,12 +553,12 @@ export const streaming = $root.streaming = (() => {
             let object = {};
             if (options.defaults) {
                 object.id = "";
-                object.transactionBase64 = "";
+                object.transactionBase58 = "";
             }
             if (message.id != null && message.hasOwnProperty("id"))
                 object.id = message.id;
-            if (message.transactionBase64 != null && message.hasOwnProperty("transactionBase64"))
-                object.transactionBase64 = message.transactionBase64;
+            if (message.transactionBase58 != null && message.hasOwnProperty("transactionBase58"))
+                object.transactionBase58 = message.transactionBase58;
             return object;
         };
 

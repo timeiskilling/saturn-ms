@@ -38,12 +38,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .init();
 
     let config = load();
-    let helius_api_key = config.helius_api_key.clone();
-    let addr = "127.0.0.1:3000".parse().unwrap();
-    let redis_url = vec![
-        "redis://localhost:6379".to_string(),
-        "redis://localhost:6380".to_string(),
-    ];
+    let helius_api_key = config.helius_url();
+    let addr = config.service_socket_addr();
+    let redis_url = vec![config.notification_redis_url()];
 
     let jito_manager = Arc::new(JitoHttpManager::new(
         "https://frankfurt.mainnet.block-engine.jito.wtf/api/v1".to_string(),

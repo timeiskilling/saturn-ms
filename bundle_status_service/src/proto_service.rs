@@ -45,7 +45,7 @@ impl BundleService for TransactionService {
 
         let tip_tx = BuiltTransaction {
             id: "jito-tip".to_string(),
-            transaction_base64: tip_tx_str,
+            transaction_base58: tip_tx_str,
         };
 
         for transaction in transactions_req {
@@ -89,7 +89,7 @@ impl BundleService for TransactionService {
                     delta.id = id.clone();
                     let built_tx = BuiltTransaction {
                         id,
-                        transaction_base64: swap_tx_str,
+                        transaction_base58: swap_tx_str,
                     };
                     (built_tx, swap_fee, delta)
                 })

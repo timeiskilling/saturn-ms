@@ -1,3 +1,1 @@
-// add Redis Sentinel
-
 // add HAProxy

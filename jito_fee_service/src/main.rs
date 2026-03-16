@@ -8,6 +8,7 @@ use tokio::net::TcpStream;
 use tokio::sync::Mutex;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream, connect_async, tungstenite::Message};
 use tracing::{error, info, warn};
+
 #[derive(Debug, Deserialize)]
 pub struct JitoResponse {
     pub landed_tips_99th_percentile: f64,
@@ -19,11 +20,11 @@ pub const TIMESTAMP_FIELD: &str = "updated_at_unix";
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt()
-    .with_max_level(tracing::Level::DEBUG)
-    .with_target(false)
-    .init();
+        .with_max_level(tracing::Level::DEBUG)
+        .with_target(false)
+        .init();
     println!("data loader");
-    
+
     let redis_url =
         std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6380".to_string());
     let client = redis::Client::open(redis_url)?;

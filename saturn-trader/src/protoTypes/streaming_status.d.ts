@@ -178,8 +178,8 @@ export namespace streaming {
         /** BuiltTransaction id */
         id?: (string|null);
 
-        /** BuiltTransaction transactionBase64 */
-        transactionBase64?: (string|null);
+        /** BuiltTransaction transactionBase58 */
+        transactionBase58?: (string|null);
     }
 
     /** Represents a BuiltTransaction. */
@@ -194,8 +194,8 @@ export namespace streaming {
         /** BuiltTransaction id. */
         public id: string;
 
-        /** BuiltTransaction transactionBase64. */
-        public transactionBase64: string;
+        /** BuiltTransaction transactionBase58. */
+        public transactionBase58: string;
 
         /**
          * Creates a new BuiltTransaction instance using the specified properties.

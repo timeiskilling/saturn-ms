@@ -9,7 +9,6 @@ service BundleService {
   rpc CreateTransactions(TransactionsBuld) returns (TransactionsToSign) {}
   rpc SendTransactions(SignedTransactions) returns (stream UserBundleUpdate) {}
 }
-
 // pub struct WebTakeQoute {
 //     pub input_mint: String,
 //     pub output_mint: String,
@@ -25,7 +24,7 @@ message SignedTransactions {
 
 message BuiltTransaction {
   string id = 1;
-  string transaction_base64 = 2;
+  string transaction_base58 = 2;
 }
 
 message TransactionsToSign {
