@@ -78,11 +78,11 @@ impl HttpManager {
                 .pool_max_idle_per_host(200)
                 .pool_idle_timeout(Duration::from_secs(120))
                 .timeout(Duration::from_secs(15))
-                .connect_timeout(Duration::from_secs(5))
+                // .connect_timeout(Duration::from_secs(5))
                 .tcp_keepalive(Duration::from_secs(60))
-                .http2_keep_alive_interval(Duration::from_secs(30))
-                .http2_keep_alive_timeout(Duration::from_secs(10))
-                .http2_prior_knowledge()
+                // .http2_keep_alive_interval(Duration::from_secs(30))
+                // .http2_keep_alive_timeout(Duration::from_secs(10))
+                // .http2_prior_knowledge()
                 .build()
                 .expect("Failed to build HTTP client"),
         );
@@ -199,13 +199,16 @@ impl HttpManager {
                 ("outputMint", params.output_mint.as_str()),
                 ("amount", params.amount.as_str()),
                 ("slippageBps", params.slippage_bps.as_str()),
-                ("platformFeeBps", "20"),
+                // ("platformFeeBps", "20"),
             ])
             .query(&params.additional_params)
             .headers(headers)
             .send()
             .await
-            .map_err(|e| anyhow::anyhow!("Request failed: {}", e))?;
+            .map_err(|e| {
+                tracing::error!("perform_quote_request: Detailed network error: {:#?}", e);
+                anyhow::Error::new(e).context("Request failed")
+            })?;
 
         if !response.status().is_success() {
             let status = response.status();
@@ -231,12 +234,13 @@ impl HttpManager {
     ) -> anyhow::Result<JupiterSwapInstructionsRsponse> {
         let url = format!("{}/swap-instructions", base_url);
 
-        let response = client
-            .post(&url)
-            .json(&payload)
-            .send()
-            .await
-            .map_err(|e| anyhow::anyhow!("Swap instruction request failed: {}", e))?;
+        let response = client.post(&url).json(&payload).send().await.map_err(|e| {
+            tracing::error!(
+                "perform_swap_transaction_request : Detailed network error: {:#?}",
+                e
+            );
+            anyhow::Error::new(e).context("Request failed")
+        })?;
 
         let status = response.status();
         if !status.is_success() {

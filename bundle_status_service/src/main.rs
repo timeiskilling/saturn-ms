@@ -40,7 +40,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = load();
     let helius_api_key = config.helius_url();
     let addr = config.service_socket_addr();
-    let redis_url = vec![config.notification_redis_url()];
+    let notification_redis_url = config.notification_redis_url();
 
     let jito_manager = Arc::new(JitoHttpManager::new(
         "https://frankfurt.mainnet.block-engine.jito.wtf/api/v1".to_string(),
@@ -50,16 +50,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ));
 
     let http_client = Arc::new(HttpManager::new(
-        "https://api.jup.ag//swap/v1".to_string(),
+        "https://api.jup.ag/swap/v1".to_string(),
         50,
         RetryConfig::default(),
         None,
         &config.jupiter_api_key,
     ));
+
     let trader = Arc::new(
         JupiterTrader::new(
             &helius_api_key.clone(),
-            redis_url,
+            notification_redis_url,
             jito_manager,
             http_client,
         )
@@ -81,7 +82,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let transaction_serve = tower::ServiceBuilder::new()
-        .layer(tower_http::cors::CorsLayer::new())
+        .layer(
+            tower_http::cors::CorsLayer::new()
+                .allow_origin(tower_http::cors::Any)
+                .allow_headers(tower_http::cors::Any)
+                .allow_methods(tower_http::cors::Any),
+        )
         .layer(tonic_web::GrpcWebLayer::new())
         .into_inner()
         .named_layer(BundleServiceServer::new(transaction_serve));

@@ -37,9 +37,11 @@ impl BundleService for TransactionService {
             .user_pk
             .clone();
 
+        let blockhash = self.cashed_blockhash.get().await.blockhash;
+
         let (tip_tx_str, jito_tip_lamports, tip_fee) = self
             .trader
-            .build_tip_transaction(&user_pk)
+            .build_tip_transaction(&user_pk, blockhash)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 

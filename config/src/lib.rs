@@ -48,7 +48,7 @@ pub struct Config {
 impl Config {
     pub fn service_socket_addr(&self) -> SocketAddr {
         use std::str::FromStr;
-        SocketAddr::from_str(&format!("{},{}", self.service_host, self.service_port)).unwrap()
+        SocketAddr::from_str(&format!("{}:{}", self.service_host, self.service_port)).unwrap()
     }
 
     pub fn redis_url(&self) -> String {
@@ -56,7 +56,10 @@ impl Config {
     }
 
     pub fn notification_redis_url(&self) -> String {
-        format!("redis://{}:{}", self.alt_redis_host, self.alt_redis_port)
+        format!(
+            "redis://{}:{}",
+            self.notification_redis_host, self.notification_redis_port
+        )
     }
 
     pub fn jito_tip_redis_url(&self) -> String {

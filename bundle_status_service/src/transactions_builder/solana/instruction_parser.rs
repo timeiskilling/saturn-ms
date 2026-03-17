@@ -28,8 +28,10 @@ impl InstructionParser<&JupiterSwapInstructionsRsponse, Vec<SolanaInstruction>>
 
         instructions
             .extend(self.parse_instructions(std::slice::from_ref(&input.swap_instruction))?);
-        instructions
-            .extend(self.parse_instructions(std::slice::from_ref(&input.cleanup_instruction))?);
+
+        if let Some(cleanup) = &input.cleanup_instruction {
+            instructions.extend(self.parse_instructions(std::slice::from_ref(cleanup))?);
+        }
 
         instructions.extend(self.parse_instructions(input.other_instructions.as_slice())?);
 

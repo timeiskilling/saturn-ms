@@ -46,7 +46,7 @@ pub struct JupiterTrader {
 impl JupiterTrader {
     pub async fn new(
         helius_api_key: &str,
-        /*keypair: Keypair*/ redis_urls: Vec<String>,
+        /*keypair: Keypair*/ notification_redis_url: String,
         jito_manager: Arc<JitoHttpManager>,
         http_client: Arc<dyn JupiterProvider>,
     ) -> Self {
@@ -81,9 +81,7 @@ impl JupiterTrader {
             config,
             notification_system: {
                 let ns = Arc::new(UserStreamNotificationSystem::new());
-                if let Some(url) = redis_urls.first()
-                    && let Ok(client) = redis::Client::open(url.as_str())
-                {
+                if let Ok(client) = redis::Client::open(notification_redis_url.as_str()) {
                     ns.start_redis_subscription(client).await;
                 }
                 ns
@@ -156,6 +154,7 @@ impl JupiterTrader {
     pub async fn build_tip_transaction(
         &self,
         pubkey: &str,
+        blockhash: Hash,
     ) -> Result<(String, u64, u64), SaturnTransactionsServiceError> {
         let user_pubkey = Pubkey::from_str(pubkey).map_err(|e| {
             SaturnTransactionsServiceError::BuildTransaction(Box::new(
@@ -182,7 +181,8 @@ impl JupiterTrader {
         })?;
         let tip_ix = transfer(&user_pubkey, &jito_tip_acc, jito_tip_lamports);
 
-        let tip_tx = Transaction::new_with_payer(&[tip_ix], Some(&user_pubkey));
+        let mut tip_tx = Transaction::new_with_payer(&[tip_ix], Some(&user_pubkey));
+        tip_tx.message.recent_blockhash = blockhash;
 
         let tip_fee = self
             .client
@@ -406,7 +406,9 @@ impl JupiterTrader {
             data.unwrap_or(MIN_JITO_TIP_LAMPORTS as f64) as u64,
         );
 
-        let tip_transaction = Transaction::new_with_payer(&[tip_instruction], Some(&user_pubkey));
+        let mut tip_transaction =
+            Transaction::new_with_payer(&[tip_instruction], Some(&user_pubkey));
+        tip_transaction.message.recent_blockhash = blockhash;
 
         let tip_encoded = bs58::encode(bincode::serialize(&tip_transaction)?).into_string();
 

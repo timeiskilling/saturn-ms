@@ -2,6 +2,9 @@ use saturn_errors::models::Instruction;
 use serde::{Deserialize, Serialize};
 use solana_sdk::pubkey::Pubkey;
 
+use crate::models::pubkey_string;
+use crate::models::pubkey_string_option;
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct JupiterSwapInstructionsRsponse {
     #[serde(rename = "tokenLedgerInstruction")]
@@ -17,7 +20,7 @@ pub struct JupiterSwapInstructionsRsponse {
     pub swap_instruction: Instruction,
 
     #[serde(rename = "cleanupInstruction")]
-    pub cleanup_instruction: Instruction,
+    pub cleanup_instruction: Option<Instruction>,
 
     #[serde(rename = "otherInstructions")]
     pub other_instructions: Vec<Instruction>,
@@ -43,6 +46,7 @@ pub struct JupiterSwapInstructionsRsponse {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AccountMeta {
+    #[serde(with = "pubkey_string")]
     pub pubkey: Pubkey,
 
     #[serde(rename = "isSigner")]
@@ -97,19 +101,29 @@ pub struct FetchedAt {
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct JupiterUltraQuoteRequest {
-    #[serde(rename = "inputMint")]
+    #[serde(rename = "inputMint", with = "pubkey_string")]
     pub input_mint: Pubkey,
 
-    #[serde(rename = "outputMint")]
+    #[serde(rename = "outputMint", with = "pubkey_string")]
     pub output_mint: Pubkey,
 
     #[serde(rename = "amount")]
     pub amount: String,
 
-    #[serde(rename = "taker", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "taker",
+        skip_serializing_if = "Option::is_none",
+        with = "pubkey_string_option",
+        default
+    )]
     pub taker: Option<Pubkey>,
 
-    #[serde(rename = "referralAccount", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "referralAccount",
+        skip_serializing_if = "Option::is_none",
+        with = "pubkey_string_option",
+        default
+    )]
     pub referral_account: Option<Pubkey>,
 
     #[serde(rename = "referralFee", skip_serializing_if = "Option::is_none")]
@@ -133,12 +147,15 @@ pub struct JupiterUltraQuoteResponse {
     pub slippage_bps: u64,
     pub price_impact_pct: String,
     pub route_plan: Vec<RoutePlan>,
+    #[serde(with = "pubkey_string")]
     pub input_mint: Pubkey,
+    #[serde(with = "pubkey_string")]
     pub output_mint: Pubkey,
     pub fee_bps: u64,
     pub prioritization_fee_lamports: u64,
     pub transaction: Option<String>,
     pub gasless: bool,
+    #[serde(with = "pubkey_string_option", default)]
     pub taker: Option<Pubkey>,
     pub in_usd_value: f64,
     pub out_usd_value: f64,
@@ -147,6 +164,7 @@ pub struct JupiterUltraQuoteResponse {
     pub total_time: u64,
 
     pub quote_id: Option<String>,
+    #[serde(with = "pubkey_string_option", default)]
     pub maker: Option<Pubkey>,
     pub expire_at: Option<String>,
     pub platform_fee: Option<PlatformFee>,
@@ -155,12 +173,12 @@ pub struct JupiterUltraQuoteResponse {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UltraSwapInfo {
-    #[serde(rename = "ammKey")]
+    #[serde(rename = "ammKey", with = "pubkey_string")]
     pub amm_key: Pubkey,
     pub label: String,
-    #[serde(rename = "inputMint")]
+    #[serde(rename = "inputMint", with = "pubkey_string")]
     pub input_mint: Pubkey,
-    #[serde(rename = "outputMint")]
+    #[serde(rename = "outputMint", with = "pubkey_string")]
     pub output_mint: Pubkey,
     #[serde(rename = "inAmount")]
     pub in_amount: String,
@@ -168,13 +186,13 @@ pub struct UltraSwapInfo {
     pub out_amount: String,
     #[serde(rename = "feeAmount")]
     pub fee_amount: String,
-    #[serde(rename = "feeMint")]
+    #[serde(rename = "feeMint", with = "pubkey_string")]
     pub fee_mint: Pubkey,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct JupiterSwapRequest {
-    #[serde(rename = "userPublicKey")]
+    #[serde(rename = "userPublicKey", with = "pubkey_string")]
     pub user_public_key: Pubkey,
     #[serde(rename = "quoteResponse")]
     pub quote_response: JupiterQuoteResponse,
@@ -185,7 +203,12 @@ pub struct JupiterSwapRequest {
 
     #[serde(rename = "wrapAndUnwrapSol", skip_serializing_if = "Option::is_none")]
     pub wrap_and_unwrap_sol: Option<bool>,
-    #[serde(rename = "feeAccount", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "feeAccount",
+        skip_serializing_if = "Option::is_none",
+        with = "pubkey_string_option",
+        default
+    )]
     pub fee_account: Option<Pubkey>,
 }
 
@@ -213,11 +236,11 @@ pub struct JupiterSwapResponse {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct JupiterQuoteResponse {
-    #[serde(rename = "inputMint")]
+    #[serde(rename = "inputMint", with = "pubkey_string")]
     pub input_mint: Pubkey,
     #[serde(rename = "inAmount")]
     pub in_amount: String,
-    #[serde(rename = "outputMint")]
+    #[serde(rename = "outputMint", with = "pubkey_string")]
     pub output_mint: Pubkey,
     #[serde(rename = "outAmount")]
     pub out_amount: String,
@@ -266,21 +289,33 @@ pub struct RoutePlanUltra {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SwapInfo {
-    #[serde(rename = "ammKey")]
+    #[serde(rename = "ammKey", with = "pubkey_string")]
     pub amm_key: Pubkey,
+
     pub label: String,
-    #[serde(rename = "inputMint")]
+
+    #[serde(rename = "inputMint", with = "pubkey_string")]
     pub input_mint: Pubkey,
-    #[serde(rename = "outputMint")]
+
+    #[serde(rename = "outputMint", with = "pubkey_string")]
     pub output_mint: Pubkey,
+
     #[serde(rename = "inAmount")]
     pub in_amount: String,
+
     #[serde(rename = "outAmount")]
     pub out_amount: String,
-    #[serde(rename = "feeAmount")]
-    pub fee_amount: String,
-    #[serde(rename = "feeMint")]
-    pub fee_mint: Pubkey,
+
+    #[serde(rename = "feeAmount", skip_serializing_if = "Option::is_none")]
+    pub fee_amount: Option<String>,
+
+    #[serde(
+        rename = "feeMint",
+        skip_serializing_if = "Option::is_none",
+        with = "pubkey_string_option",
+        default
+    )]
+    pub fee_mint: Option<Pubkey>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -321,6 +356,7 @@ pub struct QuoteOptions {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct TokenNaming {
     pub symbol: String,
+    #[serde(with = "pubkey_string")]
     pub mint: Pubkey,
 }
 

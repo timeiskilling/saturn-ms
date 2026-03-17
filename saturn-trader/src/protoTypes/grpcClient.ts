@@ -14,20 +14,18 @@ export interface GrpcClientConfig {
  * This implementation wraps the standard fetch API and handles the 5-byte
  * length-prefixed framing required by the gRPC-Web specification.
  */
-function createGrpcWebRpcImpl(config: GrpcClientConfig) {
+function createGrpcWebRpcImpl(config: GrpcClientConfig, servicePath: string) {
   // Return the callback function format expected by protobufjs Service.create()
   return function rpcImpl(
-    method: Method, // protobufjs Method descriptor
+    method: any, // protobufjs Method descriptor or function
     requestData: Uint8Array,
     callback: (error: Error | null, responseData: Uint8Array | null) => void,
   ) {
     // 1. Construct the gRPC-Web endpoint path.
     // Format: baseUrl/Package.Service/Method
-    const serviceName = method.parent?.name || "";
-    const packageName = method.parent?.parent?.name || "";
     const methodName = method.name;
 
-    const url = `${config.baseUrl}/${packageName}.${serviceName}/${methodName}`;
+    const url = `${config.baseUrl}/${servicePath}/${methodName}`;
 
     // 2. Prepare the 5-byte gRPC-Web header
     // [0]   = Compression flag (0 = none)
@@ -57,11 +55,15 @@ function createGrpcWebRpcImpl(config: GrpcClientConfig) {
       body: body,
     })
       .then(async (res) => {
-        if (!res.ok) {
+        const grpcStatus = res.headers.get("grpc-status");
+        const grpcMessage = res.headers.get("grpc-message");
+
+        if (!res.ok || (grpcStatus && grpcStatus !== "0")) {
           // Attempt to extract gRPC status message from headers if present
-          const grpcMessage =
-            res.headers.get("grpc-message") || `HTTP ${res.status}`;
-          throw new Error(`gRPC Error: ${grpcMessage}`);
+          const errorMsg = grpcMessage
+            ? decodeURIComponent(grpcMessage)
+            : `HTTP ${res.status}`;
+          throw new Error(`gRPC Error (status ${grpcStatus}): ${errorMsg}`);
         }
 
         const arrayBuffer = await res.arrayBuffer();
@@ -96,7 +98,6 @@ function createGrpcWebRpcImpl(config: GrpcClientConfig) {
  */
 export class GrpcClient {
   private config: GrpcClientConfig;
-  private rpcImpl: any;
 
   constructor(config: GrpcClientConfig) {
     // Trim trailing slashes from the base URL
@@ -104,14 +105,17 @@ export class GrpcClient {
       ...config,
       baseUrl: config.baseUrl.replace(/\/+$/, ""),
     };
-    this.rpcImpl = createGrpcWebRpcImpl(this.config);
   }
 
   /**
    * Initializes the BundleService client linked to this configuration.
    */
   public getBundleService() {
-    return streaming.BundleService.create(this.rpcImpl);
+    const rpcImpl = createGrpcWebRpcImpl(
+      this.config,
+      "streaming.BundleService",
+    );
+    return streaming.BundleService.create(rpcImpl);
   }
 
   // Add getters for future services here:

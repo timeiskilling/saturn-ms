@@ -70,3 +70,4 @@ volumes:
   redis_main:
   redis_jito:
   redis_atl:
+  redis_notification:

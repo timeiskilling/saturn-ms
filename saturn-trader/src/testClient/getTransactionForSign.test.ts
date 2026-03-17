@@ -32,6 +32,8 @@ test("getTransactionForSign", async () => {
     // 4. Call the gRPC method and await the response
     const response = await bundleService.createTransactions(request);
 
+    console.log("gRPC Response:", JSON.stringify(response, null, 2));
+
     // 5. Write Vitest assertions to verify the response
 
     // We expect the server to return at least 1 transaction string to sign
@@ -51,11 +53,14 @@ test("getTransactionForSign", async () => {
     // Check that delta information was calculated and returned
     expect(response.delta).toBeDefined();
     expect(response.delta?.swaps?.length).toBeGreaterThan(0);
-    expect(response.delta?.totalNetworkFeeLamports).toBeTypeOf("number");
+    expect(Number(response.delta?.totalNetworkFeeLamports)).toBeTypeOf(
+      "number",
+    );
+    expect(Number(response.delta?.totalNetworkFeeLamports)).toBeGreaterThan(0);
   } catch (error) {
     // If the server isn't running or returns an error, the test should fail gracefully
     console.error("gRPC Error:", error);
     // You can optionally uncomment this to force fail the test if any network error occurs
-    // expect.fail("Failed to execute gRPC request");
+    expect.fail("Failed to execute gRPC request");
   }
 });
