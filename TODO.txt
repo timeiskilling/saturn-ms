@@ -1,1 +1,3 @@
 // add HAProxy
+
+// test on HTTP 2
