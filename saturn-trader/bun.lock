@@ -14,6 +14,7 @@
         "@solana/web3.js": "^1.98.4",
         "bignumber": "^1.1.0",
         "bignumber.js": "^10.0.2",
+        "bs58": "^6.0.0",
         "buffer": "^6.0.3",
         "bun-plugin-tailwind": "^0.1.2",
         "class-variance-authority": "^0.7.1",

@@ -9,6 +9,7 @@ interface TemplateSidebarProps {
   setActiveTemplateId: (id: string) => void;
   handleAddTemplate: () => void;
   handleDeleteTemplate?: (id: string) => void;
+  handleExecuteTemplate?: (template: Template) => void;
 }
 
 export function TemplateSidebar({
@@ -17,6 +18,7 @@ export function TemplateSidebar({
   setActiveTemplateId,
   handleAddTemplate,
   handleDeleteTemplate,
+  handleExecuteTemplate,
 }: TemplateSidebarProps) {
   const [templateToDelete, setTemplateToDelete] = useState<Template | null>(
     null,
@@ -83,8 +85,11 @@ export function TemplateSidebar({
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    // TODO: implement execution logic
-                    console.log(`Executing template ${template.id}`);
+                    if (handleExecuteTemplate) {
+                      handleExecuteTemplate(template);
+                    } else {
+                      console.log(`Executing template ${template.id}`);
+                    }
                   }}
                   className="p-1.5 text-blue-500 hover:bg-blue-500/10 rounded-md transition-colors shrink-0"
                   title="Execute Bundle"

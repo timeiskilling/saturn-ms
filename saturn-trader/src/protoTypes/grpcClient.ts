@@ -1,4 +1,3 @@
-import type { Method } from "protobufjs";
 import { streaming } from "./streaming_status";
 
 export interface GrpcClientConfig {
@@ -126,7 +125,7 @@ export class GrpcClient {
 
 // Create a default instance pointing to your backend
 export const defaultGrpcClient = new GrpcClient({
-  baseUrl: "https://your-api.saturn.com", // Replace with actual backend URL
+  baseUrl: "http://127.0.0.1:3000", // Replace with actual backend URL
   // headers: { "Authorization": "Bearer ..." } // Optional
 });
 

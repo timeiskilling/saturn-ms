@@ -9,9 +9,15 @@ import {
   POPULAR_TOKENS,
   INITIAL_TEMPLATES,
 } from "./bundledTransactions/types";
+import { useSignTransaction } from "../components/api/singTransaction";
+import { executeBundle } from "../api/bundle";
+import { usePhantom } from "@phantom/react-sdk";
+import { AddressType } from "@phantom/browser-sdk";
 
 export function BundledTransactions() {
   const [templates, setTemplates] = useState<Template[]>(INITIAL_TEMPLATES);
+  const { handleSignOnly } = useSignTransaction();
+  const { addresses } = usePhantom();
   const [activeTemplateId, setActiveTemplateId] = useState<string | null>(
     INITIAL_TEMPLATES[0]?.id || null,
   );
@@ -109,6 +115,51 @@ export function BundledTransactions() {
     }
   };
 
+  const handleExecuteTemplate = async (template: Template) => {
+    try {
+      console.log(`Starting execution for template: ${template.name}`);
+
+      const userPk = addresses.find(
+        (addr) => addr.addressType === AddressType.solana,
+      )?.address;
+      if (!userPk) {
+        throw new Error("No Solana wallet connected");
+      }
+
+      const request = {
+        transactions: template.transactions.map((tx) => ({
+          id: tx.id,
+          inputMint: tx.inputMint,
+          outputMint: tx.outputMint,
+          amount: Number(tx.amount) || 0,
+          slippageBps: tx.slippageBps,
+          userPk,
+          options: tx.options || {
+            dexes: [],
+            excludeDexes: [],
+            dynamicSlippage: false,
+          },
+        })),
+      };
+
+      const bundleResponse = await executeBundle(request);
+
+      if (bundleResponse) {
+        const signedTransactions = await handleSignOnly(bundleResponse);
+        console.log("Successfully signed bundle:", signedTransactions);
+      }
+    } catch (error: any) {
+      if (
+        error?.message?.includes("User rejected") ||
+        error?.message?.includes("User canceled")
+      ) {
+        alert("Transaction signing was rejected by the user.");
+      } else {
+        console.error("Execution failed:", error);
+      }
+    }
+  };
+
   return (
     <div className="select-none flex h-full w-full bg-zinc-950 text-zinc-200">
       {/* Left Sidebar - Templates List */}
@@ -118,6 +169,7 @@ export function BundledTransactions() {
         setActiveTemplateId={setActiveTemplateId}
         handleAddTemplate={handleAddTemplate}
         handleDeleteTemplate={handleDeleteTemplate}
+        handleExecuteTemplate={handleExecuteTemplate}
       />
 
       {/* Main Content - Template Editor */}
