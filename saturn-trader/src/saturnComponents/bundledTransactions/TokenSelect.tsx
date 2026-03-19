@@ -8,12 +8,14 @@ interface TokenSelectProps {
   value: string;
   onChange: (value: string) => void;
   isInput?: boolean;
+  minimalistic?: boolean;
 }
 
 export function TokenSelect({
   value,
   onChange,
   isInput = false,
+  minimalistic = false,
 }: TokenSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -103,7 +105,11 @@ export function TokenSelect({
             setSearch(e.key);
           }
         }}
-        className="w-full flex items-center justify-between bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-zinc-100 outline-none hover:border-zinc-700 focus:border-blue-500 transition-colors"
+        className={
+          minimalistic
+            ? "flex items-center gap-2 hover:bg-zinc-800/50 rounded-lg py-1 text-xl text-zinc-100 outline-none transition-colors"
+            : "w-full flex items-center justify-between bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-zinc-100 outline-none hover:border-zinc-700 focus:border-blue-500 transition-colors"
+        }
       >
         <div className="flex items-center gap-2 overflow-hidden">
           <span className="font-medium truncate">{selectedTokenSymbol}</span>
@@ -118,7 +124,6 @@ export function TokenSelect({
 
       {isOpen && (
         <div
-          ref={dropdownRef}
           tabIndex={-1}
           className="absolute z-50 top-full left-0 right-0 mt-2 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl shadow-black/50 overflow-hidden flex flex-col max-h-[60vh] min-w-70"
         >

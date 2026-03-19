@@ -59,10 +59,10 @@ impl From<proto_models::grpc::QuoteOptions>
             },
             dexes: Some(value.dexes),
             exclude_dexes: Some(value.exclude_dexes),
-            restrict_intermediate_tokens: Some(true),
-            only_direct_routes: Some(false),
-            as_legacy_transaction: Some(false),
-            max_accounts: Some(64),
+            restrict_intermediate_tokens: value.restrict_intermediate_tokens.or(Some(true)),
+            only_direct_routes: value.only_direct_routes.or(Some(false)),
+            as_legacy_transaction: value.as_legacy_transaction.or(Some(false)),
+            max_accounts: value.max_accounts.map(|x| x as u16).or(Some(64)),
             dynamic_slippage: value.dynamic_slippage,
         }
     }

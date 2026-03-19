@@ -2207,6 +2207,10 @@ export const streaming = $root.streaming = (() => {
          * @property {Array.<string>|null} [dexes] QuoteOptions dexes
          * @property {Array.<string>|null} [excludeDexes] QuoteOptions excludeDexes
          * @property {boolean|null} [dynamicSlippage] QuoteOptions dynamicSlippage
+         * @property {boolean|null} [restrictIntermediateTokens] QuoteOptions restrictIntermediateTokens
+         * @property {boolean|null} [onlyDirectRoutes] QuoteOptions onlyDirectRoutes
+         * @property {boolean|null} [asLegacyTransaction] QuoteOptions asLegacyTransaction
+         * @property {number|null} [maxAccounts] QuoteOptions maxAccounts
          */
 
         /**
@@ -2258,6 +2262,38 @@ export const streaming = $root.streaming = (() => {
          */
         QuoteOptions.prototype.dynamicSlippage = null;
 
+        /**
+         * QuoteOptions restrictIntermediateTokens.
+         * @member {boolean|null|undefined} restrictIntermediateTokens
+         * @memberof streaming.QuoteOptions
+         * @instance
+         */
+        QuoteOptions.prototype.restrictIntermediateTokens = null;
+
+        /**
+         * QuoteOptions onlyDirectRoutes.
+         * @member {boolean|null|undefined} onlyDirectRoutes
+         * @memberof streaming.QuoteOptions
+         * @instance
+         */
+        QuoteOptions.prototype.onlyDirectRoutes = null;
+
+        /**
+         * QuoteOptions asLegacyTransaction.
+         * @member {boolean|null|undefined} asLegacyTransaction
+         * @memberof streaming.QuoteOptions
+         * @instance
+         */
+        QuoteOptions.prototype.asLegacyTransaction = null;
+
+        /**
+         * QuoteOptions maxAccounts.
+         * @member {number|null|undefined} maxAccounts
+         * @memberof streaming.QuoteOptions
+         * @instance
+         */
+        QuoteOptions.prototype.maxAccounts = null;
+
         // OneOf field names bound to virtual getters and setters
         let $oneOfFields;
 
@@ -2270,6 +2306,30 @@ export const streaming = $root.streaming = (() => {
         // Virtual OneOf for proto3 optional field
         Object.defineProperty(QuoteOptions.prototype, "_dynamicSlippage", {
             get: $util.oneOfGetter($oneOfFields = ["dynamicSlippage"]),
+            set: $util.oneOfSetter($oneOfFields)
+        });
+
+        // Virtual OneOf for proto3 optional field
+        Object.defineProperty(QuoteOptions.prototype, "_restrictIntermediateTokens", {
+            get: $util.oneOfGetter($oneOfFields = ["restrictIntermediateTokens"]),
+            set: $util.oneOfSetter($oneOfFields)
+        });
+
+        // Virtual OneOf for proto3 optional field
+        Object.defineProperty(QuoteOptions.prototype, "_onlyDirectRoutes", {
+            get: $util.oneOfGetter($oneOfFields = ["onlyDirectRoutes"]),
+            set: $util.oneOfSetter($oneOfFields)
+        });
+
+        // Virtual OneOf for proto3 optional field
+        Object.defineProperty(QuoteOptions.prototype, "_asLegacyTransaction", {
+            get: $util.oneOfGetter($oneOfFields = ["asLegacyTransaction"]),
+            set: $util.oneOfSetter($oneOfFields)
+        });
+
+        // Virtual OneOf for proto3 optional field
+        Object.defineProperty(QuoteOptions.prototype, "_maxAccounts", {
+            get: $util.oneOfGetter($oneOfFields = ["maxAccounts"]),
             set: $util.oneOfSetter($oneOfFields)
         });
 
@@ -2307,6 +2367,14 @@ export const streaming = $root.streaming = (() => {
                     writer.uint32(/* id 3, wireType 2 =*/26).string(message.excludeDexes[i]);
             if (message.dynamicSlippage != null && Object.hasOwnProperty.call(message, "dynamicSlippage"))
                 writer.uint32(/* id 4, wireType 0 =*/32).bool(message.dynamicSlippage);
+            if (message.restrictIntermediateTokens != null && Object.hasOwnProperty.call(message, "restrictIntermediateTokens"))
+                writer.uint32(/* id 5, wireType 0 =*/40).bool(message.restrictIntermediateTokens);
+            if (message.onlyDirectRoutes != null && Object.hasOwnProperty.call(message, "onlyDirectRoutes"))
+                writer.uint32(/* id 6, wireType 0 =*/48).bool(message.onlyDirectRoutes);
+            if (message.asLegacyTransaction != null && Object.hasOwnProperty.call(message, "asLegacyTransaction"))
+                writer.uint32(/* id 7, wireType 0 =*/56).bool(message.asLegacyTransaction);
+            if (message.maxAccounts != null && Object.hasOwnProperty.call(message, "maxAccounts"))
+                writer.uint32(/* id 8, wireType 0 =*/64).uint32(message.maxAccounts);
             return writer;
         };
 
@@ -2361,6 +2429,22 @@ export const streaming = $root.streaming = (() => {
                     }
                 case 4: {
                         message.dynamicSlippage = reader.bool();
+                        break;
+                    }
+                case 5: {
+                        message.restrictIntermediateTokens = reader.bool();
+                        break;
+                    }
+                case 6: {
+                        message.onlyDirectRoutes = reader.bool();
+                        break;
+                    }
+                case 7: {
+                        message.asLegacyTransaction = reader.bool();
+                        break;
+                    }
+                case 8: {
+                        message.maxAccounts = reader.uint32();
                         break;
                     }
                 default:
@@ -2423,6 +2507,26 @@ export const streaming = $root.streaming = (() => {
                 if (typeof message.dynamicSlippage !== "boolean")
                     return "dynamicSlippage: boolean expected";
             }
+            if (message.restrictIntermediateTokens != null && message.hasOwnProperty("restrictIntermediateTokens")) {
+                properties._restrictIntermediateTokens = 1;
+                if (typeof message.restrictIntermediateTokens !== "boolean")
+                    return "restrictIntermediateTokens: boolean expected";
+            }
+            if (message.onlyDirectRoutes != null && message.hasOwnProperty("onlyDirectRoutes")) {
+                properties._onlyDirectRoutes = 1;
+                if (typeof message.onlyDirectRoutes !== "boolean")
+                    return "onlyDirectRoutes: boolean expected";
+            }
+            if (message.asLegacyTransaction != null && message.hasOwnProperty("asLegacyTransaction")) {
+                properties._asLegacyTransaction = 1;
+                if (typeof message.asLegacyTransaction !== "boolean")
+                    return "asLegacyTransaction: boolean expected";
+            }
+            if (message.maxAccounts != null && message.hasOwnProperty("maxAccounts")) {
+                properties._maxAccounts = 1;
+                if (!$util.isInteger(message.maxAccounts))
+                    return "maxAccounts: integer expected";
+            }
             return null;
         };
 
@@ -2456,6 +2560,14 @@ export const streaming = $root.streaming = (() => {
             }
             if (object.dynamicSlippage != null)
                 message.dynamicSlippage = Boolean(object.dynamicSlippage);
+            if (object.restrictIntermediateTokens != null)
+                message.restrictIntermediateTokens = Boolean(object.restrictIntermediateTokens);
+            if (object.onlyDirectRoutes != null)
+                message.onlyDirectRoutes = Boolean(object.onlyDirectRoutes);
+            if (object.asLegacyTransaction != null)
+                message.asLegacyTransaction = Boolean(object.asLegacyTransaction);
+            if (object.maxAccounts != null)
+                message.maxAccounts = object.maxAccounts >>> 0;
             return message;
         };
 
@@ -2495,6 +2607,26 @@ export const streaming = $root.streaming = (() => {
                 object.dynamicSlippage = message.dynamicSlippage;
                 if (options.oneofs)
                     object._dynamicSlippage = "dynamicSlippage";
+            }
+            if (message.restrictIntermediateTokens != null && message.hasOwnProperty("restrictIntermediateTokens")) {
+                object.restrictIntermediateTokens = message.restrictIntermediateTokens;
+                if (options.oneofs)
+                    object._restrictIntermediateTokens = "restrictIntermediateTokens";
+            }
+            if (message.onlyDirectRoutes != null && message.hasOwnProperty("onlyDirectRoutes")) {
+                object.onlyDirectRoutes = message.onlyDirectRoutes;
+                if (options.oneofs)
+                    object._onlyDirectRoutes = "onlyDirectRoutes";
+            }
+            if (message.asLegacyTransaction != null && message.hasOwnProperty("asLegacyTransaction")) {
+                object.asLegacyTransaction = message.asLegacyTransaction;
+                if (options.oneofs)
+                    object._asLegacyTransaction = "asLegacyTransaction";
+            }
+            if (message.maxAccounts != null && message.hasOwnProperty("maxAccounts")) {
+                object.maxAccounts = message.maxAccounts;
+                if (options.oneofs)
+                    object._maxAccounts = "maxAccounts";
             }
             return object;
         };

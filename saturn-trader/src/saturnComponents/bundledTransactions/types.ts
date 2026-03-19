@@ -3,6 +3,10 @@ export interface QuoteOptions {
   dexes: string[];
   excludeDexes: string[];
   dynamicSlippage?: boolean;
+  restrictIntermediateTokens?: boolean;
+  onlyDirectRoutes?: boolean;
+  asLegacyTransaction?: boolean;
+  maxAccounts?: number;
 }
 
 export interface TransactionInstruction {

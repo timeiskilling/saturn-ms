@@ -876,6 +876,18 @@ export namespace streaming {
 
         /** QuoteOptions dynamicSlippage */
         dynamicSlippage?: (boolean|null);
+
+        /** QuoteOptions restrictIntermediateTokens */
+        restrictIntermediateTokens?: (boolean|null);
+
+        /** QuoteOptions onlyDirectRoutes */
+        onlyDirectRoutes?: (boolean|null);
+
+        /** QuoteOptions asLegacyTransaction */
+        asLegacyTransaction?: (boolean|null);
+
+        /** QuoteOptions maxAccounts */
+        maxAccounts?: (number|null);
     }
 
     /** Represents a QuoteOptions. */
@@ -898,6 +910,18 @@ export namespace streaming {
 
         /** QuoteOptions dynamicSlippage. */
         public dynamicSlippage?: (boolean|null);
+
+        /** QuoteOptions restrictIntermediateTokens. */
+        public restrictIntermediateTokens?: (boolean|null);
+
+        /** QuoteOptions onlyDirectRoutes. */
+        public onlyDirectRoutes?: (boolean|null);
+
+        /** QuoteOptions asLegacyTransaction. */
+        public asLegacyTransaction?: (boolean|null);
+
+        /** QuoteOptions maxAccounts. */
+        public maxAccounts?: (number|null);
 
         /**
          * Creates a new QuoteOptions instance using the specified properties.

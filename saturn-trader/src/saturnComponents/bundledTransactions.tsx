@@ -51,15 +51,18 @@ export function BundledTransactions() {
       },
     };
 
-    updateActiveTemplate({
-      ...activeTemplate,
-      transactions: [...activeTemplate.transactions, newTx],
-    });
+    setTemplates((prev) =>
+      prev.map((t) =>
+        t.id === activeTemplate.id
+          ? { ...t, transactions: [...t.transactions, newTx] }
+          : t,
+      ),
+    );
   };
 
   const updateActiveTemplate = (updatedTemplate: Template) => {
-    setTemplates(
-      templates.map((t) => (t.id === updatedTemplate.id ? updatedTemplate : t)),
+    setTemplates((prev) =>
+      prev.map((t) => (t.id === updatedTemplate.id ? updatedTemplate : t)),
     );
   };
 
@@ -68,14 +71,23 @@ export function BundledTransactions() {
     field: keyof TransactionInstruction,
     value: any,
   ) => {
-    if (!activeTemplate) return;
-    const updatedTxs = activeTemplate.transactions.map((tx) => {
-      if (tx.id === txId) {
-        return { ...tx, [field]: value };
-      }
-      return tx;
-    });
-    updateActiveTemplate({ ...activeTemplate, transactions: updatedTxs });
+    if (!activeTemplateId) return;
+    setTemplates((prev) =>
+      prev.map((t) => {
+        if (t.id === activeTemplateId) {
+          return {
+            ...t,
+            transactions: t.transactions.map((tx) => {
+              if (tx.id === txId) {
+                return { ...tx, [field]: value };
+              }
+              return tx;
+            }),
+          };
+        }
+        return t;
+      }),
+    );
   };
 
   const handleUpdateOptions = (
@@ -83,28 +95,67 @@ export function BundledTransactions() {
     field: keyof QuoteOptions,
     value: any,
   ) => {
-    if (!activeTemplate) return;
-    const updatedTxs = activeTemplate.transactions.map((tx) => {
-      if (tx.id === txId) {
-        return {
-          ...tx,
-          options: {
-            ...(tx.options || { dexes: [], excludeDexes: [] }),
-            [field]: value,
-          },
-        };
-      }
-      return tx;
-    });
-    updateActiveTemplate({ ...activeTemplate, transactions: updatedTxs });
+    if (!activeTemplateId) return;
+    setTemplates((prev) =>
+      prev.map((t) => {
+        if (t.id === activeTemplateId) {
+          return {
+            ...t,
+            transactions: t.transactions.map((tx) => {
+              if (tx.id === txId) {
+                return {
+                  ...tx,
+                  options: {
+                    ...(tx.options || { dexes: [], excludeDexes: [] }),
+                    [field]: value,
+                  },
+                };
+              }
+              return tx;
+            }),
+          };
+        }
+        return t;
+      }),
+    );
   };
 
   const handleRemoveTx = (txId: string) => {
-    if (!activeTemplate) return;
-    updateActiveTemplate({
-      ...activeTemplate,
-      transactions: activeTemplate.transactions.filter((tx) => tx.id !== txId),
-    });
+    if (!activeTemplateId) return;
+    setTemplates((prev) =>
+      prev.map((t) =>
+        t.id === activeTemplateId
+          ? {
+              ...t,
+              transactions: t.transactions.filter((tx) => tx.id !== txId),
+            }
+          : t,
+      ),
+    );
+  };
+
+  const handleSwapTxTokens = (txId: string) => {
+    if (!activeTemplateId) return;
+    setTemplates((prev) =>
+      prev.map((t) => {
+        if (t.id === activeTemplateId) {
+          return {
+            ...t,
+            transactions: t.transactions.map((tx) => {
+              if (tx.id === txId) {
+                return {
+                  ...tx,
+                  inputMint: tx.outputMint,
+                  outputMint: tx.inputMint,
+                };
+              }
+              return tx;
+            }),
+          };
+        }
+        return t;
+      }),
+    );
   };
 
   const handleDeleteTemplate = (templateId: string) => {
@@ -217,7 +268,7 @@ export function BundledTransactions() {
             </div>
 
             {/* Transactions Stack */}
-            <div className="flex-1 overflow-y-auto p-8">
+            <div className="flex-1 overflow-y-scroll p-8">
               <div className="max-w-4xl mx-auto space-y-4">
                 {activeTemplate.transactions.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-20 px-4 border-2 border-dashed border-zinc-800 rounded-2xl bg-zinc-900/20">
@@ -247,6 +298,7 @@ export function BundledTransactions() {
                       handleUpdateTx={handleUpdateTx}
                       handleUpdateOptions={handleUpdateOptions}
                       handleRemoveTx={handleRemoveTx}
+                      handleSwapTxTokens={handleSwapTxTokens}
                     />
                   ))
                 )}

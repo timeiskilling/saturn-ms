@@ -69,6 +69,10 @@ message QuoteOptions {
   repeated string dexes = 2;
   repeated string exclude_dexes = 3;
   optional bool dynamic_slippage = 4;
+  optional bool restrict_intermediate_tokens = 5;
+  optional bool only_direct_routes = 6;
+  optional bool as_legacy_transaction = 7;
+  optional uint32 max_accounts = 8;
 }
 
 message Empty {}

@@ -1,0 +1,1 @@
+export const HIGH_FEE_THRESHOLD_PERCENT = 2.5;
