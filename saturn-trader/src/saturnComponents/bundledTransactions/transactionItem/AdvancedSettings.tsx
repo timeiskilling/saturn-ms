@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { X, Info } from "lucide-react";
 import type { QuoteOptions } from "../types";
 import { HIGH_FEE_THRESHOLD_PERCENT } from "../../../lib/constants";
@@ -9,6 +9,7 @@ interface AdvancedSettingsProps {
   onClose: () => void;
   slippageBps: number;
   onSlippageChange: (bps: number) => void;
+  triggerRef?: React.RefObject<HTMLButtonElement | null>;
 }
 
 export function AdvancedSettings({
@@ -17,6 +18,7 @@ export function AdvancedSettings({
   onClose,
   slippageBps,
   onSlippageChange,
+  triggerRef,
 }: AdvancedSettingsProps) {
   const slippageValue = slippageBps / 100;
   const [localSlippage, setLocalSlippage] = useState(
@@ -32,6 +34,7 @@ export function AdvancedSettings({
       if (!isEquivalent && slippageBps > 0) {
         setLocalSlippage((slippageBps / 100).toString());
       } else if (
+        !isEquivalent &&
         slippageBps === 0 &&
         localSlippage !== "" &&
         localSlippage !== "."
@@ -80,15 +83,28 @@ export function AdvancedSettings({
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
+      const target = event.target as Node;
+
+      if (triggerRef?.current && triggerRef.current.contains(target)) {
+        return;
+      }
+
       if (
         modalRef.current &&
-        !modalRef.current.contains(event.target as Node)
+        !event.composedPath().includes(modalRef.current)
       ) {
         onClose();
       }
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+
+    const timer = setTimeout(() => {
+      document.addEventListener("mousedown", handleClickOutside);
+    }, 0);
+
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, [onClose]);
 
   const ToggleSwitch = ({

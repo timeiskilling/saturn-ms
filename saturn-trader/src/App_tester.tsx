@@ -12,7 +12,7 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState<"trading" | "bundles">("trading");
 
   return (
-    <div className="flex flex-col h-screen w-full overflow-x-auto overflow-y-hidden bg-zinc-950">
+    <div className="select-none flex flex-col h-screen w-full overflow-x-auto overflow-y-hidden bg-zinc-950">
       <div className="flex flex-col w-full h-full min-w-5xl">
         <div className="shrink-0 flex items-center justify-between border-b border-zinc-800 bg-zinc-950 pr-4">
           <BasicCard

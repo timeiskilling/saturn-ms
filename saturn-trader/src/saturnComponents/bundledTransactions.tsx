@@ -257,10 +257,6 @@ export function BundledTransactions() {
                   className="text-2xl font-bold bg-transparent border-none outline-none text-white focus:ring-0 p-0 hover:bg-zinc-900/50 rounded transition-colors"
                   placeholder="Template Name..."
                 />
-                <p className="text-sm text-zinc-500 mt-1">
-                  Configure up to 4 sequential transactions to execute
-                  atomically.
-                </p>
               </div>
               <div className="flex flex-wrap items-center gap-3">
                 {/* TODO */}

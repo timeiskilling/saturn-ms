@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { Trash2, Settings } from "lucide-react";
 import { BasicCard } from "../card";
 import { SwapButton } from "../../components/ui/swap-button";
@@ -10,6 +10,7 @@ import {
 import { useTokenAccounts } from "@/hooks/useTokenAccounts";
 import { TokenInputBlock } from "./transactionItem/TokenInputBlock";
 import { AdvancedSettings } from "./transactionItem/AdvancedSettings";
+import { AdvancedSettings as AdvancedSettingsV2 } from "./transactionItem/SettingsV2";
 
 interface TransactionItemProps {
   tx: TransactionInstruction;
@@ -40,7 +41,7 @@ export function TransactionItem({
 }: TransactionItemProps) {
   const { tokens: ownedTokens } = useTokenAccounts();
   const [showSettings, setShowSettings] = useState(false);
-
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const maxDecimals =
     POPULAR_TOKENS.find((t) => t.mint === tx.inputMint)?.decimals ??
     ownedTokens?.find((t) => t.mint === tx.inputMint)?.decimals ??
@@ -68,6 +69,7 @@ export function TransactionItem({
         <div className="flex justify-end items-center mb-2 px-1">
           <div className="flex items-center gap-3">
             <button
+              ref={buttonRef}
               onClick={(e) => {
                 e.stopPropagation();
                 setShowSettings(!showSettings);
@@ -89,7 +91,7 @@ export function TransactionItem({
         </div>
 
         {showSettings && (
-          <AdvancedSettings
+          <AdvancedSettingsV2
             options={tx.options}
             onUpdateOptions={(field, value) =>
               handleUpdateOptions(tx.id, field, value)
@@ -99,6 +101,7 @@ export function TransactionItem({
             onSlippageChange={(bps) =>
               handleUpdateTx(tx.id, "slippageBps", bps)
             }
+            // triggerRef={buttonRef}
           />
         )}
 
