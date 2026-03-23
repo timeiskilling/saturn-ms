@@ -12,6 +12,7 @@ interface TokenInputBlockProps {
   isInput: boolean;
   maxDecimals: number;
   balance: string | null;
+  usdRate?: number | null;
 }
 
 function formatDecimalInput(value: string, maxDecimals: number): string {
@@ -45,6 +46,7 @@ export function TokenInputBlock({
   isInput,
   maxDecimals,
   balance,
+  usdRate = null,
 }: TokenInputBlockProps) {
   // Validate if user has enough balance (only applies if isInput is true and balance is known)
   const isInsufficientBalance =
@@ -81,7 +83,7 @@ export function TokenInputBlock({
               value={mint}
               onChange={onMintChange}
               isInput={isInput}
-              minimalistic 
+              minimalistic
             />
           </div>
         </div>
@@ -114,8 +116,11 @@ export function TokenInputBlock({
       {/* USD Value / Balance Row */}
       <div className="flex items-center justify-between text-xs font-medium mt-1">
         <span className="text-zinc-600">
-          {/* Placeholder for USD conversion: 1 SOL eq 100 USDC logic will go here */}
-          {amount && parseFloat(amount) > 0 ? "≈ $0.00" : "-"}
+          {amount && parseFloat(amount) > 0
+            ? usdRate !== null
+              ? `≈ $${(parseFloat(amount) * usdRate).toFixed(2)}`
+              : "≈ $0.00"
+            : "-"}
         </span>
 
         {isInput && balance !== null && (

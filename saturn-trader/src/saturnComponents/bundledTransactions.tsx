@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import Scrollbar from "smooth-scrollbar";
 import { Plus, Trash2, Save, Layers, CircleDashed, Rocket } from "lucide-react";
 import { TemplateSidebar } from "./bundledTransactions/TemplateSidebar";
 import { TransactionItem } from "./bundledTransactions/TransactionItem";
@@ -13,6 +14,9 @@ import { useSignTransaction } from "../components/api/singTransaction";
 import { executeBundle } from "../api/bundle";
 import { usePhantom } from "@phantom/react-sdk";
 import { AddressType } from "@phantom/browser-sdk";
+import OverscrollPlugin from "smooth-scrollbar/plugins/overscroll";
+
+Scrollbar.use(OverscrollPlugin);
 
 export function BundledTransactions() {
   const [templates, setTemplates] = useState<Template[]>(INITIAL_TEMPLATES);
@@ -21,6 +25,41 @@ export function BundledTransactions() {
   const [activeTemplateId, setActiveTemplateId] = useState<string | null>(
     INITIAL_TEMPLATES[0]?.id || null,
   );
+
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+
+    if (container) {
+      const scrollbar = Scrollbar.init(container, {
+        damping: 0.1,
+        renderByPixels: true,
+        alwaysShowTracks: true,
+        continuousScrolling: true,
+        plugins: {
+          overscroll: {
+            enable: true,
+            effect: "bounce",
+            damping: 0.15,
+            maxOverscroll: 150,
+          },
+        },
+      });
+
+      scrollbar.addListener((status) => {
+        const offset = status.offset.y;
+        const limit = status.limit.y;
+        const progress = limit > 0 ? offset / limit : 0;
+
+        container.style.setProperty("--scroll-progress", `${progress * 100}%`);
+      });
+
+      return () => {
+        if (scrollbar) scrollbar.destroy();
+      };
+    }
+  }, []);
 
   const activeTemplate =
     templates.find((t) => t.id === activeTemplateId) || templates[0] || null;
@@ -264,8 +303,11 @@ export function BundledTransactions() {
             </div>
 
             {/* Transactions Stack */}
-            <div className="flex-1 overflow-y-scroll p-8">
-              <div className="max-w-4xl mx-auto space-y-4">
+            <div
+              ref={scrollContainerRef}
+              className="flex-1 h-full w-full overflow-hidden p-8 relative"
+            >
+              <div className="max-w-4xl mx-auto space-y-4 pb-20">
                 {activeTemplate.transactions.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-20 px-4 border-2 border-dashed border-zinc-800 rounded-2xl bg-zinc-900/20">
                     <CircleDashed className="w-12 h-12 text-zinc-700 mb-4" />

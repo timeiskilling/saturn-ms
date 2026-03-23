@@ -1,6 +1,10 @@
 @import "../styles/globals.css";
 
 @layer base {
+    html {
+        scroll-behavior: smooth;
+    }
+
     :root {
         @apply font-sans;
     }

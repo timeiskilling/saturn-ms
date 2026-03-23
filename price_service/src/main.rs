@@ -1,7 +1,8 @@
 pub mod handlers;
+pub mod models;
 use std::{collections::HashMap, collections::HashSet, sync::Arc, time::Duration};
 
-use axum::{extract::ws::WebSocket, routing::get, Router};
+use axum::{Router, extract::ws::WebSocket, routing::get};
 use common::models::DayTickerEvent;
 use futures::{SinkExt, StreamExt};
 
@@ -42,7 +43,6 @@ async fn main() {
 
     axum::serve(listener, router).await.unwrap();
 }
-
 
 pub struct PriceManager {
     http_client: reqwest::Client,

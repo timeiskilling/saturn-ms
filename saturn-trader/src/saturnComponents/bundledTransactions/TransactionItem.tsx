@@ -118,6 +118,7 @@ export function TransactionItem({
                 isInput={true}
                 maxDecimals={maxDecimals}
                 balance={inputTokenBalance}
+                usdRate={130}
               />
             </div>
 

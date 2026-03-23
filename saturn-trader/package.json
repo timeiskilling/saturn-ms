@@ -30,6 +30,7 @@
     "protobufjs-cli": "^2.0.0",
     "react": "^19",
     "react-dom": "^19",
+    "smooth-scrollbar": "^8.8.4",
     "tailwind-merge": "^3.3.1",
     "vitest": "^4.1.0"
   },

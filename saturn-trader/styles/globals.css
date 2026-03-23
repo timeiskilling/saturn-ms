@@ -111,116 +111,14 @@
 }
 
 @layer base {
+    html {
+        scroll-behavior: smooth;
+    }
     * {
         @apply border-border outline-ring/50;
     }
     body {
         @apply bg-background text-foreground;
-    }
-
-    ::-webkit-scrollbar {
-        width: 16px;
-        height: 16px;
-    }
-
-    ::-webkit-scrollbar-track {
-        background-image: repeating-linear-gradient(
-            to bottom,
-            transparent 0,
-            transparent 6px,
-            #27272a 6px,
-            #27272a 8px
-        );
-        background-clip: padding-box;
-        border: 4px solid transparent;
-        background-attachment: fixed;
-    }
-
-    ::-webkit-scrollbar-track-piece:start {
-        background-image: repeating-linear-gradient(
-            to bottom,
-            transparent 0,
-            transparent 6px,
-            #34d399 6px,
-            #34d399 8px
-        );
-        background-clip: padding-box;
-        border: 4px solid transparent;
-        background-attachment: fixed;
-    }
-
-    ::-webkit-scrollbar-thumb {
-        background-image: repeating-linear-gradient(
-            to bottom,
-            transparent 0,
-            transparent 6px,
-            #34d399 6px,
-            #34d399 8px
-        );
-        background-clip: padding-box;
-        border: 4px solid transparent;
-        background-attachment: fixed;
-    }
-
-    ::-webkit-scrollbar-thumb:hover {
-        background-image: repeating-linear-gradient(
-            to bottom,
-            transparent 0,
-            transparent 6px,
-            #10b981 6px,
-            #10b981 8px
-        );
-        background-attachment: fixed;
-    }
-
-    ::-webkit-scrollbar-track:horizontal {
-        background-image: repeating-linear-gradient(
-            to right,
-            transparent 0,
-            transparent 6px,
-            #27272a 6px,
-            #27272a 8px
-        );
-        background-clip: padding-box;
-        border: 4px solid transparent;
-        background-attachment: fixed;
-    }
-
-    ::-webkit-scrollbar-track-piece:start:horizontal {
-        background-image: repeating-linear-gradient(
-            to right,
-            transparent 0,
-            transparent 6px,
-            #34d399 6px,
-            #34d399 8px
-        );
-        background-clip: padding-box;
-        border: 4px solid transparent;
-        background-attachment: fixed;
-    }
-
-    ::-webkit-scrollbar-thumb:horizontal {
-        background-image: repeating-linear-gradient(
-            to right,
-            transparent 0,
-            transparent 6px,
-            #34d399 6px,
-            #34d399 8px
-        );
-        background-clip: padding-box;
-        border: 4px solid transparent;
-        background-attachment: fixed;
-    }
-
-    ::-webkit-scrollbar-thumb:horizontal:hover {
-        background-image: repeating-linear-gradient(
-            to right,
-            transparent 0,
-            transparent 6px,
-            #10b981 6px,
-            #10b981 8px
-        );
-        background-attachment: fixed;
     }
 
     .scrollbar-hide::-webkit-scrollbar {
@@ -229,5 +127,77 @@
     .scrollbar-hide {
         -ms-overflow-style: none;
         scrollbar-width: none;
+    }
+
+    .scrollbar-track-y {
+        pointer-events: none !important;
+
+        width: 16px !important;
+        background-color: #27272a !important;
+        border-left: 4px solid transparent !important;
+        border-right: 4px solid transparent !important;
+        background-clip: padding-box !important;
+
+        -webkit-mask-image: repeating-linear-gradient(
+            to bottom,
+            transparent 0,
+            transparent 6px,
+            black 6px,
+            black 8px
+        );
+        mask-image: repeating-linear-gradient(
+            to bottom,
+            transparent 0,
+            transparent 6px,
+            black 6px,
+            black 8px
+        );
+    }
+
+    .scrollbar-track-y .scrollbar-thumb {
+        background-color: #34d399 !important;
+        border-radius: 0 !important;
+        background-image: none !important;
+        width: 100% !important;
+
+        top: 0 !important;
+        transform: none !important;
+        height: var(--scroll-progress, 0%) !important;
+
+        transition: height 0.05s linear;
+    }
+
+    .scrollbar-track-y .scrollbar-thumb:hover {
+        background-color: #10b981 !important;
+    }
+
+    .scrollbar-track-x {
+        height: 16px !important;
+        background-color: #27272a !important;
+        border-top: 4px solid transparent !important;
+        border-bottom: 4px solid transparent !important;
+        background-clip: padding-box !important;
+
+        -webkit-mask-image: repeating-linear-gradient(
+            to right,
+            transparent 0,
+            transparent 6px,
+            black 6px,
+            black 8px
+        );
+        mask-image: repeating-linear-gradient(
+            to right,
+            transparent 0,
+            transparent 6px,
+            black 6px,
+            black 8px
+        );
+    }
+
+    .scrollbar-track-x .scrollbar-thumb {
+        background-color: #34d399 !important;
+        border-radius: 0 !important;
+        background-image: none !important;
+        height: 100% !important;
     }
 }
