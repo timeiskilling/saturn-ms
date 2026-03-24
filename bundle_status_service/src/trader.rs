@@ -8,7 +8,6 @@ use common::jito_client_api::main_api::JitoClient;
 use common::traits::TransactionBuilder;
 use config::Config;
 use core::str;
-use dashmap::DashMap;
 use proto_models::grpc::TransactionDelta;
 
 use jupiter_trader_data::models::jupiter_models::{
@@ -40,7 +39,6 @@ pub struct JupiterTrader {
     jito_tip_redis: Arc<Mutex<redis::aio::MultiplexedConnection>>,
     // pub atl_pubkey: Pubkey,
     notification_system: Arc<UserStreamNotificationSystem>,
-    pub coin_naming: Arc<DashMap<String, String>>,
 }
 
 impl JupiterTrader {
@@ -86,7 +84,6 @@ impl JupiterTrader {
                 }
                 ns
             },
-            coin_naming: Arc::new(DashMap::new()),
             tip_cache: Arc::new(RwLock::new(None)),
         }
     }

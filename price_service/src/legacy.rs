@@ -1,9 +1,3 @@
-pub mod deserialization;
-pub mod handlers;
-pub mod models;
-pub mod redis_interface;
-pub mod request_client;
-pub mod ws_listener;
 use std::{collections::HashMap, collections::HashSet, sync::Arc, time::Duration};
 
 use axum::{Router, extract::ws::WebSocket, routing::get};
@@ -20,50 +14,33 @@ use crate::handlers::websocket_handler;
 
 type SharedPriceState = Arc<Mutex<HashMap<String, DayTickerEvent>>>;
 
-use futures_util::StreamExt;
-use tokio_tungstenite::connect_async;
+// #[tokio::main]
+// async fn main() {
+//     tracing_subscriber::fmt()
+//         .with_max_level(tracing::Level::DEBUG)
+//         .with_span_events(FmtSpan::CLOSE)
+//         .init();
 
-#[tokio::main]
-async fn main() {
-    // URL для одного токена через Combined Stream (щоб формат співпадав з вашим майбутнім кодом)
-    let url = "wss://stream.binance.com:9443/stream?streams=btcusdt@ticker";
+//     println!("Starting ant_interface server...");
+//     let cors_layer = CorsLayer::new()
+//         .allow_origin(cors::Any)
+//         .allow_headers(cors::Any)
+//         .allow_methods(cors::Any);
 
-    println!("🔌 Підключаємось до Binance: {}...", url);
+//     println!("CORS layer configured");
+//     let state = Arc::new(PriceManager::new());
 
-    // Підключаємося (expect викине паніку, якщо немає інтернету або URL неправильний)
-    let (mut ws_stream, _) = connect_async(url).await.expect("❌ Не вдалося підключитися!");
+//     tokio::spawn(run_binance_ws_listener(state.clone()));
 
-    println!("✅ Успішно підключено! Чекаємо на дані...\n");
+//     let router = Router::new()
+//         .route("/ws/prices_v2", get(websocket_handler))
+//         .layer(cors_layer)
+//         .with_state(Arc::clone(&state));
 
-    let mut count = 0;
+//     let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
 
-    // Читаємо стрім
-    while let Some(msg_result) = ws_stream.next().await {
-        match msg_result {
-            Ok(msg) => {
-                // Нас цікавлять тільки текстові повідомлення з JSON
-                if msg.is_text() {
-                    let text = msg.to_text().unwrap();
-                    println!("📦 Повідомлення {}:\n{}\n", count + 1, text);
-
-                    count += 1;
-
-                    // Зупиняємо тест після 3 повідомлень, щоб не спамити консоль
-                    if count >= 3 {
-                        println!("🏁 Тест успішно завершено. Дані йдуть!");
-                        break;
-                    }
-                } else if msg.is_ping() {
-                    println!("🏓 Отримано Ping від сервера");
-                }
-            }
-            Err(e) => {
-                eprintln!("❌ Помилка під час читання стріму: {}", e);
-                break;
-            }
-        }
-    }
-}
+//     axum::serve(listener, router).await.unwrap();
+// }
 
 pub struct PriceManager {
     http_client: reqwest::Client,

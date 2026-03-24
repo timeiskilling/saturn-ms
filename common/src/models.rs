@@ -115,3 +115,19 @@ pub struct DayTickerEvent {
     #[serde(rename = "n")]
     pub num_trades: u64,
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct SmallTickerEvent {
+    #[serde(rename = "s")]
+    pub symbol: String,
+
+    #[serde(rename = "p")]
+    pub price_change: String,
+
+    #[serde(rename = "P")]
+    pub price_change_percent: String,
+
+    #[serde(rename = "x")]
+    pub prev_close: String,
+}

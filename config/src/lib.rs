@@ -43,6 +43,9 @@ pub struct Config {
 
     pub alt_redis_host: String,
     pub alt_redis_port: u16,
+
+    pub price_redis_host: String,
+    pub price_redis_port: u16,
 }
 
 impl Config {
@@ -71,6 +74,13 @@ impl Config {
 
     pub fn alt_redis_url(&self) -> String {
         format!("redis://{}:{}", self.alt_redis_host, self.alt_redis_port)
+    }
+
+    pub fn price_redis_url(&self) -> String {
+        format!(
+            "redis://{}:{}",
+            self.price_redis_host, self.price_redis_port
+        )
     }
 
     pub fn helius_url(&self) -> String {
@@ -130,11 +140,15 @@ pub fn load() -> Config {
         jito_tip_redis_port: env_parse("JITO_TIP_REDIS_PORT"),
         alt_redis_host: env_get("ATL_REDIS_HOST"),
         alt_redis_port: env_parse("ATL_REDIS_PORT"),
+
         jupiter_api_key: env_get("JUPITER_API_KEY"),
         helius_api_key: env_get("HELIUS_API_KEY"),
 
         notification_redis_host: env_get("NOTIFICATION_REDIS_HOST"),
         notification_redis_port: env_parse("NOTIFICATION_REDIS_PORT"),
+
+        price_redis_host: env_get("PRICE_REDIS_HOST"),
+        price_redis_port: env_parse("PRICE_REDIS_PORT"),
     };
 
     tracing::trace!("configuration: {:#?}", config);

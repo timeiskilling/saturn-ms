@@ -31,6 +31,25 @@ pub enum WalletError {
     BlockhashRpcRequest,
 }
 
+#[derive(Debug)]
+pub enum PriceServiceError {
+    Redis(PriceRedisError),
+    Parse(PriceParseError),
+    Worker(String),
+}
+
+#[derive(Debug, Clone)]
+pub enum PriceRedisError {
+    HsetFailed { symbol: String, reason: String },
+    ConnectionLost { reason: String },
+}
+
+#[derive(Debug, Clone)]
+pub enum PriceParseError {
+    SimdJsonError { reason: String },
+    InvalidPayloadSize { expected: usize, got: usize },
+}
+
 #[derive(Debug, Clone)]
 pub enum RedisErr {
     MgetALT { redis_issue: String },
@@ -873,6 +892,48 @@ impl fmt::Display for BuildTransactionError {
     }
 }
 
+impl fmt::Display for PriceServiceError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Redis(e) => write!(f, "Price Redis Error: {}", e),
+            Self::Parse(e) => write!(f, "Price Parse Error: {}", e),
+            Self::Worker(s) => write!(f, "Price Worker Error: {}", s),
+        }
+    }
+}
+
+impl fmt::Display for PriceRedisError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::HsetFailed { symbol, reason } => {
+                write!(
+                    f,
+                    "Failed to HSET price data for symbol {}: {}",
+                    symbol, reason
+                )
+            }
+            Self::ConnectionLost { reason } => {
+                write!(f, "Redis connection lost in price_service: {}", reason)
+            }
+        }
+    }
+}
+
+impl fmt::Display for PriceParseError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::SimdJsonError { reason } => write!(f, "simd-json parsing failed: {}", reason),
+            Self::InvalidPayloadSize { expected, got } => {
+                write!(
+                    f,
+                    "Invalid payload size: expected {}, got {}",
+                    expected, got
+                )
+            }
+        }
+    }
+}
+
 impl std::error::Error for WalletError {}
 impl std::error::Error for EncryptionError {}
 impl std::error::Error for KeystoreError {}
@@ -887,3 +948,6 @@ impl std::error::Error for RedisErr {}
 impl std::error::Error for ATlError {}
 impl std::error::Error for BuildTransactionError {}
 impl std::error::Error for JitoEndpointErr {}
+impl std::error::Error for PriceServiceError {}
+impl std::error::Error for PriceRedisError {}
+impl std::error::Error for PriceParseError {}

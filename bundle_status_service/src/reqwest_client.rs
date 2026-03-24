@@ -5,15 +5,20 @@ use governor::{
     clock::DefaultClock,
     state::{InMemoryState, NotKeyed},
 };
-use jupiter_trader_data::models::jupiter_models::{
-    JupiterQuoteResponse, JupiterSwapInstructionsRsponse, JupiterSwapRequest, PriorityLevel,
-    QuoteOptions,
+use jupiter_trader_data::models::{
+    api_models::TokenPrices,
+    jupiter_models::{
+        JupiterQuoteResponse, JupiterSwapInstructionsRsponse, JupiterSwapRequest, PriorityLevel,
+        QuoteOptions,
+    },
 };
 use reqwest::Client;
 use std::{num::NonZeroU32, sync::atomic::Ordering, time::Duration};
 use tokio::time::sleep;
 
-use saturn_errors::error::{JupiterReqestError, RpcError, SaturnTransactionsServiceError};
+use saturn_errors::error::{
+    JupiterReqestError, RpcError, SaturnTransactionsServiceError, TokenError,
+};
 
 #[derive(Clone)]
 struct QuoteRequestParams {
@@ -48,6 +53,8 @@ pub trait JupiterProvider: Send + Sync {
         quote: JupiterQuoteResponse,
         pubkey: &'a Pubkey,
     ) -> Result<JupiterSwapInstructionsRsponse, SaturnTransactionsServiceError>;
+
+    async fn get_token_price<'a>(&'a self) -> Result<TokenPrices, SaturnTransactionsServiceError>;
 }
 
 pub struct HttpManager {
@@ -92,6 +99,7 @@ impl HttpManager {
 
         let rate_limiter = Arc::new(RateLimiter::direct(quota));
         let metrics = Arc::new(RpcMetrics::new());
+
         Self {
             inner,
             rate_limiter,
@@ -276,6 +284,28 @@ impl HttpManager {
         Ok(swap_instructions)
     }
 
+    async fn perform_get_tokens(
+        client: Arc<reqwest::Client>,
+        base_url: Arc<String>,
+    ) -> anyhow::Result<TokenPrices> {
+        let url = format!("{}/tokens/v2/toporganicscore/24h", base_url);
+
+        let response = client.get(&url).send().await.map_err(|e| {
+            tracing::error!("perfom_get_tokens : Detailed network error: {:#?}", e);
+            anyhow::Error::new(e).context("Request failed")
+        })?;
+
+        let status = response.status();
+        if !status.is_success() {
+            return Err(anyhow::anyhow!("Failed to get tokens: {}", status));
+        }
+        let token_prices = response
+            .json()
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to parse token prices response: {}", e))?;
+        Ok(token_prices)
+    }
+
     fn convert_error(&self, error: &reqwest::Error) -> RpcError {
         if error.is_timeout() {
             return RpcError::Timeout {
@@ -437,6 +467,24 @@ impl JupiterProvider for HttpManager {
                 async move {
                     Self::perform_swap_transaction_request(client, url, payload, pk_log).await
                 }
+            })
+            .await;
+
+        result.map_err(|rpc_error| {
+            let jupiter_error = self.convert_rpc_to_jupiter_error(rpc_error, "create_swap");
+            SaturnTransactionsServiceError::JupiterError(jupiter_error)
+        })
+    }
+
+    async fn get_token_price(&self) -> Result<TokenPrices, SaturnTransactionsServiceError> {
+        tracing::info!("Make Price tokens request");
+
+        let result = self
+            .execute_with_retry("get_prices", move || {
+                let client = self.inner.clone();
+                let url = self.base_url.clone();
+
+                async move { Self::perform_get_tokens(client, url).await }
             })
             .await;
 
