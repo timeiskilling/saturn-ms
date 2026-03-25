@@ -11,7 +11,7 @@ use core::str;
 use proto_models::grpc::TransactionDelta;
 
 use jupiter_trader_data::models::jupiter_models::{
-    JupiterQuoteResponse, JupiterSwapInstructionsRsponse, QuoteOptions,
+    JupiterQuoteResponse, JupiterSwapInstructionsRsponse, SwapRequestParams,
 };
 use redis::AsyncCommands;
 use saturn_errors::error::{
@@ -22,7 +22,7 @@ use solana_commitment_config::CommitmentConfig;
 use solana_system_interface::instruction::transfer;
 
 use crate::prelude::*;
-use crate::{blockhash_data::BlockhashCache, constant::MIN_JITO_TIP_LAMPORTS, redis_con};
+use crate::{constant::MIN_JITO_TIP_LAMPORTS, redis_con};
 
 // pub type SharedPriceState = Arc<Mutex<HashMap<String, DayTickerEvent>>>;
 
@@ -92,23 +92,6 @@ impl JupiterTrader {
         self.notification_system.clone()
     }
 
-    #[instrument(skip_all, level = "info")]
-    pub async fn get_quote_with_options(
-        &self,
-        input_mint: &str,
-        output_mint: &str,
-        amount: u64,
-        slippage_bps: u16,
-        options: QuoteOptions,
-        // fee_account : &str,
-    ) -> Result<JupiterQuoteResponse, SaturnTransactionsServiceError> {
-        let quote = self
-            .http_client
-            .get_quote_with_options(input_mint, output_mint, amount, slippage_bps, options)
-            .await?;
-        Ok(quote)
-    }
-
     //#[instrument(skip_all, level = "info")]
     async fn build_transaction_from_instructions(
         &self,
@@ -125,8 +108,7 @@ impl JupiterTrader {
     pub async fn create_transactions(
         &self,
         pubkey: &str,
-        quote: JupiterQuoteResponse,
-        blockhash: &BlockhashCache,
+        params: SwapRequestParams<'_>,
     ) -> Result<(String, u64, TransactionDelta), SaturnTransactionsServiceError> {
         let user_pubkey = Pubkey::from_str(pubkey).map_err(|e| {
             SaturnTransactionsServiceError::BuildTransaction(Box::new(
@@ -137,12 +119,36 @@ impl JupiterTrader {
             ))
         })?;
 
-        let blockhash = blockhash.get().await.blockhash;
+        let (quote, swap_instructions) = self
+            .http_client
+            .create_swap_transaction(
+                params.input_mint,
+                params.output_mint,
+                params.amount,
+                params.slippage_bps,
+                params.options,
+                &user_pubkey,
+            )
+            .await?;
+
+        let blockhash_for_swap = {
+            let bytes: [u8; 32] = swap_instructions
+                .blockhash_with_metadata
+                .blockhash
+                .as_slice()
+                .try_into()
+                .unwrap_or([0u8; 32]);
+            solana_sdk::hash::Hash::new_from_array(bytes)
+        };
 
         let delta = self.build_delta(&quote, 0, 0)?;
 
         let (swap_transaction, swap_fee) = self
-            .create_swap_transaction(quote, blockhash, &user_pubkey)
+            .build_transaction_from_instructions(
+                swap_instructions,
+                blockhash_for_swap,
+                &user_pubkey,
+            )
             .await?;
 
         Ok((swap_transaction, swap_fee, delta))
@@ -314,25 +320,6 @@ impl JupiterTrader {
         }
     }
 
-    //#[instrument(skip_all, level = "info")]
-    async fn create_swap_transaction(
-        &self,
-        quote: JupiterQuoteResponse,
-        blockhash: solana_sdk::hash::Hash,
-        pubkey: &Pubkey,
-    ) -> Result<(String, u64), SaturnTransactionsServiceError> {
-        let swap_instructions = self
-            .http_client
-            .create_swap_transaction(quote, pubkey)
-            .await?;
-
-        let transactions = self
-            .build_transaction_from_instructions(swap_instructions, blockhash, pubkey)
-            .await?;
-
-        Ok(transactions)
-    }
-
     pub async fn jito_tip_listener(&self) {
         const REDIS_KEY: &str = "jito:tip:latest";
         const VALUE_FIELD: &str = "value";
@@ -365,7 +352,7 @@ impl JupiterTrader {
     pub async fn create_transactions_test(
         &self,
         pubkey: &str,
-        quote: JupiterQuoteResponse,
+        params: SwapRequestParams<'_>,
         blockhash: Hash,
     ) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>> {
         let mut transactions: Vec<String> = Vec::with_capacity(6);
@@ -413,8 +400,34 @@ impl JupiterTrader {
 
         // let blockhash = blockhash.get().await.blockhash;
 
+        let (_quote, swap_instructions) = self
+            .http_client
+            .create_swap_transaction(
+                params.input_mint,
+                params.output_mint,
+                params.amount,
+                params.slippage_bps,
+                params.options,
+                &user_pubkey,
+            )
+            .await?;
+
+        let blockhash_for_swap = {
+            let bytes: [u8; 32] = swap_instructions
+                .blockhash_with_metadata
+                .blockhash
+                .as_slice()
+                .try_into()
+                .unwrap_or([0u8; 32]);
+            solana_sdk::hash::Hash::new_from_array(bytes)
+        };
+
         let swap_transaction = self
-            .create_swap_transaction(quote, blockhash, &user_pubkey)
+            .build_transaction_from_instructions(
+                swap_instructions,
+                blockhash_for_swap,
+                &user_pubkey,
+            )
             .await?;
 
         transactions.push(swap_transaction.0);

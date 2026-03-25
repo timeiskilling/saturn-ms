@@ -17,7 +17,7 @@ thiserror = "2"
 serde = "1.0.209"
 serde_json = "1.0"
 config = {path = "../config"}
-
+async-trait = "0.1.89"
 simd-json = "0.17.0"
 tower = "0.5.2"
 tower-http = { version = "0.6.2", features = ["trace", "cors"] }
@@ -30,6 +30,7 @@ tokio-tungstenite = { version = "0.21", features = [
 ] }
 
 saturn_errors = { path = "../saturn_errors" }
+jupiter_trader_data = { path = "../jupiter_trader_data" }
 
 bundle_status_service = { path = "../bundle_status_service" }
 tokio = { version = "1.45.1", features = ["full", "macros"] }

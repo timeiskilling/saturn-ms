@@ -45,7 +45,6 @@ pub async fn run_binance_ws_client(url: String, redis_conn: redis::aio::Multiple
             }
             Err(e) => {
                 tracing::error!("Failed to connect to Binance WebSocket: {}", e);
-                break;
             }
         }
         tracing::warn!("Binance WebSocket reconnection on 5 seconds");

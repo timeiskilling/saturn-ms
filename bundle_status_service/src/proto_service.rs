@@ -53,7 +53,6 @@ impl BundleService for TransactionService {
         for transaction in transactions_req {
             let trader = self.trader.clone();
             let semaphore = self.rpc_semaphore.clone();
-            let block_hash = self.cashed_blockhash.clone();
 
             tasks.push(tokio::spawn(async move {
                 let permit = semaphore
@@ -67,23 +66,18 @@ impl BundleService for TransactionService {
                         "Field 'options' is missing in one of the transactions.",
                     )
                 })?;
-                let quote = trader
-                    .get_quote_with_options(
-                        &transaction.input_mint,
-                        &transaction.output_mint,
-                        transaction.amount,
-                        transaction.slippage_bps as u16,
-                        options.into(),
-                    )
-                    .await
-                    .map_err(|e| {
-                        tracing::error!("Failed to get quote: {:?}", e);
-                        Status::internal("Failed to get a quote for one of the transactions.")
-                    })?;
-
                 let id = transaction.id.clone();
                 let tx_res = trader
-                    .create_transactions(&transaction.user_pk, quote, &block_hash)
+                    .create_transactions(
+                        &transaction.user_pk,
+                        jupiter_trader_data::models::jupiter_models::SwapRequestParams {
+                            input_mint: &transaction.input_mint,
+                            output_mint: &transaction.output_mint,
+                            amount: transaction.amount,
+                            slippage_bps: transaction.slippage_bps as u16,
+                            options: options.into(),
+                        },
+                    )
                     .await
                     .map_err(|e| Status::internal(e.to_string()));
 

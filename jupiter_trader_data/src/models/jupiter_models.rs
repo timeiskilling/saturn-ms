@@ -10,10 +10,10 @@ pub struct JupiterSwapInstructionsRsponse {
     #[serde(rename = "tokenLedgerInstruction")]
     pub token_ledger_instruction: Option<Instruction>,
 
-    #[serde(rename = "computeBudgetInstructions")]
+    #[serde(rename = "computeBudgetInstructions", default)]
     pub compute_budget_instructions: Vec<Instruction>,
 
-    #[serde(rename = "setupInstructions")]
+    #[serde(rename = "setupInstructions", default)]
     pub setup_instructions: Vec<Instruction>,
 
     #[serde(rename = "swapInstruction")]
@@ -22,20 +22,20 @@ pub struct JupiterSwapInstructionsRsponse {
     #[serde(rename = "cleanupInstruction")]
     pub cleanup_instruction: Option<Instruction>,
 
-    #[serde(rename = "otherInstructions")]
+    #[serde(rename = "otherInstructions", default)]
     pub other_instructions: Vec<Instruction>,
 
-    #[serde(rename = "addressLookupTableAddresses")]
+    #[serde(rename = "addressLookupTableAddresses", default)]
     pub address_lookup_table_addresses: Vec<String>,
 
-    #[serde(rename = "prioritizationFeeLamports")]
+    #[serde(rename = "prioritizationFeeLamports", default)]
     pub prioritization_fee_lamports: u64,
 
-    #[serde(rename = "computeUnitLimit")]
+    #[serde(rename = "computeUnitLimit", default)]
     pub compute_unit_limit: u64,
 
-    #[serde(rename = "prioritizationType")]
-    pub prioritization_type: PrioritizationType,
+    #[serde(rename = "prioritizationType", default)]
+    pub prioritization_type: Option<PrioritizationType>,
 
     #[serde(rename = "addressesByLookupTableAddress")]
     pub addresses_by_lookup_table_address: Option<serde_json::Value>,
@@ -86,8 +86,8 @@ pub struct BlockhashWithMetadata {
     #[serde(rename = "lastValidBlockHeight")]
     pub last_valid_block_height: u64,
 
-    #[serde(rename = "fetchedAt")]
-    pub fetched_at: FetchedAt,
+    #[serde(rename = "fetchedAt", default)]
+    pub fetched_at: Option<FetchedAt>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -244,15 +244,15 @@ pub struct JupiterQuoteResponse {
     pub output_mint: Pubkey,
     #[serde(rename = "outAmount")]
     pub out_amount: String,
-    #[serde(rename = "otherAmountThreshold")]
+    #[serde(rename = "otherAmountThreshold", default)]
     pub other_amount_threshold: String,
     #[serde(rename = "swapMode")]
     pub swap_mode: SwapMode,
     #[serde(rename = "slippageBps")]
     pub slippage_bps: u64,
-    #[serde(rename = "platformFee")]
+    #[serde(rename = "platformFee", default)]
     pub platform_fee: Option<PlatformFee>,
-    #[serde(rename = "priceImpactPct")]
+    #[serde(rename = "priceImpactPct", default)]
     pub price_impact_pct: String,
     #[serde(rename = "routePlan")]
     pub route_plan: Vec<RoutePlan>,
@@ -351,6 +351,24 @@ pub struct QuoteOptions {
     pub as_legacy_transaction: Option<bool>,
     pub max_accounts: Option<u16>,
     pub dynamic_slippage: Option<bool>,
+    pub blockhash_slots_to_expiry: Option<u16>,
+}
+
+#[derive(Clone)]
+pub struct QuoteRequestParams {
+    pub input_mint: String,
+    pub output_mint: String,
+    pub amount: String,
+    pub slippage_bps: String,
+    pub additional_params: Vec<(&'static str, String)>,
+}
+
+pub struct SwapRequestParams<'a> {
+    pub input_mint: &'a str,
+    pub output_mint: &'a str,
+    pub amount: u64,
+    pub slippage_bps: u16,
+    pub options: QuoteOptions,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

@@ -1,15 +1,16 @@
 use std::sync::Arc;
 
-use axum::{
-    extract::{State, WebSocketUpgrade},
-    response::IntoResponse,
-};
+use axum::{Json, extract::State};
+use common::models::TokenInfo;
+use reqwest::StatusCode;
 
-use crate::{PriceManager, handle_websocket};
+use crate::build::AppState;
 
-pub async fn websocket_handler(
-    ws: WebSocketUpgrade,
-    State(state): State<Arc<PriceManager>>,
-) -> impl IntoResponse {
-    ws.on_upgrade(move |socket| handle_websocket(socket, state))
+pub async fn token_list_handler(
+    _: crate::api_extracter::Client,
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<Vec<TokenInfo>>, StatusCode> {
+    let tokens = state.cached_tokens.read().await.clone();
+
+    Ok(Json(tokens))
 }

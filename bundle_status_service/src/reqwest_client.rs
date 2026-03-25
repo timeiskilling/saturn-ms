@@ -1,33 +1,22 @@
 use crate::prelude::*;
 use async_trait::async_trait;
+use common::{binance::ExchangeInfo, models::TokenInfo};
 use governor::{
     Quota, RateLimiter,
     clock::DefaultClock,
     state::{InMemoryState, NotKeyed},
 };
 use jupiter_trader_data::models::{
-    api_models::TokenPrices,
+    api_models::TokenPricesV2,
     jupiter_models::{
-        JupiterQuoteResponse, JupiterSwapInstructionsRsponse, JupiterSwapRequest, PriorityLevel,
-        QuoteOptions,
+        JupiterQuoteResponse, JupiterSwapInstructionsRsponse, QuoteOptions, QuoteRequestParams,
     },
 };
 use reqwest::Client;
 use std::{num::NonZeroU32, sync::atomic::Ordering, time::Duration};
 use tokio::time::sleep;
 
-use saturn_errors::error::{
-    JupiterReqestError, RpcError, SaturnTransactionsServiceError, TokenError,
-};
-
-#[derive(Clone)]
-struct QuoteRequestParams {
-    input_mint: String,
-    output_mint: String,
-    amount: String,
-    slippage_bps: String,
-    additional_params: Vec<(&'static str, String)>,
-}
+use saturn_errors::error::{JupiterReqestError, RpcError, SaturnTransactionsServiceError};
 
 // pub trait SolanaRpcProvider: Send + Sync {
 //     async fn get_latest_blockhash(&self) -> Result<Hash, RpcError>;
@@ -39,22 +28,24 @@ struct QuoteRequestParams {
 
 #[async_trait]
 pub trait JupiterProvider: Send + Sync {
-    async fn get_quote_with_options<'a>(
+    async fn create_swap_transaction<'a>(
         &'a self,
         input_mint: &'a str,
         output_mint: &'a str,
         amount: u64,
         slippage_bps: u16,
         options: QuoteOptions,
-    ) -> Result<JupiterQuoteResponse, SaturnTransactionsServiceError>;
-
-    async fn create_swap_transaction<'a>(
-        &'a self,
-        quote: JupiterQuoteResponse,
         pubkey: &'a Pubkey,
-    ) -> Result<JupiterSwapInstructionsRsponse, SaturnTransactionsServiceError>;
+    ) -> Result<
+        (JupiterQuoteResponse, JupiterSwapInstructionsRsponse),
+        SaturnTransactionsServiceError,
+    >;
 
-    async fn get_token_price<'a>(&'a self) -> Result<TokenPrices, SaturnTransactionsServiceError>;
+    async fn get_list_of_tokens<'a>(
+        &'a self,
+        query: &str,
+        binance_url: &str,
+    ) -> Result<Vec<TokenInfo>, SaturnTransactionsServiceError>;
 }
 
 pub struct HttpManager {
@@ -187,12 +178,26 @@ impl HttpManager {
         }
     }
 
-    async fn perform_quote_request(
+    async fn perform_swap_transaction_request(
         client: Arc<reqwest::Client>,
         base_url: Arc<String>,
+        pubkey_log: Vec<u8>,
         params: QuoteRequestParams,
-    ) -> anyhow::Result<JupiterQuoteResponse> {
-        let url = format!("{}/quote", base_url);
+        pubkey_str: String,
+    ) -> anyhow::Result<(JupiterQuoteResponse, JupiterSwapInstructionsRsponse)> {
+        let url = format!("{}/swap/v2/build", base_url);
+
+        let mut query = vec![
+            ("inputMint", params.input_mint.clone()),
+            ("outputMint", params.output_mint.clone()),
+            ("amount", params.amount.clone()),
+            ("slippageBps", params.slippage_bps.clone()),
+            ("taker", pubkey_str),
+        ];
+
+        for (k, v) in &params.additional_params {
+            query.push((*k, v.clone()));
+        }
 
         let mut headers = reqwest::header::HeaderMap::new();
         headers.insert(
@@ -202,53 +207,17 @@ impl HttpManager {
 
         let response = client
             .get(&url)
-            .query(&[
-                ("inputMint", params.input_mint.as_str()),
-                ("outputMint", params.output_mint.as_str()),
-                ("amount", params.amount.as_str()),
-                ("slippageBps", params.slippage_bps.as_str()),
-                // ("platformFeeBps", "20"),
-            ])
-            .query(&params.additional_params)
+            .query(&query)
             .headers(headers)
             .send()
             .await
             .map_err(|e| {
-                tracing::error!("perform_quote_request: Detailed network error: {:#?}", e);
+                tracing::error!(
+                    "perform_swap_transaction_request : Detailed network error: {:#?}",
+                    e
+                );
                 anyhow::Error::new(e).context("Request failed")
             })?;
-
-        if !response.status().is_success() {
-            let status = response.status();
-            let error_txt = response.text().await.unwrap_or_default();
-            return Err(anyhow::anyhow!(
-                "Jupiter API error (status {}): {}",
-                status,
-                error_txt
-            ));
-        }
-
-        response
-            .json()
-            .await
-            .map_err(|e| anyhow::anyhow!("Failed to parse: {}", e))
-    }
-
-    async fn perform_swap_transaction_request(
-        client: Arc<reqwest::Client>,
-        base_url: Arc<String>,
-        payload: JupiterSwapRequest,
-        pubkey_log: Vec<u8>,
-    ) -> anyhow::Result<JupiterSwapInstructionsRsponse> {
-        let url = format!("{}/swap-instructions", base_url);
-
-        let response = client.post(&url).json(&payload).send().await.map_err(|e| {
-            tracing::error!(
-                "perform_swap_transaction_request : Detailed network error: {:#?}",
-                e
-            );
-            anyhow::Error::new(e).context("Request failed")
-        })?;
 
         let status = response.status();
         if !status.is_success() {
@@ -261,49 +230,90 @@ impl HttpManager {
                 status = status.as_u16(),
                 pubkey = ?pubkey_log,
                 error = %error_txt,
-                "Jupiter swap-instructions API returned error"
+                "Jupiter build API returned error"
             );
 
             return Err(anyhow::anyhow!(
-                "Jupiter swap-instructions error (status {}): {}",
+                "Jupiter build error (status {}): {}",
                 status.as_u16(),
                 error_txt
             ));
         }
 
-        let swap_instructions = response
-            .json()
-            .await
-            .map_err(|e| anyhow::anyhow!("Failed to parse swap instructions response: {}", e))?;
+        let bytes = response.bytes().await?;
+
+        let quote: JupiterQuoteResponse = serde_json::from_slice(&bytes)
+            .map_err(|e| anyhow::anyhow!("Failed to parse build quote response: {}", e))?;
+        let swap_instructions: JupiterSwapInstructionsRsponse = serde_json::from_slice(&bytes)
+            .map_err(|e| {
+                anyhow::anyhow!("Failed to parse build swap instructions response: {}", e)
+            })?;
 
         tracing::info!(
             pubkey = ?pubkey_log,
             "Successfully created swap transaction instructions"
         );
 
-        Ok(swap_instructions)
+        Ok((quote, swap_instructions))
     }
 
-    async fn perform_get_tokens(
+    pub async fn get_list_of_tokens(
         client: Arc<reqwest::Client>,
         base_url: Arc<String>,
-    ) -> anyhow::Result<TokenPrices> {
-        let url = format!("{}/tokens/v2/toporganicscore/24h", base_url);
+        binance_url: &str,
+        query: &str,
+    ) -> anyhow::Result<Vec<TokenInfo>> {
+        let url = format!("{}/tokens/v2/tag", base_url);
 
-        let response = client.get(&url).send().await.map_err(|e| {
-            tracing::error!("perfom_get_tokens : Detailed network error: {:#?}", e);
-            anyhow::Error::new(e).context("Request failed")
-        })?;
-
-        let status = response.status();
-        if !status.is_success() {
-            return Err(anyhow::anyhow!("Failed to get tokens: {}", status));
-        }
-        let token_prices = response
+        let binance_tokens: ExchangeInfo = client
+            .get(binance_url)
+            .send()
+            .await
+            .map_err(|e| tracing::error!("Failed to fetch Binance exchangeInfo: {}", e))
+            .unwrap()
             .json()
             .await
-            .map_err(|e| anyhow::anyhow!("Failed to parse token prices response: {}", e))?;
-        Ok(token_prices)
+            .map_err(|e| {
+                tracing::error!(
+                    "binance get_list_of_tokens : Detailed network error: {:#?}",
+                    e
+                );
+                anyhow::Error::new(e).context("Binance Request failed")
+            })?;
+
+        let binance_base_assets: std::collections::HashSet<String> = binance_tokens
+            .symbols
+            .iter()
+            .filter(|s| s.quote_asset == "USDT" && s.status == "TRADING")
+            .map(|s| s.base_asset.to_uppercase())
+            .collect();
+
+        let jupiter_tokens: TokenPricesV2 = client
+            .get(url)
+            .query(&[("query", query)])
+            .send()
+            .await
+            .map_err(|e| tracing::error!("Failed to fetch Jupiter tokens: {}", e))
+            .unwrap()
+            .json()
+            .await
+            .map_err(|e| {
+                tracing::error!(
+                    "jupiter get_list_of_tokens : Detailed network error: {:#?}",
+                    e
+                );
+                anyhow::Error::new(e).context("Jupiter request failed")
+            })?;
+
+        Ok(jupiter_tokens
+            .into_iter()
+            .filter(|t| binance_base_assets.contains(&t.symbol.to_uppercase()))
+            .map(|t| TokenInfo {
+                symbol: t.symbol.to_uppercase(),
+                mint: t.id,
+                decimals: t.decimals as u8,
+            })
+            .collect())
     }
 
     fn convert_error(&self, error: &reqwest::Error) -> RpcError {
@@ -403,15 +413,22 @@ impl HttpManager {
 
 #[async_trait]
 impl JupiterProvider for HttpManager {
-    async fn get_quote_with_options<'a>(
+    async fn create_swap_transaction<'a>(
         &'a self,
         input_mint: &'a str,
         output_mint: &'a str,
         amount: u64,
         slippage_bps: u16,
         options: QuoteOptions,
-    ) -> Result<JupiterQuoteResponse, SaturnTransactionsServiceError> {
-        let params = QuoteRequestParams {
+        pubkey: &'a Pubkey,
+    ) -> Result<
+        (JupiterQuoteResponse, JupiterSwapInstructionsRsponse),
+        SaturnTransactionsServiceError,
+    > {
+        let pubkey_string = pubkey.to_string();
+        let pubkey_bytes = pubkey.as_array().to_vec();
+
+        let mut params = QuoteRequestParams {
             input_mint: input_mint.to_string(),
             output_mint: output_mint.to_string(),
             amount: amount.to_string(),
@@ -419,35 +436,10 @@ impl JupiterProvider for HttpManager {
             additional_params: options.cleaned().to_params(),
         };
 
-        let base_url = self.base_url.clone();
-        let inner = self.inner.clone();
-
-        let result = self
-            .execute_with_retry("get_quote_with_options", move || {
-                let client = inner.clone();
-                let url = base_url.clone();
-                let p = params.clone();
-
-                async move { Self::perform_quote_request(client, url, p).await }
-            })
-            .await;
-
-        result.map_err(|rpc_error| {
-            let jupiter_error = self.convert_rpc_to_jupiter_error(rpc_error, "get_quote");
-            SaturnTransactionsServiceError::JupiterError(jupiter_error)
-        })
-    }
-
-    async fn create_swap_transaction<'a>(
-        &'a self,
-        quote: JupiterQuoteResponse,
-        pubkey: &'a Pubkey,
-    ) -> Result<JupiterSwapInstructionsRsponse, SaturnTransactionsServiceError> {
-        let pubkey_string = pubkey.to_string();
-        let pubkey_bytes = pubkey.as_array().to_vec();
-
-        let swap_request =
-            JupiterSwapRequest::new(*pubkey, quote, 100_000_000, PriorityLevel::VeryHigh, true);
+        // Match the previous wrapAndUnwrapSol logic from JupiterSwapRequest
+        params
+            .additional_params
+            .push(("wrapAndUnwrapSol", "true".to_string()));
 
         tracing::info!(
             pubkey = %pubkey_string,
@@ -461,11 +453,12 @@ impl JupiterProvider for HttpManager {
             .execute_with_retry("create_swap_transaction", move || {
                 let client = inner.clone();
                 let url = base_url.clone();
-                let payload = swap_request.clone();
+                let p = params.clone();
                 let pk_log = pubkey_bytes.clone();
+                let pk_str = pubkey_string.clone();
 
                 async move {
-                    Self::perform_swap_transaction_request(client, url, payload, pk_log).await
+                    Self::perform_swap_transaction_request(client, url, pk_log, p, pk_str).await
                 }
             })
             .await;
@@ -476,20 +469,24 @@ impl JupiterProvider for HttpManager {
         })
     }
 
-    async fn get_token_price(&self) -> Result<TokenPrices, SaturnTransactionsServiceError> {
+    async fn get_list_of_tokens<'a>(
+        &'a self,
+        query: &str,
+        binance_url: &str,
+    ) -> Result<Vec<TokenInfo>, SaturnTransactionsServiceError> {
         tracing::info!("Make Price tokens request");
 
         let result = self
-            .execute_with_retry("get_prices", move || {
+            .execute_with_retry("get_list_of_tokens", move || {
                 let client = self.inner.clone();
                 let url = self.base_url.clone();
 
-                async move { Self::perform_get_tokens(client, url).await }
+                async move { Self::get_list_of_tokens(client, url, binance_url, query).await }
             })
             .await;
 
         result.map_err(|rpc_error| {
-            let jupiter_error = self.convert_rpc_to_jupiter_error(rpc_error, "create_swap");
+            let jupiter_error = self.convert_rpc_to_jupiter_error(rpc_error, "get_list_of_tokens");
             SaturnTransactionsServiceError::JupiterError(jupiter_error)
         })
     }

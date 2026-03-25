@@ -131,3 +131,10 @@ pub struct SmallTickerEvent {
     #[serde(rename = "x")]
     pub prev_close: String,
 }
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct TokenInfo {
+    pub symbol: String,
+    pub mint: String,
+    pub decimals: u8,
+}

@@ -3062,6 +3062,7 @@ dependencies = [
 name = "price_service"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "axum 0.8.8",
  "axum-extra 0.10.1",
  "axum-server",
@@ -3071,6 +3072,7 @@ dependencies = [
  "dashmap 6.1.0",
  "futures",
  "futures-util",
+ "jupiter_trader_data",
  "redis 1.1.0",
  "reqwest 0.12.28",
  "rustls 0.22.4",

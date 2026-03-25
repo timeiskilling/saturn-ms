@@ -73,6 +73,7 @@ message QuoteOptions {
   optional bool only_direct_routes = 6;
   optional bool as_legacy_transaction = 7;
   optional uint32 max_accounts = 8;
+  optional uint32 blockhash_slots_to_expiry = 9;
 }
 
 message Empty {}

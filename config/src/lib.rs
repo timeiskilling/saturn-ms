@@ -46,10 +46,18 @@ pub struct Config {
 
     pub price_redis_host: String,
     pub price_redis_port: u16,
+
+    pub price_service_host: String,
+    pub price_service_port: u16,
 }
 
 impl Config {
     pub fn service_socket_addr(&self) -> SocketAddr {
+        use std::str::FromStr;
+        SocketAddr::from_str(&format!("{}:{}", self.service_host, self.service_port)).unwrap()
+    }
+
+    pub fn price_service_socket_addr(&self) -> SocketAddr {
         use std::str::FromStr;
         SocketAddr::from_str(&format!("{}:{}", self.service_host, self.service_port)).unwrap()
     }
@@ -149,6 +157,9 @@ pub fn load() -> Config {
 
         price_redis_host: env_get("PRICE_REDIS_HOST"),
         price_redis_port: env_parse("PRICE_REDIS_PORT"),
+
+        price_service_host: env_get("PRICE_SERVICE_HOST"),
+        price_service_port: env_parse("PRICE_SERVICE_PORT"),
     };
 
     tracing::trace!("configuration: {:#?}", config);

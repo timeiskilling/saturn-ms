@@ -50,7 +50,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ));
 
     let http_client = Arc::new(HttpManager::new(
-        "https://api.jup.ag/swap/v1".to_string(),
+        "https://api.jup.ag".to_string(),
         50,
         RetryConfig::default(),
         None,

@@ -155,3 +155,31 @@ pub struct Audit {
     pub top_holders_percentage: f64,
     pub dev_mints: i64,
 }
+
+pub type TokenPricesV2 = Vec<PriceV2>;
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PriceV2 {
+    pub id: String,
+    pub name: String,
+    pub symbol: String,
+    pub decimals: i64,
+}
+
+pub struct SwapRequestParams<'a> {
+    pub input_mint: &'a str,
+    pub output_mint: &'a str,
+    pub amount: u64,
+    pub slippage_bps: u16,
+    pub options: QuoteOptions,
+}
+
+#[derive(Clone)]
+pub struct QuoteRequestParams {
+    input_mint: String,
+    output_mint: String,
+    amount: String,
+    slippage_bps: String,
+    additional_params: Vec<(&'static str, String)>,
+}
