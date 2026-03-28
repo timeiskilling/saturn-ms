@@ -129,7 +129,7 @@
         scrollbar-width: none;
     }
 
-    .scrollbar-track-y {
+    .p-8 > .scrollbar-track-y {
         pointer-events: none !important;
 
         width: 16px !important;
@@ -154,7 +154,7 @@
         );
     }
 
-    .scrollbar-track-y .scrollbar-thumb {
+    .p-8 > .scrollbar-track-y .scrollbar-thumb {
         background-color: #34d399 !important;
         border-radius: 0 !important;
         background-image: none !important;
@@ -167,11 +167,11 @@
         transition: height 0.05s linear;
     }
 
-    .scrollbar-track-y .scrollbar-thumb:hover {
+    .p-8 > .scrollbar-track-y .scrollbar-thumb:hover {
         background-color: #10b981 !important;
     }
 
-    .scrollbar-track-x {
+    .p-8 > .scrollbar-track-x {
         height: 16px !important;
         background-color: #27272a !important;
         border-top: 4px solid transparent !important;
@@ -194,7 +194,7 @@
         );
     }
 
-    .scrollbar-track-x .scrollbar-thumb {
+    .p-8 > .scrollbar-track-x .scrollbar-thumb {
         background-color: #34d399 !important;
         border-radius: 0 !important;
         background-image: none !important;

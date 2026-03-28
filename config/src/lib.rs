@@ -59,7 +59,11 @@ impl Config {
 
     pub fn price_service_socket_addr(&self) -> SocketAddr {
         use std::str::FromStr;
-        SocketAddr::from_str(&format!("{}:{}", self.service_host, self.service_port)).unwrap()
+        SocketAddr::from_str(&format!(
+            "{}:{}",
+            self.price_service_host, self.price_service_port
+        ))
+        .unwrap()
     }
 
     pub fn redis_url(&self) -> String {

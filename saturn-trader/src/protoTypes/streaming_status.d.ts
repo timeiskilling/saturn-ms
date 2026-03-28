@@ -888,6 +888,9 @@ export namespace streaming {
 
         /** QuoteOptions maxAccounts */
         maxAccounts?: (number|null);
+
+        /** QuoteOptions blockhashSlotsToExpiry */
+        blockhashSlotsToExpiry?: (number|null);
     }
 
     /** Represents a QuoteOptions. */
@@ -922,6 +925,9 @@ export namespace streaming {
 
         /** QuoteOptions maxAccounts. */
         public maxAccounts?: (number|null);
+
+        /** QuoteOptions blockhashSlotsToExpiry. */
+        public blockhashSlotsToExpiry?: (number|null);
 
         /**
          * Creates a new QuoteOptions instance using the specified properties.

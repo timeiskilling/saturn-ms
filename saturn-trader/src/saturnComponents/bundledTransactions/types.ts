@@ -45,10 +45,10 @@ export const POPULAR_TOKENS = [
     decimals: 5,
   },
   {
-    symbol: "mSOL",
-    mint: "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",
-    color: "text-green-400",
-    decimals: 9,
+    symbol: "ETH",
+    mint: "7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs",
+    color: "text-blue-400",
+    decimals: 8,
   },
   {
     symbol: "JUP",
@@ -61,7 +61,7 @@ export const POPULAR_TOKENS = [
 export const INITIAL_TEMPLATES: Template[] = [
   {
     id: "t_1",
-    name: "Yield Strategy (USDC -> SOL -> mSOL)",
+    name: "Yield Strategy (USDC -> SOL -> ETH)",
     transactions: [
       {
         id: "tx_1",
@@ -73,7 +73,7 @@ export const INITIAL_TEMPLATES: Template[] = [
       {
         id: "tx_2",
         inputMint: "So11111111111111111111111111111111111111112",
-        outputMint: "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",
+        outputMint: "7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs",
         amount: "0.1",
         slippageBps: 100,
         options: {

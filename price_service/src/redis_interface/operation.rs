@@ -11,16 +11,19 @@ pub fn spawn_redis_price_worker(
         while let Some(mut payload) = event.recv().await {
             if let Some(CombinedStreamEvent { data }) = parse_combined_ticker(&mut payload) {
                 let redis_key = format!("binance:{}", data.symbol);
-
                 let result: Result<(), _> = redis_worker_conn
                     .hset_multiple(
                         &redis_key,
                         &[
+                            ("current_price", data.current_price),
                             ("price_change", data.price_change),
                             ("percent", data.price_change_percent),
-                            ("prev_close", data.prev_close),
                         ],
                     )
+                    .await;
+
+                let _: Result<(), _> = redis_worker_conn
+                    .publish(&redis_key, data.current_price)
                     .await;
 
                 if let Err(e) = result {

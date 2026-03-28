@@ -2211,6 +2211,7 @@ export const streaming = $root.streaming = (() => {
          * @property {boolean|null} [onlyDirectRoutes] QuoteOptions onlyDirectRoutes
          * @property {boolean|null} [asLegacyTransaction] QuoteOptions asLegacyTransaction
          * @property {number|null} [maxAccounts] QuoteOptions maxAccounts
+         * @property {number|null} [blockhashSlotsToExpiry] QuoteOptions blockhashSlotsToExpiry
          */
 
         /**
@@ -2294,6 +2295,14 @@ export const streaming = $root.streaming = (() => {
          */
         QuoteOptions.prototype.maxAccounts = null;
 
+        /**
+         * QuoteOptions blockhashSlotsToExpiry.
+         * @member {number|null|undefined} blockhashSlotsToExpiry
+         * @memberof streaming.QuoteOptions
+         * @instance
+         */
+        QuoteOptions.prototype.blockhashSlotsToExpiry = null;
+
         // OneOf field names bound to virtual getters and setters
         let $oneOfFields;
 
@@ -2330,6 +2339,12 @@ export const streaming = $root.streaming = (() => {
         // Virtual OneOf for proto3 optional field
         Object.defineProperty(QuoteOptions.prototype, "_maxAccounts", {
             get: $util.oneOfGetter($oneOfFields = ["maxAccounts"]),
+            set: $util.oneOfSetter($oneOfFields)
+        });
+
+        // Virtual OneOf for proto3 optional field
+        Object.defineProperty(QuoteOptions.prototype, "_blockhashSlotsToExpiry", {
+            get: $util.oneOfGetter($oneOfFields = ["blockhashSlotsToExpiry"]),
             set: $util.oneOfSetter($oneOfFields)
         });
 
@@ -2375,6 +2390,8 @@ export const streaming = $root.streaming = (() => {
                 writer.uint32(/* id 7, wireType 0 =*/56).bool(message.asLegacyTransaction);
             if (message.maxAccounts != null && Object.hasOwnProperty.call(message, "maxAccounts"))
                 writer.uint32(/* id 8, wireType 0 =*/64).uint32(message.maxAccounts);
+            if (message.blockhashSlotsToExpiry != null && Object.hasOwnProperty.call(message, "blockhashSlotsToExpiry"))
+                writer.uint32(/* id 9, wireType 0 =*/72).uint32(message.blockhashSlotsToExpiry);
             return writer;
         };
 
@@ -2445,6 +2462,10 @@ export const streaming = $root.streaming = (() => {
                     }
                 case 8: {
                         message.maxAccounts = reader.uint32();
+                        break;
+                    }
+                case 9: {
+                        message.blockhashSlotsToExpiry = reader.uint32();
                         break;
                     }
                 default:
@@ -2527,6 +2548,11 @@ export const streaming = $root.streaming = (() => {
                 if (!$util.isInteger(message.maxAccounts))
                     return "maxAccounts: integer expected";
             }
+            if (message.blockhashSlotsToExpiry != null && message.hasOwnProperty("blockhashSlotsToExpiry")) {
+                properties._blockhashSlotsToExpiry = 1;
+                if (!$util.isInteger(message.blockhashSlotsToExpiry))
+                    return "blockhashSlotsToExpiry: integer expected";
+            }
             return null;
         };
 
@@ -2568,6 +2594,8 @@ export const streaming = $root.streaming = (() => {
                 message.asLegacyTransaction = Boolean(object.asLegacyTransaction);
             if (object.maxAccounts != null)
                 message.maxAccounts = object.maxAccounts >>> 0;
+            if (object.blockhashSlotsToExpiry != null)
+                message.blockhashSlotsToExpiry = object.blockhashSlotsToExpiry >>> 0;
             return message;
         };
 
@@ -2627,6 +2655,11 @@ export const streaming = $root.streaming = (() => {
                 object.maxAccounts = message.maxAccounts;
                 if (options.oneofs)
                     object._maxAccounts = "maxAccounts";
+            }
+            if (message.blockhashSlotsToExpiry != null && message.hasOwnProperty("blockhashSlotsToExpiry")) {
+                object.blockhashSlotsToExpiry = message.blockhashSlotsToExpiry;
+                if (options.oneofs)
+                    object._blockhashSlotsToExpiry = "blockhashSlotsToExpiry";
             }
             return object;
         };

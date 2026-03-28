@@ -183,3 +183,13 @@ pub struct QuoteRequestParams {
     slippage_bps: String,
     additional_params: Vec<(&'static str, String)>,
 }
+
+pub type ImageFetch = Vec<ImageData>;
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImageData {
+    pub symbol: String,
+    #[serde(default)]
+    pub icon: Option<String>,
+}

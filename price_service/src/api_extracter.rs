@@ -17,7 +17,7 @@ where
             .ok_or((StatusCode::UNAUTHORIZED, "Unauthorized"))?;
 
         // todo: validate auth_header against state
-        //
+
         Ok(Client)
     }
 }

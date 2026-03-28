@@ -173,7 +173,7 @@ export function BundledTransactions() {
     );
   };
 
-  const handleSwapTxTokens = (txId: string) => {
+  const handleSwapTxTokens = (txId: string, newAmount?: string) => {
     if (!activeTemplateId) return;
     setTemplates((prev) =>
       prev.map((t) => {
@@ -186,6 +186,7 @@ export function BundledTransactions() {
                   ...tx,
                   inputMint: tx.outputMint,
                   outputMint: tx.inputMint,
+                  amount: newAmount !== undefined ? newAmount : tx.amount,
                 };
               }
               return tx;

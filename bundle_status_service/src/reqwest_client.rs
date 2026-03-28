@@ -7,7 +7,7 @@ use governor::{
     state::{InMemoryState, NotKeyed},
 };
 use jupiter_trader_data::models::{
-    api_models::TokenPricesV2,
+    api_models::{ImageFetch, TokenPricesV2},
     jupiter_models::{
         JupiterQuoteResponse, JupiterSwapInstructionsRsponse, QuoteOptions, QuoteRequestParams,
     },
@@ -264,6 +264,7 @@ impl HttpManager {
         query: &str,
     ) -> anyhow::Result<Vec<TokenInfo>> {
         let url = format!("{}/tokens/v2/tag", base_url);
+        let url2 = format!("{}/tokens/v2/search", base_url);
 
         let binance_tokens: ExchangeInfo = client
             .get(binance_url)
@@ -305,15 +306,48 @@ impl HttpManager {
                 anyhow::Error::new(e).context("Jupiter request failed")
             })?;
 
-        Ok(jupiter_tokens
+        let mut sorted: Vec<TokenInfo> = jupiter_tokens
             .into_iter()
             .filter(|t| binance_base_assets.contains(&t.symbol.to_uppercase()))
             .map(|t| TokenInfo {
                 symbol: t.symbol.to_uppercase(),
                 mint: t.id,
                 decimals: t.decimals as u8,
+                icon: String::new(),
             })
-            .collect())
+            .collect();
+
+        for chunk in sorted.chunks_mut(100) {
+            let query: Vec<String> = chunk.iter().map(|t| t.mint.clone()).collect();
+
+            let response: ImageFetch = client
+                .get(&url2)
+                .query(&[("query", query.join(","))])
+                .send()
+                .await
+                .map_err(|e| tracing::error!("Failed to fetch image data: {}", e))
+                .unwrap()
+                .json()
+                .await
+                .map_err(|e| {
+                    tracing::error!(
+                        "jupiter get_list_of_tokens : Detailed network error: {:#?}",
+                        e
+                    );
+                    anyhow::Error::new(e).context("Image Jupiter request failed")
+                })?;
+
+            for token in chunk.iter_mut() {
+                if let Some(image_data) = response
+                    .iter()
+                    .find(|img| img.symbol.to_uppercase() == token.symbol)
+                {
+                    token.icon = image_data.icon.clone().unwrap_or_default();
+                }
+            }
+        }
+
+        Ok(sorted)
     }
 
     fn convert_error(&self, error: &reqwest::Error) -> RpcError {

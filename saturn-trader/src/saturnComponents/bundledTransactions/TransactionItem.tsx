@@ -8,6 +8,8 @@ import {
   POPULAR_TOKENS,
 } from "./types";
 import { useTokenAccounts } from "@/hooks/useTokenAccounts";
+import { useTokenList } from "@/hooks/useTokenList";
+import { useTokenPrice } from "@/hooks/useTokenPrice";
 import { TokenInputBlock } from "./transactionItem/TokenInputBlock";
 import { AdvancedSettings } from "./transactionItem/AdvancedSettings";
 import { AdvancedSettings as AdvancedSettingsV2 } from "./transactionItem/SettingsV2";
@@ -27,7 +29,7 @@ interface TransactionItemProps {
     value: any,
   ) => void;
   handleRemoveTx: (txId: string) => void;
-  handleSwapTxTokens: (txId: string) => void;
+  handleSwapTxTokens: (txId: string, newAmount?: string) => void;
 }
 
 export function TransactionItem({
@@ -40,6 +42,30 @@ export function TransactionItem({
   handleSwapTxTokens,
 }: TransactionItemProps) {
   const { tokens: ownedTokens } = useTokenAccounts();
+  const { tokens: allTokens } = useTokenList();
+
+  const inputTokenSymbol =
+    allTokens.find((t) => t.mint === tx.inputMint)?.symbol ||
+    POPULAR_TOKENS.find((t) => t.mint === tx.inputMint)?.symbol;
+  const outputTokenSymbol =
+    allTokens.find((t) => t.mint === tx.outputMint)?.symbol ||
+    POPULAR_TOKENS.find((t) => t.mint === tx.outputMint)?.symbol;
+
+  const inputPriceData = useTokenPrice(inputTokenSymbol);
+  const outputPriceData = useTokenPrice(outputTokenSymbol);
+
+  let calculatedOutputAmount = "";
+  if (
+    tx.amount &&
+    parseFloat(tx.amount) > 0 &&
+    inputPriceData?.price &&
+    outputPriceData?.price
+  ) {
+    const inUsd = parseFloat(tx.amount) * inputPriceData.price;
+    const outAmount = inUsd / outputPriceData.price;
+    calculatedOutputAmount = outAmount.toFixed(9).replace(/\.?0+$/, "");
+  }
+
   const [showSettings, setShowSettings] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const maxDecimals =
@@ -51,7 +77,7 @@ export function TransactionItem({
     ownedTokens?.find((t) => t.mint === tx.inputMint)?.balance ?? null;
 
   const handleSwapTokens = () => {
-    handleSwapTxTokens(tx.id);
+    handleSwapTxTokens(tx.id, calculatedOutputAmount);
   };
 
   return (
@@ -118,7 +144,7 @@ export function TransactionItem({
                 isInput={true}
                 maxDecimals={maxDecimals}
                 balance={inputTokenBalance}
-                usdRate={130}
+                usdRate={inputPriceData?.price ?? null}
               />
             </div>
 
@@ -129,13 +155,14 @@ export function TransactionItem({
             <div className="flex-1">
               <TokenInputBlock
                 label="To"
-                amount={tx.amount} // Read-only or placeholder for 'To' side
+                amount={calculatedOutputAmount} // Calculated output amount
                 onAmountChange={() => {}} // Usually calculated, so read-only for now
                 mint={tx.outputMint}
                 onMintChange={(val) => handleUpdateTx(tx.id, "outputMint", val)}
                 isInput={false}
                 maxDecimals={9}
                 balance={null}
+                usdRate={outputPriceData?.price ?? null}
               />
             </div>
           </div>

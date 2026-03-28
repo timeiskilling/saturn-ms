@@ -3,6 +3,9 @@ import { ChevronDown, Search, Wallet, Coins } from "lucide-react";
 import { POPULAR_TOKENS } from "./types";
 import { useTokenAccounts } from "@/hooks/useTokenAccounts";
 import { useSolanaBalance } from "@/hooks/useSolanaBalance";
+import { useTokenList } from "@/hooks/useTokenList";
+
+import { useNestedScrollbar } from "@/hooks/useNestedScrollbar";
 
 interface TokenSelectProps {
   value: string;
@@ -24,6 +27,9 @@ export function TokenSelect({
 
   const { tokens: ownedTokens, loading: tokensLoading } = useTokenAccounts();
   const solBalance = useSolanaBalance();
+  const { tokens: allTokens } = useTokenList();
+
+  const scrollContainerRef = useNestedScrollbar(isOpen);
 
   useEffect(() => {
     if (isOpen && inputRef.current) {
@@ -49,44 +55,58 @@ export function TokenSelect({
     symbol: "SOL",
     balance: solBalance !== null ? solBalance.toString() : "0",
     decimals: 9,
+    icon: allTokens.find(
+      (t) => t.mint === "So11111111111111111111111111111111111111112",
+    )?.icon,
   };
 
   const allOwnedTokens = [
     ...(solBalance !== null && solBalance > 0 ? [solToken] : []),
     ...ownedTokens.map((t) => {
       const popularMatch = POPULAR_TOKENS.find((p) => p.mint === t.mint);
+      const allListMatch = allTokens.find((p) => p.mint === t.mint);
       return {
         mint: t.mint,
-        symbol: popularMatch?.symbol || "Unknown",
+        symbol: popularMatch?.symbol || allListMatch?.symbol || "Unknown",
         balance: t.balance,
         decimals: t.decimals,
+        icon: allListMatch?.icon,
       };
     }),
   ];
+
+  const sourceTokens = allTokens.length > 0 ? allTokens : POPULAR_TOKENS;
 
   // For input, we prioritize owned tokens
   const baseTokensForInput =
     allOwnedTokens.length > 0
       ? allOwnedTokens
-      : POPULAR_TOKENS.map((t) => ({ ...t, balance: "0", decimals: 0 }));
+      : sourceTokens.map((t) => ({
+          ...t,
+          balance: "0",
+          decimals: t.decimals || 0,
+        }));
 
-  const displayTokens = isInput
-    ? baseTokensForInput.filter(
-        (t) =>
-          t.mint.toLowerCase().includes(search.toLowerCase()) ||
-          t.symbol.toLowerCase().includes(search.toLowerCase()),
-      )
-    : POPULAR_TOKENS.filter(
-        (t) =>
-          t.mint.toLowerCase().includes(search.toLowerCase()) ||
-          t.symbol.toLowerCase().includes(search.toLowerCase()),
-      );
+  const displayTokens = (
+    isInput
+      ? baseTokensForInput.filter(
+          (t) =>
+            t.mint.toLowerCase().includes(search.toLowerCase()) ||
+            t.symbol.toLowerCase().includes(search.toLowerCase()),
+        )
+      : sourceTokens.filter(
+          (t) =>
+            t.mint.toLowerCase().includes(search.toLowerCase()) ||
+            t.symbol.toLowerCase().includes(search.toLowerCase()),
+        )
+  ).slice(0, 15);
 
   // Fallback for custom addresses
   const showCustomOption =
-    search.length > 30 && !displayTokens.find((t) => t.mint === search);
+    search.length > 15 && !displayTokens.find((t) => t.mint === search);
 
   const selectedTokenSymbol =
+    allTokens.find((t) => t.mint === value)?.symbol ||
     POPULAR_TOKENS.find((t) => t.mint === value)?.symbol ||
     allOwnedTokens.find((t) => t.mint === value)?.symbol ||
     "Custom";
@@ -125,7 +145,7 @@ export function TokenSelect({
       {isOpen && (
         <div
           tabIndex={-1}
-          className="absolute z-50 top-full left-0 right-0 mt-2 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl shadow-black/50 overflow-hidden flex flex-col max-h-[60vh] min-w-70"
+          className="absolute z-50 top-full left-0 right-0 mt-2 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl shadow-black/50 overflow-hidden flex flex-col min-w-70"
         >
           <div className="p-2 border-b border-zinc-800">
             <div className="relative">
@@ -142,10 +162,13 @@ export function TokenSelect({
             </div>
           </div>
 
-          <div className="flex-1 overflow-auto">
+          <div
+            ref={scrollContainerRef}
+            className="flex-1 overflow-hidden max-h-[60vh]"
+          >
             {isInput ? (
               <div className="w-full min-w-max">
-                <div className="flex items-center gap-2 px-3 py-2 bg-zinc-950/50 border-b border-zinc-800/50 sticky top-0 backdrop-blur-sm z-10">
+                <div className="flex items-center gap-2 px-3 py-2 bg-zinc-950 border-b border-zinc-800/50 sticky top-0 z-10">
                   <Wallet className="w-3.5 h-3.5 text-blue-400" />
                   <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
                     Your Tokens
@@ -158,7 +181,7 @@ export function TokenSelect({
                   </div>
                 ) : displayTokens.length > 0 ? (
                   <table className="w-full text-left text-sm">
-                    <thead className="bg-zinc-900/50 text-zinc-500 text-xs uppercase sticky top-8.25 backdrop-blur-sm z-10 shadow-sm">
+                    <thead className="bg-zinc-900 text-zinc-500 text-xs uppercase sticky top-8.25 z-10 shadow-sm">
                       <tr>
                         <th className="px-3 py-2 font-medium">Token</th>
                         <th className="px-3 py-2 font-medium text-right">
@@ -177,14 +200,27 @@ export function TokenSelect({
                           className="hover:bg-zinc-800/50 cursor-pointer transition-colors group"
                         >
                           <td className="px-3 py-2.5">
-                            <div className="flex flex-col">
-                              <span className="font-medium text-zinc-200 group-hover:text-white transition-colors">
-                                {token.symbol}
-                              </span>
-                              <span className="text-[10px] text-zinc-500">
-                                {token.mint.slice(0, 8)}...
-                                {token.mint.slice(-4)}
-                              </span>
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 rounded-full bg-zinc-800 border border-zinc-700/50 flex shrink-0 items-center justify-center text-xs font-bold text-zinc-400 overflow-hidden shadow-sm">
+                                {"icon" in token && token.icon ? (
+                                  <img
+                                    src={(token as any).icon}
+                                    alt={token.symbol}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  token.symbol[0]
+                                )}
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="font-medium text-zinc-200 group-hover:text-white transition-colors">
+                                  {token.symbol}
+                                </span>
+                                <span className="text-[10px] text-zinc-500">
+                                  {token.mint.slice(0, 8)}...
+                                  {token.mint.slice(-4)}
+                                </span>
+                              </div>
                             </div>
                           </td>
                           <td className="px-3 py-2.5 text-right">
@@ -215,7 +251,7 @@ export function TokenSelect({
               </div>
             ) : (
               <div className="p-1 min-w-max">
-                <div className="px-2 py-1.5 text-xs font-semibold text-zinc-500 uppercase tracking-wider sticky top-0 bg-zinc-900/90 backdrop-blur-sm z-10">
+                <div className="px-2 py-1.5 text-xs font-semibold text-zinc-500 uppercase tracking-wider sticky top-0 bg-zinc-900 z-10">
                   Popular Tokens
                 </div>
                 {displayTokens.map((token) => (
@@ -228,8 +264,16 @@ export function TokenSelect({
                     className="flex items-center justify-between px-2 py-2 hover:bg-zinc-800 rounded-lg cursor-pointer transition-colors"
                   >
                     <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-xs font-bold text-zinc-400 shadow-sm">
-                        {token.symbol[0]}
+                      <div className="w-6 h-6 rounded-full bg-zinc-800 border border-zinc-700/50 flex shrink-0 items-center justify-center text-xs font-bold text-zinc-400 overflow-hidden shadow-sm">
+                        {"icon" in token && token.icon ? (
+                          <img
+                            src={(token as any).icon}
+                            alt={token.symbol}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          token.symbol[0]
+                        )}
                       </div>
                       <span className="text-sm font-medium text-zinc-200">
                         {token.symbol}

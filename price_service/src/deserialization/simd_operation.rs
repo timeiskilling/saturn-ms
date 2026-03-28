@@ -10,12 +10,12 @@ pub struct CombinedStreamEvent<'a> {
 pub struct SmallTickerEvent<'a> {
     #[serde(borrow, rename = "s")]
     pub symbol: &'a str,
+    #[serde(borrow, rename = "c")]
+    pub current_price: &'a str,
     #[serde(borrow, rename = "p")]
     pub price_change: &'a str,
     #[serde(borrow, rename = "P")]
     pub price_change_percent: &'a str,
-    #[serde(borrow, rename = "x")]
-    pub prev_close: &'a str,
 }
 
 #[inline]

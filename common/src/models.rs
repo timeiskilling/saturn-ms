@@ -137,4 +137,5 @@ pub struct TokenInfo {
     pub symbol: String,
     pub mint: String,
     pub decimals: u8,
+    pub icon: String,
 }

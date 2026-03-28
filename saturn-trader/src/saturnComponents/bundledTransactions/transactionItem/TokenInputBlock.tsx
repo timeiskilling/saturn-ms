@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { TokenSelect } from "../TokenSelect";
 import { MaxButton } from "./MaxButton";
 import { HalfButton } from "./HalfButton";
+import { useTokenList } from "@/hooks/useTokenList";
 
 interface TokenInputBlockProps {
   label: "From" | "To";
@@ -48,6 +49,36 @@ export function TokenInputBlock({
   balance,
   usdRate = null,
 }: TokenInputBlockProps) {
+  const { tokens } = useTokenList();
+  const tokenIcon = tokens.find((t) => t.mint === mint)?.icon;
+
+  const [displayAmount, setDisplayAmount] = useState(amount);
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  // When mint changes (like during a swap), instantly clear the old value
+  useEffect(() => {
+    if (!isInput) {
+      setDisplayAmount("");
+      setIsUpdating(true);
+    }
+  }, [mint, isInput]);
+
+  useEffect(() => {
+    if (!isInput) {
+      setIsUpdating(true);
+      // Added a slightly longer latency to swallow the intermediate wrong calculation
+      // that occurs before the new WebSocket prices map to the swapped tokens.
+      const timer = setTimeout(() => {
+        setDisplayAmount(amount || "");
+        setIsUpdating(false);
+      }, 500);
+      return () => clearTimeout(timer);
+    } else {
+      setDisplayAmount(amount || "");
+      setIsUpdating(false);
+    }
+  }, [amount, isInput]);
+
   // Validate if user has enough balance (only applies if isInput is true and balance is known)
   const isInsufficientBalance =
     isInput &&
@@ -72,8 +103,15 @@ export function TokenInputBlock({
       {/* Top section: Mint selection */}
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-full bg-zinc-800 flex shrink-0 items-center justify-center border border-zinc-700/50 shadow-sm overflow-hidden">
-          {/* Default avatar placeholder, wait for real token icons */}
-          <div className="w-full h-full bg-zinc-600/50" />
+          {tokenIcon ? (
+            <img
+              src={tokenIcon}
+              alt="Token Icon"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-zinc-600/50" />
+          )}
         </div>
 
         <div className="flex flex-col flex-1 min-w-0 pr-20">
@@ -94,15 +132,16 @@ export function TokenInputBlock({
         <input
           type="text"
           inputMode="decimal"
-          value={amount}
+          value={displayAmount}
           onChange={(e) => {
             const val = formatDecimalInput(e.target.value, maxDecimals);
             onAmountChange(val);
           }}
-          className={`bg-transparent text-3xl font-medium outline-none w-full mr-4 placeholder:text-zinc-700 transition-colors ${
+          className={`bg-transparent text-3xl font-medium outline-none w-full mr-4 placeholder:text-zinc-700 transition-all duration-300 ${
             isInsufficientBalance ? "text-red-400" : "text-zinc-100"
-          }`}
+          } ${isUpdating && !isInput ? "opacity-40 scale-[0.98] blur-[1px]" : "opacity-100 scale-100 blur-none"}`}
           placeholder="0.00"
+          readOnly={!isInput}
         />
 
         {isInput && (
@@ -115,12 +154,14 @@ export function TokenInputBlock({
 
       {/* USD Value / Balance Row */}
       <div className="flex items-center justify-between text-xs font-medium mt-1">
-        <span className="text-zinc-600">
-          {amount && parseFloat(amount) > 0
-            ? usdRate !== null
-              ? `≈ $${(parseFloat(amount) * usdRate).toFixed(2)}`
+        <span
+          className={`text-zinc-600 transition-all duration-300 ${isUpdating && !isInput ? "opacity-40" : "opacity-100"}`}
+        >
+          {displayAmount && parseFloat(displayAmount) > 0
+            ? usdRate !== null && usdRate > 0
+              ? `≈ $${(parseFloat(displayAmount) * usdRate).toFixed(2)}`
               : "≈ $0.00"
-            : "-"}
+            : "≈ $0.00"}
         </span>
 
         {isInput && balance !== null && (
