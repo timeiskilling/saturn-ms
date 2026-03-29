@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import { TokenSelect } from "../TokenSelect";
 import { MaxButton } from "./MaxButton";
 import { HalfButton } from "./HalfButton";
@@ -50,7 +50,27 @@ export function TokenInputBlock({
   usdRate = null,
 }: TokenInputBlockProps) {
   const { tokens } = useTokenList();
-  const tokenIcon = tokens.find((t) => t.mint === mint)?.icon;
+  const tokenIcon = useMemo(
+    () => tokens.find((t) => t.mint === mint)?.icon,
+    [tokens, mint],
+  );
+
+  const onMintChangeRef = useRef(onMintChange);
+  useEffect(() => {
+    onMintChangeRef.current = onMintChange;
+  }, [onMintChange]);
+
+  const tokenSelectElement = useMemo(
+    () => (
+      <TokenSelect
+        value={mint}
+        onChange={(val) => onMintChangeRef.current(val)}
+        isInput={isInput}
+        minimalistic
+      />
+    ),
+    [mint, isInput],
+  );
 
   const [displayAmount, setDisplayAmount] = useState(amount);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -116,14 +136,7 @@ export function TokenInputBlock({
 
         <div className="flex flex-col flex-1 min-w-0 pr-20">
           <span className="text-sm font-semibold text-zinc-100">{label}</span>
-          <div className="w-full mt-0.5">
-            <TokenSelect
-              value={mint}
-              onChange={onMintChange}
-              isInput={isInput}
-              minimalistic
-            />
-          </div>
+          <div className="w-full mt-0.5">{tokenSelectElement}</div>
         </div>
       </div>
 

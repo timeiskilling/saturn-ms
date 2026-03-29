@@ -83,11 +83,13 @@ export function TransactionItem({
   return (
     <div className="relative flex group">
       {/* Step Number Line */}
-      <div className="flex flex-col items-center mr-4 w-8 shrink-0">
-        <div className="w-8 h-8 rounded-full bg-zinc-900 border border-zinc-700 flex items-center justify-center text-xs font-bold text-zinc-400 shadow-sm z-10">
+      <div className="flex flex-col items-center mr-4 w-8 shrink-0 relative">
+        <div className="w-8 h-8 mt-2 rounded-full bg-[#141414] border border-zinc-800 flex items-center justify-center text-xs font-bold text-zinc-500 shadow-sm z-10 relative group-hover:border-zinc-700 group-hover:text-zinc-300 transition-colors">
           {index + 1}
         </div>
-        {!isLast && <div className="w-0.5 h-full bg-zinc-800 -my-1" />}
+        {!isLast && (
+          <div className="absolute top-10 -bottom-6 w-[2px] bg-zinc-800/80 group-hover:bg-zinc-700/80 transition-colors" />
+        )}
       </div>
 
       {/* Transaction Card */}

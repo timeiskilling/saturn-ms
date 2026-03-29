@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Layers, Plus, ArrowRight, Play, Trash2 } from "lucide-react";
 import { type Template, POPULAR_TOKENS } from "./types";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
+import { useTokenList } from "@/hooks/useTokenList";
 
 interface TemplateSidebarProps {
   templates: Template[];
@@ -23,9 +24,10 @@ export function TemplateSidebar({
   const [templateToDelete, setTemplateToDelete] = useState<Template | null>(
     null,
   );
+  const { tokens: allTokens } = useTokenList();
 
   const getTokenSymbol = (mint: string) => {
-    return POPULAR_TOKENS.find((t) => t.mint === mint)?.symbol || "Custom";
+    return allTokens.find((t) => t.mint === mint)?.symbol || "Custom";
   };
 
   return (

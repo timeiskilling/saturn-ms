@@ -1,5 +1,7 @@
 import { BasicCard } from "./card";
-import { ConnectBox, usePhantom } from "@phantom/react-sdk";
+import { usePhantom } from "@phantom/react-sdk";
+import { CustomConnectButton } from "../components/wallet/CustomConnectButton";
+import { CustomWalletProfile } from "../components/wallet/CustomWalletProfile";
 import { useSolanaBalance } from "../hooks/useSolanaBalance";
 import { useTokenAccounts } from "@/hooks/useTokenAccounts";
 import { RefreshCw, Coins } from "lucide-react";
@@ -63,10 +65,11 @@ export function WalletSidebar() {
         content: "flex flex-col gap-1 mt-4 px-6",
       }}
     >
-      <div className="flex flex-col w-full">
-        <ConnectBox transparent />
+      <div className="flex flex-col w-full gap-4">
+        <CustomConnectButton />
+        <CustomWalletProfile />
 
-        {isConnected && (
+        {/*{isConnected && (
           <div className="mt-6 p-4 bg-zinc-900 rounded-lg border border-zinc-800">
             <h4 className="text-zinc-400 text-sm font-medium mb-1">
               Solana Balance
@@ -75,7 +78,7 @@ export function WalletSidebar() {
               {balance !== null ? `${balance.toFixed(4)} SOL` : "Loading..."}
             </p>
           </div>
-        )}
+        )}*/}
 
         {/* Token List Header */}
         {/*<div className="mt-6 mb-3 flex items-center justify-between">

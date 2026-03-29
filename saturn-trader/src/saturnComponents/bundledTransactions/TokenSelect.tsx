@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { ChevronDown, Search, Wallet, Coins } from "lucide-react";
 import { POPULAR_TOKENS } from "./types";
 import { useTokenAccounts } from "@/hooks/useTokenAccounts";
@@ -50,66 +50,86 @@ export function TokenSelect({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const solToken = {
-    mint: "So11111111111111111111111111111111111111112",
-    symbol: "SOL",
-    balance: solBalance !== null ? solBalance.toString() : "0",
-    decimals: 9,
-    icon: allTokens.find(
-      (t) => t.mint === "So11111111111111111111111111111111111111112",
-    )?.icon,
-  };
-
-  const allOwnedTokens = [
-    ...(solBalance !== null && solBalance > 0 ? [solToken] : []),
-    ...ownedTokens.map((t) => {
-      const popularMatch = POPULAR_TOKENS.find((p) => p.mint === t.mint);
-      const allListMatch = allTokens.find((p) => p.mint === t.mint);
-      return {
-        mint: t.mint,
-        symbol: popularMatch?.symbol || allListMatch?.symbol || "Unknown",
-        balance: t.balance,
-        decimals: t.decimals,
-        icon: allListMatch?.icon,
-      };
+  const solToken = useMemo(
+    () => ({
+      mint: "So11111111111111111111111111111111111111112",
+      symbol: "SOL",
+      balance: solBalance !== null ? solBalance.toString() : "0",
+      decimals: 9,
+      icon: allTokens.find(
+        (t) => t.mint === "So11111111111111111111111111111111111111112",
+      )?.icon,
     }),
-  ];
+    [solBalance, allTokens],
+  );
 
-  const sourceTokens = allTokens.length > 0 ? allTokens : POPULAR_TOKENS;
+  const allOwnedTokens = useMemo(
+    () => [
+      ...(solBalance !== null && solBalance > 0 ? [solToken] : []),
+      ...ownedTokens.map((t) => {
+        const popularMatch = POPULAR_TOKENS.find((p) => p.mint === t.mint);
+        const allListMatch = allTokens.find((p) => p.mint === t.mint);
+        return {
+          mint: t.mint,
+          symbol: popularMatch?.symbol || allListMatch?.symbol || "Unknown",
+          balance: t.balance,
+          decimals: t.decimals,
+          icon: allListMatch?.icon,
+        };
+      }),
+    ],
+    [solBalance, solToken, ownedTokens, allTokens],
+  );
+
+  const sourceTokens = useMemo(
+    () => (allTokens.length > 0 ? allTokens : POPULAR_TOKENS),
+    [allTokens],
+  );
 
   // For input, we prioritize owned tokens
-  const baseTokensForInput =
-    allOwnedTokens.length > 0
-      ? allOwnedTokens
-      : sourceTokens.map((t) => ({
-          ...t,
-          balance: "0",
-          decimals: t.decimals || 0,
-        }));
+  const baseTokensForInput = useMemo(
+    () =>
+      allOwnedTokens.length > 0
+        ? allOwnedTokens
+        : sourceTokens.map((t) => ({
+            ...t,
+            balance: "0",
+            decimals: t.decimals || 0,
+          })),
+    [allOwnedTokens, sourceTokens],
+  );
 
-  const displayTokens = (
-    isInput
-      ? baseTokensForInput.filter(
-          (t) =>
-            t.mint.toLowerCase().includes(search.toLowerCase()) ||
-            t.symbol.toLowerCase().includes(search.toLowerCase()),
-        )
-      : sourceTokens.filter(
-          (t) =>
-            t.mint.toLowerCase().includes(search.toLowerCase()) ||
-            t.symbol.toLowerCase().includes(search.toLowerCase()),
-        )
-  ).slice(0, 15);
+  const displayTokens = useMemo(
+    () =>
+      (isInput
+        ? baseTokensForInput.filter(
+            (t) =>
+              t.mint.toLowerCase().includes(search.toLowerCase()) ||
+              t.symbol.toLowerCase().includes(search.toLowerCase()),
+          )
+        : sourceTokens.filter(
+            (t) =>
+              t.mint.toLowerCase().includes(search.toLowerCase()) ||
+              t.symbol.toLowerCase().includes(search.toLowerCase()),
+          )
+      ).slice(0, 20),
+    [isInput, baseTokensForInput, sourceTokens, search],
+  );
 
   // Fallback for custom addresses
-  const showCustomOption =
-    search.length > 15 && !displayTokens.find((t) => t.mint === search);
+  const showCustomOption = useMemo(
+    () => search.length > 20 && !displayTokens.find((t) => t.mint === search),
+    [search, displayTokens],
+  );
 
-  const selectedTokenSymbol =
-    allTokens.find((t) => t.mint === value)?.symbol ||
-    POPULAR_TOKENS.find((t) => t.mint === value)?.symbol ||
-    allOwnedTokens.find((t) => t.mint === value)?.symbol ||
-    "Custom";
+  const selectedTokenSymbol = useMemo(
+    () =>
+      allTokens.find((t) => t.mint === value)?.symbol ||
+      POPULAR_TOKENS.find((t) => t.mint === value)?.symbol ||
+      allOwnedTokens.find((t) => t.mint === value)?.symbol ||
+      "Custom",
+    [allTokens, value, allOwnedTokens],
+  );
 
   return (
     <div className="relative" ref={dropdownRef}>

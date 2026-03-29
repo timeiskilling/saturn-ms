@@ -4,6 +4,44 @@ import type { QuoteOptions } from "../types";
 import { createPortal } from "react-dom";
 import { HIGH_FEE_THRESHOLD_PERCENT } from "../../../lib/constants";
 
+const ToggleSwitch = ({
+  checked,
+  onChange,
+}: {
+  checked: boolean;
+  onChange: () => void;
+}) => (
+  <div
+    onClick={onChange}
+    className={`w-12 h-6 rounded-full relative cursor-pointer transition-colors ${checked ? "bg-[#DADADA]" : "bg-[#0F0F0F]"}`}
+  >
+    <div
+      className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${checked ? "translate-x-6.5" : "translate-x-0.5"}`}
+    />
+  </div>
+);
+
+const SegmentedControlButton = ({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) => (
+  <button
+    onClick={onClick}
+    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors border ${
+      active
+        ? "bg-white text-black border-transparent"
+        : "bg-[#141414] border-zinc-700/50 text-zinc-400 hover:text-white"
+    }`}
+  >
+    {label}
+  </button>
+);
+
 interface AdvancedSettingsProps {
   options: QuoteOptions | undefined;
   onUpdateOptions: (field: keyof QuoteOptions, value: any) => void;
@@ -24,23 +62,30 @@ export function AdvancedSettings({
     slippageBps ? slippageValue.toString() : "",
   );
   const [mounted, setMounted] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+
   useEffect(() => {
     setMounted(true);
+    requestAnimationFrame(() => setIsOpen(true));
   }, []);
+
+  const handleClose = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      onClose();
+    }, 250);
+  };
+
   useEffect(() => {
-    if (!options?.dynamicSlippage) {
+    if (options?.dynamicSlippage) {
+      if (localSlippage !== "") setLocalSlippage("");
+    } else {
       const numericLocal = parseFloat(localSlippage);
       const isEquivalent =
         !isNaN(numericLocal) && Math.round(numericLocal * 100) === slippageBps;
       if (!isEquivalent && slippageBps > 0) {
         setLocalSlippage((slippageBps / 100).toString());
-      } else if (
-        !isEquivalent &&
-        slippageBps === 0 &&
-        localSlippage !== "" &&
-        localSlippage !== "."
-      ) {
-        setLocalSlippage("");
       }
     }
   }, [slippageBps, options?.dynamicSlippage, localSlippage]);
@@ -65,79 +110,48 @@ export function AdvancedSettings({
       val = `${integer}.${fraction.slice(0, 2)}`;
     }
     setLocalSlippage(val);
-    onUpdateOptions("dynamicSlippage", false);
-    let parsed = parseFloat(val);
+
     if (val === "" || val === ".") {
-      onSlippageChange(0);
-    } else if (!isNaN(parsed)) {
-      if (parsed > 100) {
-        parsed = 100;
-        setLocalSlippage("100");
+      onUpdateOptions("dynamicSlippage", true);
+    } else {
+      onUpdateOptions("dynamicSlippage", false);
+      let parsed = parseFloat(val);
+      if (!isNaN(parsed)) {
+        if (parsed > 100) {
+          parsed = 100;
+          setLocalSlippage("100");
+        }
+        onSlippageChange(Math.round(parsed * 100));
       }
-      onSlippageChange(Math.round(parsed * 100));
     }
   };
-
-  const ToggleSwitch = ({
-    checked,
-    onChange,
-  }: {
-    checked: boolean;
-    onChange: () => void;
-  }) => (
-    <div
-      onClick={onChange}
-      className={`w-12 h-6 rounded-full relative cursor-pointer transition-colors ${checked ? "bg-[#DADADA]" : "bg-[#0F0F0F]"}`}
-    >
-      <div
-        className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${checked ? "translate-x-6.5" : "translate-x-0.5"}`}
-      />
-    </div>
-  );
-
-  const SegmentedControlButton = ({
-    label,
-
-    active,
-
-    onClick,
-  }: {
-    label: string;
-
-    active: boolean;
-
-    onClick: () => void;
-  }) => (
-    <button
-      onClick={onClick}
-      className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors border ${
-        active
-          ? "bg-white text-black border-transparent"
-          : "bg-[#141414] border-zinc-700/50 text-zinc-400 hover:text-white"
-      }`}
-    >
-      {label}
-    </button>
-  );
 
   if (!mounted) return null;
 
   return createPortal(
     <div
-      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-      onClick={onClose}
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-300 ease-out ${
+        isOpen && !isClosing
+          ? "bg-black/60 backdrop-blur-sm"
+          : "bg-transparent backdrop-blur-none"
+      }`}
+      onClick={handleClose}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-120 max-h-[90vh] flex flex-col bg-[#1E1E1E] rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.7)] overflow-hidden"
+        className={`w-full max-w-120 max-h-[90vh] flex flex-col bg-[#121212] border border-zinc-800/80 rounded-3xl shadow-[0_0_80px_-15px_rgba(0,0,0,0.8)] overflow-hidden transition-all duration-300 ease-out ${
+          isOpen && !isClosing
+            ? "opacity-100 scale-100 translate-y-0"
+            : "opacity-0 scale-95 translate-y-8"
+        }`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-7 pb-6">
-          <h3 className="text-xl font-bold text-white">Advanced Settings</h3>
+        <div className="flex items-center justify-between p-6 pb-4 border-b border-zinc-800/50 bg-zinc-900/20">
+          <h3 className="text-xl font-bold text-zinc-100">Advanced Settings</h3>
 
           <button
-            onClick={onClose}
-            className="w-10 h-10 flex items-center justify-center rounded-full text-zinc-500 hover:text-white transition-colors"
+            onClick={handleClose}
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-white transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -165,13 +179,12 @@ export function AdvancedSettings({
               <div className="flex-1 bg-[#141414] rounded-lg p-3 border border-zinc-700/50">
                 <input
                   type="text"
-                  value={options?.dynamicSlippage ? "Auto" : localSlippage}
+                  value={options?.dynamicSlippage ? "" : localSlippage}
                   onChange={handleCustomSlippage}
-                  disabled={!!options?.dynamicSlippage}
                   className={`w-full bg-transparent text-sm font-medium outline-none ${
                     options?.dynamicSlippage ? "text-zinc-500" : "text-white"
                   }`}
-                  placeholder="Custom %"
+                  placeholder="Auto"
                 />
               </div>
 
@@ -193,38 +206,6 @@ export function AdvancedSettings({
                   />
                 ))}
               </div>
-            </div>
-          </div>
-
-          {/* Swap Mode */}
-
-          <div>
-            <div className="flex items-center gap-1.5 mb-4">
-              <span className="text-base font-medium text-zinc-300">
-                Swap Mode
-              </span>
-
-              <Info className="w-4 h-4 text-zinc-500" />
-            </div>
-
-            <div className="flex w-full bg-[#141414] rounded-lg p-1 border border-zinc-700/50 gap-1.5">
-              {[
-                { label: "Exact In", value: 0 },
-
-                { label: "Exact Out", value: 1 },
-              ].map((mode) => (
-                <button
-                  key={mode.label}
-                  onClick={() => onUpdateOptions("swapMode", mode.value)}
-                  className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors border ${
-                    (options?.swapMode ?? 0) === mode.value
-                      ? "bg-white text-black border-transparent"
-                      : "bg-[#141414] border-zinc-700/50 text-zinc-400 hover:text-white"
-                  }`}
-                >
-                  {mode.label}
-                </button>
-              ))}
             </div>
           </div>
 
