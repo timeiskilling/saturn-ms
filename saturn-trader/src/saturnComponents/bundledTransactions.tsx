@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import Scrollbar from "smooth-scrollbar";
 import { Plus, Trash2, Save, Layers, CircleDashed, Rocket } from "lucide-react";
 import { TemplateSidebar } from "./bundledTransactions/TemplateSidebar";
@@ -53,6 +53,10 @@ export function BundledTransactions() {
         const progress = limit > 0 ? offset / limit : 0;
 
         container.style.setProperty("--scroll-progress", `${progress * 100}%`);
+        container.style.setProperty(
+          "--scroll-progress-num",
+          progress.toString(),
+        );
       });
 
       return () => {
@@ -99,104 +103,109 @@ export function BundledTransactions() {
     );
   };
 
-  const updateActiveTemplate = (updatedTemplate: Template) => {
+  const updateActiveTemplate = useCallback((updatedTemplate: Template) => {
     setTemplates((prev) =>
       prev.map((t) => (t.id === updatedTemplate.id ? updatedTemplate : t)),
     );
-  };
+  }, []);
 
-  const handleUpdateTx = (
-    txId: string,
-    field: keyof TransactionInstruction,
-    value: any,
-  ) => {
-    if (!activeTemplateId) return;
-    setTemplates((prev) =>
-      prev.map((t) => {
-        if (t.id === activeTemplateId) {
-          return {
-            ...t,
-            transactions: t.transactions.map((tx) => {
-              if (tx.id === txId) {
-                return { ...tx, [field]: value };
-              }
-              return tx;
-            }),
-          };
-        }
-        return t;
-      }),
-    );
-  };
+  const handleUpdateTx = useCallback(
+    (txId: string, field: keyof TransactionInstruction, value: any) => {
+      if (!activeTemplateId) return;
+      setTemplates((prev) =>
+        prev.map((t) => {
+          if (t.id === activeTemplateId) {
+            return {
+              ...t,
+              transactions: t.transactions.map((tx) => {
+                if (tx.id === txId) {
+                  return { ...tx, [field]: value };
+                }
+                return tx;
+              }),
+            };
+          }
+          return t;
+        }),
+      );
+    },
+    [activeTemplateId],
+  );
 
-  const handleUpdateOptions = (
-    txId: string,
-    field: keyof QuoteOptions,
-    value: any,
-  ) => {
-    if (!activeTemplateId) return;
-    setTemplates((prev) =>
-      prev.map((t) => {
-        if (t.id === activeTemplateId) {
-          return {
-            ...t,
-            transactions: t.transactions.map((tx) => {
-              if (tx.id === txId) {
-                return {
-                  ...tx,
-                  options: {
-                    ...(tx.options || { dexes: [], excludeDexes: [] }),
-                    [field]: value,
-                  },
-                };
-              }
-              return tx;
-            }),
-          };
-        }
-        return t;
-      }),
-    );
-  };
+  const handleUpdateOptions = useCallback(
+    (txId: string, field: keyof QuoteOptions, value: any) => {
+      if (!activeTemplateId) return;
+      setTemplates((prev) =>
+        prev.map((t) => {
+          if (t.id === activeTemplateId) {
+            return {
+              ...t,
+              transactions: t.transactions.map((tx) => {
+                if (tx.id === txId) {
+                  return {
+                    ...tx,
+                    options: {
+                      ...(tx.options || { dexes: [], excludeDexes: [] }),
+                      [field]: value,
+                    },
+                  };
+                }
+                return tx;
+              }),
+            };
+          }
+          return t;
+        }),
+      );
+    },
+    [activeTemplateId],
+  );
 
-  const handleRemoveTx = (txId: string) => {
-    if (!activeTemplateId) return;
-    setTemplates((prev) =>
-      prev.map((t) =>
-        t.id === activeTemplateId
-          ? {
+  const handleRemoveTx = useCallback(
+    (txId: string) => {
+      if (!activeTemplateId) return;
+      setTemplates((prev) =>
+        prev.map((t) => {
+          if (t.id === activeTemplateId) {
+            return {
               ...t,
               transactions: t.transactions.filter((tx) => tx.id !== txId),
-            }
-          : t,
-      ),
-    );
-  };
+            };
+          }
+          return t;
+        }),
+      );
+    },
+    [activeTemplateId],
+  );
 
-  const handleSwapTxTokens = (txId: string, newAmount?: string) => {
-    if (!activeTemplateId) return;
-    setTemplates((prev) =>
-      prev.map((t) => {
-        if (t.id === activeTemplateId) {
-          return {
-            ...t,
-            transactions: t.transactions.map((tx) => {
-              if (tx.id === txId) {
-                return {
-                  ...tx,
-                  inputMint: tx.outputMint,
-                  outputMint: tx.inputMint,
-                  amount: newAmount !== undefined ? newAmount : tx.amount,
-                };
-              }
-              return tx;
-            }),
-          };
-        }
-        return t;
-      }),
-    );
-  };
+  const handleSwapTxTokens = useCallback(
+    (txId: string, newAmount?: string) => {
+      if (!activeTemplateId) return;
+      setTemplates((prev) =>
+        prev.map((t) => {
+          if (t.id === activeTemplateId) {
+            return {
+              ...t,
+              transactions: t.transactions.map((tx) => {
+                if (tx.id === txId) {
+                  return {
+                    ...tx,
+                    inputMint: tx.outputMint,
+                    outputMint: tx.inputMint,
+                    amount: newAmount !== undefined ? newAmount : tx.amount,
+                  };
+                }
+                return tx;
+              }),
+            };
+          }
+          return t;
+        }),
+      );
+    },
+    [activeTemplateId],
+  );
 
   const handleDeleteTemplate = (templateId: string) => {
     const newTemplates = templates.filter((t) => t.id !== templateId);

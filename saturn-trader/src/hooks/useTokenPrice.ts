@@ -10,8 +10,10 @@ export interface TokenPriceData {
 type Listener = (data: TokenPriceData) => void;
 
 let sharedWs: WebSocket | null = null;
-const listeners = new Set<Listener>();
+const listeners = new Map<string, Set<Listener>>();
 const priceCache: Record<string, TokenPriceData> = {};
+const lastUpdateTime: Record<string, number> = {};
+const THROTTLE_MS = 250; // Max 4 updates per second per symbol
 
 function getSharedWebSocket(): WebSocket {
   if (!sharedWs || sharedWs.readyState === WebSocket.CLOSED) {
@@ -68,8 +70,23 @@ function getSharedWebSocket(): WebSocket {
           priceCache[currentSymbol] = priceDataObj;
           priceCache[baseSymbol] = priceDataObj;
 
-          // Broadcast the data payload to all hooked React components
-          listeners.forEach((listener) => listener(priceDataObj));
+          const now = Date.now();
+          const lastUpdate = lastUpdateTime[baseSymbol] || 0;
+
+          if (now - lastUpdate >= THROTTLE_MS) {
+            lastUpdateTime[baseSymbol] = now;
+
+            // Broadcast the data payload to listeners of this specific symbol
+            const targetSet = listeners.get(baseSymbol);
+            if (targetSet) {
+              targetSet.forEach((listener) => listener(priceDataObj));
+            }
+
+            const targetSetUSDT = listeners.get(`${baseSymbol}USDT`);
+            if (targetSetUSDT) {
+              targetSetUSDT.forEach((listener) => listener(priceDataObj));
+            }
+          }
         }
       } catch (error) {
         console.error("Error parsing WebSocket price data:", error);
@@ -115,21 +132,33 @@ export function useTokenPrice(symbol: string | undefined) {
     }
 
     const listener: Listener = (data) => {
-      const targetSymbol = `${symbol.toUpperCase()}USDT`;
-      const currentSymbol = `${data.symbol.toUpperCase()}USDT`;
-
-      if (
-        currentSymbol === targetSymbol ||
-        data.symbol.toUpperCase() === symbol.toUpperCase()
-      ) {
-        setPriceData(data);
-      }
+      setPriceData((prev) => {
+        if (
+          prev &&
+          prev.price === data.price &&
+          prev.priceChange === data.priceChange &&
+          prev.percentChange === data.percentChange
+        ) {
+          return prev;
+        }
+        return data;
+      });
     };
 
-    listeners.add(listener);
+    const targetKey = symbol.toUpperCase();
+    if (!listeners.has(targetKey)) {
+      listeners.set(targetKey, new Set());
+    }
+    listeners.get(targetKey)!.add(listener);
 
     return () => {
-      listeners.delete(listener);
+      const targetSet = listeners.get(targetKey);
+      if (targetSet) {
+        targetSet.delete(listener);
+        if (targetSet.size === 0) {
+          listeners.delete(targetKey);
+        }
+      }
 
       // Clean up the shared WebSocket connection if no components are listening
       if (listeners.size === 0 && sharedWs) {

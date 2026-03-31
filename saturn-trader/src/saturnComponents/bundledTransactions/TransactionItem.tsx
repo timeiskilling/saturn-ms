@@ -32,7 +32,7 @@ interface TransactionItemProps {
   handleSwapTxTokens: (txId: string, newAmount?: string) => void;
 }
 
-export function TransactionItem({
+export const TransactionItem = React.memo(function TransactionItem({
   tx,
   index,
   isLast,
@@ -172,4 +172,4 @@ export function TransactionItem({
       </div>
     </div>
   );
-}
+});

@@ -29,8 +29,8 @@ export function useNestedScrollbar(isOpen: boolean) {
       e.stopPropagation();
     };
 
-    el.addEventListener("wheel", stopPropagation, { passive: false });
-    el.addEventListener("touchmove", stopPropagation, { passive: false });
+    el.addEventListener("wheel", stopPropagation, { passive: true });
+    el.addEventListener("touchmove", stopPropagation, { passive: true });
 
     return () => {
       el.removeEventListener("wheel", stopPropagation);

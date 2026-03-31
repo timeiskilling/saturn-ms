@@ -16,22 +16,6 @@ const MOCK_TOKENS = [
     name: "USD Coin",
     icon: "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png",
   },
-  {
-    mint: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263", // BONK
-    balance: "15000000",
-    decimals: 5,
-    symbol: "BONK",
-    name: "Bonk",
-    icon: "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263/logo.png",
-  },
-  {
-    mint: "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So", // mSOL
-    balance: "15.2",
-    decimals: 9,
-    symbol: "mSOL",
-    name: "Marinade staked SOL",
-    icon: "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So/logo.png",
-  },
 ];
 
 export function WalletSidebar() {
@@ -66,9 +50,6 @@ export function WalletSidebar() {
       }}
     >
       <div className="flex flex-col w-full gap-4">
-        <CustomConnectButton />
-        <CustomWalletProfile />
-
         {/*{isConnected && (
           <div className="mt-6 p-4 bg-zinc-900 rounded-lg border border-zinc-800">
             <h4 className="text-zinc-400 text-sm font-medium mb-1">

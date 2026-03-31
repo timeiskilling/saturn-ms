@@ -7,6 +7,8 @@ import { BundledTransactions } from "./saturnComponents/bundledTransactions";
 
 import { PhantomProvider, darkTheme } from "@phantom/react-sdk";
 import { AddressType } from "@phantom/browser-sdk";
+import { CustomWalletProfile } from "./components/wallet/CustomWalletProfile";
+import { CustomConnectButton } from "./components/wallet/CustomConnectButton";
 
 function AppContent() {
   const [activeTab, setActiveTab] = useState<"trading" | "bundles">("trading");
@@ -18,28 +20,40 @@ function AppContent() {
           <BasicCard
             title="Saturn Trader"
             className="flex rounded-none border-none bg-transparent w-auto shadow-none"
-          ></BasicCard>
-          <div className="flex gap-2 bg-zinc-900 p-1 rounded-lg border border-zinc-800">
-            <button
-              onClick={() => setActiveTab("trading")}
-              className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                activeTab === "trading"
-                  ? "bg-zinc-800 text-white shadow-sm"
-                  : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
-              }`}
-            >
-              Terminal
-            </button>
-            <button
-              onClick={() => setActiveTab("bundles")}
-              className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                activeTab === "bundles"
-                  ? "bg-zinc-800 text-white shadow-sm"
-                  : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
-              }`}
-            >
-              Bundles
-            </button>
+          />
+
+          <div className="flex items-center justify-end gap-4 ml-auto py-2">
+            <div className="flex items-center gap-3">
+              <div className="w-auto">
+                <CustomConnectButton />
+              </div>
+              <div className="w-auto">
+                <CustomWalletProfile />
+              </div>
+            </div>
+
+            <div className="flex gap-1 bg-zinc-900 p-1 rounded-lg border border-zinc-800">
+              <button
+                onClick={() => setActiveTab("trading")}
+                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  activeTab === "trading"
+                    ? "bg-zinc-800 text-white shadow-sm"
+                    : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+                }`}
+              >
+                Terminal
+              </button>
+              <button
+                onClick={() => setActiveTab("bundles")}
+                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  activeTab === "bundles"
+                    ? "bg-zinc-800 text-white shadow-sm"
+                    : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+                }`}
+              >
+                Bundles
+              </button>
+            </div>
           </div>
         </div>
 

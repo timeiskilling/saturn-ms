@@ -75,29 +75,10 @@ export function TokenInputBlock({
   const [displayAmount, setDisplayAmount] = useState(amount);
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // When mint changes (like during a swap), instantly clear the old value
   useEffect(() => {
-    if (!isInput) {
-      setDisplayAmount("");
-      setIsUpdating(true);
-    }
-  }, [mint, isInput]);
-
-  useEffect(() => {
-    if (!isInput) {
-      setIsUpdating(true);
-      // Added a slightly longer latency to swallow the intermediate wrong calculation
-      // that occurs before the new WebSocket prices map to the swapped tokens.
-      const timer = setTimeout(() => {
-        setDisplayAmount(amount || "");
-        setIsUpdating(false);
-      }, 500);
-      return () => clearTimeout(timer);
-    } else {
-      setDisplayAmount(amount || "");
-      setIsUpdating(false);
-    }
-  }, [amount, isInput]);
+    setDisplayAmount(amount || "");
+    setIsUpdating(false);
+  }, [amount]);
 
   // Validate if user has enough balance (only applies if isInput is true and balance is known)
   const isInsufficientBalance =
