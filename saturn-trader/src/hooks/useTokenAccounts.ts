@@ -1,7 +1,7 @@
 import { type TokenAccount } from "@/solanaAccountData/tokenAccount";
 import { usePhantom } from "@phantom/react-sdk";
-import { TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { Connection, PublicKey } from "@solana/web3.js";
+import { createSolanaClient,address } from "gill";
+import { TOKEN_PROGRAM_ADDRESS, TOKEN_2022_PROGRAM_ADDRESS } from "gill/programs";
 import { useCallback, useEffect, useState } from "react";
 
 interface CacheEntry {
@@ -27,7 +27,7 @@ export function useTokenAccounts(
         return;
       }
 
-      const address = addresses[0].address;
+      const addressPb = addresses[0].address;
       const cacheKey = `${address}-${rpcUrl}`;
 
       if (!cache[cacheKey]) {
@@ -59,20 +59,27 @@ export function useTokenAccounts(
       setError(null);
 
       entry.promise = (async () => {
-        const connection = new Connection(rpcUrl);
-        const publicKey = new PublicKey(address);
+        const { rpc } = createSolanaClient({
+          urlOrMoniker: rpcUrl,
+        });
+        const publicKey = address(addressPb);
 
         const [splTokenAccounts, token2022Accounts] = await Promise.all([
-          connection.getParsedTokenAccountsByOwner(
+          rpc.getTokenAccountsByOwner(
             publicKey,
-            { programId: TOKEN_PROGRAM_ID },
-            "confirmed",
-          ),
-          connection.getParsedTokenAccountsByOwner(
+            { programId: TOKEN_PROGRAM_ADDRESS },
+            {
+              commitment: "confirmed",
+              encoding: "jsonParsed"
+            },
+          ).send(),
+          rpc.getTokenAccountsByOwner(
             publicKey,
-            { programId: TOKEN_2022_PROGRAM_ID },
-            "confirmed",
-          ),
+            { programId: TOKEN_2022_PROGRAM_ADDRESS },
+            {
+              commitment: "confirmed",
+              encoding: "jsonParsed" },
+          ).send(),
         ]);
 
         const allAccounts = [

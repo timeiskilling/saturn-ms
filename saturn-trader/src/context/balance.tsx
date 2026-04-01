@@ -1,4 +1,4 @@
-import type { TokenBalance } from "@solana/web3.js";
+import type { TokenBalance } from "gill";
 
 interface BalanceContextState {
   balances: TokenBalance[];

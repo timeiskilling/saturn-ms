@@ -1,6 +1,6 @@
 import { expect, test, vi } from "vitest";
-import bs58 from "bs58";
 import { Buffer } from "buffer";
+import { getBase58Decoder } from "gill";
 import type { streaming } from "@/protoTypes/streaming_status";
 
 // We mock the dependencies to isolate the test from the actual Phantom Wallet
@@ -20,13 +20,17 @@ vi.mock("@phantom/react-sdk", () => ({
   })),
 }));
 
-vi.mock("@solana/web3.js", () => ({
-  VersionedTransaction: {
-    deserialize: vi.fn((bytes: Uint8Array) => ({
-      serialize: () => bytes,
+vi.mock("gill", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("gill")>();
+  return {
+    ...actual,
+    getTransactionDecoder: vi.fn(() => ({
+      decode: vi.fn((bytes: Uint8Array) => ({
+        serialize: () => bytes,
+      })),
     })),
-  },
-}));
+  };
+});
 
 test("handleSignOnly decodes base58, signs, and encodes to base64", async () => {
   // Dynamic import ensures the mocks are applied before the module is loaded
@@ -38,7 +42,7 @@ test("handleSignOnly decodes base58, signs, and encodes to base64", async () => 
   // 1. Setup mock input data
   // We provide a dummy transaction byte array, encoded in Base58
   const dummyTxBytes = new Uint8Array([1, 2, 3]);
-  const dummyBase58 = bs58.encode(dummyTxBytes);
+  const dummyBase58 = getBase58Decoder().decode(dummyTxBytes);
 
   const mockRequest: streaming.ITransactionsToSign = {
     transactions: [

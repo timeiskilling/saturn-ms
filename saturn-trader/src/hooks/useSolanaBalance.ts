@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
-import { Connection, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { createSolanaClient,address,LAMPORTS_PER_SOL} from "gill";
+import { TOKEN_PROGRAM_ADDRESS, TOKEN_2022_PROGRAM_ADDRESS} from "gill/programs";
+// import { Connection, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { usePhantom } from "@phantom/react-sdk";
 import { AddressType } from "@phantom/browser-sdk";
 
@@ -27,8 +29,8 @@ export function useSolanaBalance(
         );
 
         if (solAddress) {
-          const address = solAddress.address;
-          const cacheKey = `${address}-${rpcUrl}`;
+          const addressPb = solAddress.address;
+          const cacheKey = `${addressPb}-${rpcUrl}`;
 
           if (!cache[cacheKey]) {
             cache[cacheKey] = { promise: null, data: null, timestamp: 0 };
@@ -53,10 +55,12 @@ export function useSolanaBalance(
           }
 
           entry.promise = (async () => {
-            const connection = new Connection(rpcUrl, "confirmed");
-            const pubKey = new PublicKey(address);
-            const balanceLamports = await connection.getBalance(pubKey);
-            return balanceLamports / LAMPORTS_PER_SOL;
+            const { rpc } = createSolanaClient({
+              urlOrMoniker: rpcUrl,
+            })
+            const publicKey = address(addressPb);
+            const balanceLamports = await rpc.getBalance(publicKey).send();
+            return Number(balanceLamports.value) / Number(LAMPORTS_PER_SOL);
           })();
 
           try {
