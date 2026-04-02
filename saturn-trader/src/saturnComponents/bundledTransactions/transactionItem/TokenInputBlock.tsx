@@ -3,6 +3,7 @@ import { TokenSelect } from "../TokenSelect";
 import { MaxButton } from "./MaxButton";
 import { HalfButton } from "./HalfButton";
 import { useTokenList } from "@/hooks/useTokenList";
+import { type TransactionInstruction } from "../types";
 
 interface TokenInputBlockProps {
   label: "From" | "To";
@@ -14,6 +15,31 @@ interface TokenInputBlockProps {
   maxDecimals: number;
   balance: string | null;
   usdRate?: number | null;
+  transactions?: TransactionInstruction[];
+  index?: number;
+  walletAddress?: string;
+  onWalletChange?: (address: string) => void;
+  actualBalance?: string | null;
+}
+
+function formatTokenDisplay(value: string, maxDecimals: number): string {
+  if (!value) return "";
+  const num = parseFloat(value);
+  if (isNaN(num) || num === 0) return value;
+
+  if (num < 0.0001) {
+    return num.toFixed(Math.min(maxDecimals, 10)).replace(/\.?0+$/, "");
+  }
+
+  let displayDecimals = 6;
+  if (num >= 1000) {
+    displayDecimals = 2;
+  } else if (num >= 1) {
+    displayDecimals = 4;
+  }
+
+  displayDecimals = Math.min(displayDecimals, maxDecimals);
+  return num.toFixed(displayDecimals).replace(/\.?0+$/, "");
 }
 
 function formatDecimalInput(value: string, maxDecimals: number): string {
@@ -48,6 +74,11 @@ export function TokenInputBlock({
   maxDecimals,
   balance,
   usdRate = null,
+  transactions = [],
+  index = 0,
+  walletAddress,
+  onWalletChange,
+  actualBalance = null,
 }: TokenInputBlockProps) {
   const { tokens } = useTokenList();
   const tokenIcon = useMemo(
@@ -67,9 +98,13 @@ export function TokenInputBlock({
         onChange={(val) => onMintChangeRef.current(val)}
         isInput={isInput}
         minimalistic
+        transactions={transactions}
+        index={index}
+        walletAddress={walletAddress}
+        onWalletChange={onWalletChange}
       />
     ),
-    [mint, isInput],
+    [mint, isInput, transactions, index, walletAddress, onWalletChange],
   );
 
   const [displayAmount, setDisplayAmount] = useState(amount);
@@ -80,11 +115,14 @@ export function TokenInputBlock({
     setIsUpdating(false);
   }, [amount]);
 
+  const isWalletDisconnected = isInput && walletAddress === undefined;
+
   // Validate if user has enough balance (only applies if isInput is true and balance is known)
   const isInsufficientBalance =
     isInput &&
     balance !== null &&
-    parseFloat(amount || "0") > parseFloat(balance);
+    parseFloat(amount || "0") > parseFloat(balance) &&
+    !isWalletDisconnected;
 
   const handleMaxClick = () => {
     if (balance) {
@@ -126,16 +164,17 @@ export function TokenInputBlock({
         <input
           type="text"
           inputMode="decimal"
-          value={displayAmount}
+          value={isInput ? displayAmount : formatTokenDisplay(displayAmount, maxDecimals)}
           onChange={(e) => {
             const val = formatDecimalInput(e.target.value, maxDecimals);
             onAmountChange(val);
           }}
           className={`bg-transparent text-3xl font-medium outline-none w-full mr-4 placeholder:text-zinc-700 transition-all duration-300 ${
-            isInsufficientBalance ? "text-red-400" : "text-zinc-100"
+            isInsufficientBalance || isWalletDisconnected ? "text-red-400" : "text-zinc-100"
           } ${isUpdating && !isInput ? "opacity-40 scale-[0.98] blur-[1px]" : "opacity-100 scale-100 blur-none"}`}
           placeholder="0.00"
           readOnly={!isInput}
+          title={!isInput && displayAmount ? displayAmount : undefined}
         />
 
         {isInput && (
@@ -158,17 +197,27 @@ export function TokenInputBlock({
             : "≈ $0.00"}
         </span>
 
-        {isInput && balance !== null && (
+        {isInput && isWalletDisconnected ? (
+          <span className="text-red-400/80 transition-colors flex items-center gap-1">
+            Wallet disconnected
+          </span>
+        ) : isInput && balance !== null && (
           <span
-            className={`cursor-pointer hover:underline decoration-zinc-500 underline-offset-2 transition-colors ${
+            className={`cursor-pointer hover:underline decoration-zinc-500 underline-offset-2 transition-colors flex items-center gap-1 ${
               isInsufficientBalance ? "text-red-400/80" : "text-zinc-500"
             }`}
             onClick={handleMaxClick}
+            title={actualBalance !== null && actualBalance !== balance ? `Real balance: ${parseFloat(actualBalance).toLocaleString(undefined, { maximumFractionDigits: 4 })}` : undefined}
           >
             Balance:{" "}
             {parseFloat(balance).toLocaleString(undefined, {
               maximumFractionDigits: 4,
             })}
+            {actualBalance !== null && parseFloat(actualBalance) !== parseFloat(balance) && (
+              <span className="text-[10px] opacity-70">
+                (Simulated)
+              </span>
+            )}
           </span>
         )}
       </div>

@@ -54,17 +54,17 @@ export function CustomConnectModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity"
+      className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity"
       onClick={onClose}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-[400px] flex flex-col bg-[#1A1A1A] border border-zinc-800 rounded-3xl shadow-[0_0_80px_-15px_rgba(0,0,0,0.8)] overflow-hidden"
+        className="w-full max-w-100 flex flex-col bg-[#1A1A1A] border border-zinc-800 rounded-3xl shadow-[0_0_80px_-15px_rgba(0,0,0,0.8)] overflow-hidden"
       >
         <div className="p-6 pb-4 flex justify-between items-start">
           <div>
             <h3 className="text-xl font-bold text-zinc-100">Connect Wallet</h3>
-            <p className="text-sm text-zinc-400 mt-1 max-w-[220px]">
+            <p className="text-sm text-zinc-400 mt-1 max-w-55">
               You can only connect one wallet per environment.
             </p>
           </div>

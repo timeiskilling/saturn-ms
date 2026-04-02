@@ -1,0 +1,37 @@
+Add-on: Full Bundle Routing Summary & Total Fee Calculation
+Context & Motivation
+When a user constructs a multi-step bundle, the total cost includes not only the swapped assets but also network/gas fees, priority fees, and potential protocol fees. Before final execution, the frontend must communicate with the backend service (via an execute/simulate endpoint) to fetch the exact bundle characteristics and total fees. This ensures absolute transparency and prevents failed transactions due to insufficient gas.
+
+Core Requirements
+1. Backend Simulation & Fee Fetching
+
+Upon completing the bundle setup (or before clicking the final "Confirm/Sign" button), the client must send the bundle payload to the backend service.
+
+The backend will return the full bundle characteristics, including the exact aggregated fee required for the entire path.
+
+2. Bundle Summary UI (Confirmation Message)
+
+Display a comprehensive Bundle Summary component before the user signs the transaction.
+
+The summary must clearly outline:
+
+The full execution path (e.g., USDC -> SOL -> ETH).
+
+The Total Estimated Fee (aggregated across all bundle steps), broken down if necessary (Network Gas vs. Protocol Fee).
+
+The Net Expected Output.
+
+3. Integration with Simulated Balances (Gas Reservation)
+
+The total fee returned by the backend must be integrated into the Optimistic Balance Simulation (from the main task).
+
+Example: If the bundle fee is 0.05 SOL, the system must reserve an additional 0.05 SOL from the user's active wallet balance to ensure they don't max out their funds and fail the transaction due to gas constraints.
+
+Acceptance Criteria (DoD Updates)
+The frontend successfully calls the backend simulation/execute endpoint to retrieve the bundle's full routing path and total fee.
+
+A "Bundle Summary" UI is presented to the user, displaying the total fee clearly before final signature.
+
+The calculated total fee is properly subtracted from the user's simulatedBalances (specifically for the native gas token like SOL or ETH) to prevent "out of gas" errors when users click the "Max" button.
+
+If the user's balance cannot cover both the input amount and the total backend-calculated fee, the "Submit" button is disabled and an explicit "Insufficient funds for gas/fees" error is shown.

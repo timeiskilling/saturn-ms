@@ -14,6 +14,7 @@ const CACHE_TTL = 15000; // 15 seconds cache
 
 export function useTokenAccounts(
   rpcUrl: string = "https://api.devnet.solana.com",
+  customAddress?: string,
 ) {
   const { isConnected, addresses } = usePhantom();
   const [tokens, setTokens] = useState<TokenAccount[]>([]);
@@ -22,13 +23,15 @@ export function useTokenAccounts(
 
   const fetchTokenAccounts = useCallback(
     async (forceRefresh = false) => {
-      if (!addresses?.[0] || !isConnected) {
+      const targetAddress = customAddress || addresses?.[0]?.address;
+
+      if (!targetAddress || (!customAddress && !isConnected)) {
         setTokens([]);
         return;
       }
 
-      const addressPb = addresses[0].address;
-      const cacheKey = `${address}-${rpcUrl}`;
+      const addressPb = targetAddress;
+      const cacheKey = `${addressPb}-${rpcUrl}`;
 
       if (!cache[cacheKey]) {
         cache[cacheKey] = { promise: null, data: null, timestamp: 0 };
@@ -110,7 +113,7 @@ export function useTokenAccounts(
         setLoading(false);
       }
     },
-    [addresses, isConnected, rpcUrl],
+    [addresses, isConnected, rpcUrl, customAddress],
   );
 
   useEffect(() => {

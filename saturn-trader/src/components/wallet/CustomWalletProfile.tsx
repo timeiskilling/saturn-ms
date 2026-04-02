@@ -1,12 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import {
   useAccounts,
   useDisconnect,
   usePhantom,
   useDiscoveredWallets,
-  useModal,
+  useConnect,
 } from "@phantom/react-sdk";
+import { CustomConnectButton, CustomConnectModal } from "./CustomConnectButton";
+import { useConnectedWallets } from "../../hooks/useConnectedWallets";
 import {
   LogOut,
   Sun,
@@ -23,13 +25,13 @@ export function CustomWalletProfile() {
   const { disconnect, isDisconnecting } = useDisconnect();
   const accounts = useAccounts();
   const { wallets } = useDiscoveredWallets();
-  const { open: openModal } = useModal();
+  const { savedWallets, removeSavedWallet } = useConnectedWallets();
+  const { connect } = useConnect();
   const [showModal, setShowModal] = useState(false);
+  const [showConnectModal, setShowConnectModal] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [isWalletExpanded, setIsWalletExpanded] = useState(true);
-
-  if (!isConnected || !accounts || accounts.length === 0) return null;
 
   const handleOpen = () => {
     setShowModal(true);
@@ -45,9 +47,39 @@ export function CustomWalletProfile() {
     }, 300);
   };
 
+  const allAccounts = useMemo(() => {
+    const accs: { address: string; addressType: string; walletId: string; icon?: string; name: string }[] = [];
+    savedWallets.forEach((w) => {
+      w.accounts.forEach((a) => {
+        accs.push({
+          address: a.address,
+          addressType: a.addressType,
+          walletId: w.walletId,
+          icon: w.icon,
+          name: w.name,
+        });
+      });
+    });
+    // Add current accounts if not already in savedWallets (to prevent flicker)
+    if (accounts && isConnected) {
+          accounts.forEach((a) => {
+            if (!accs.find((sa) => sa.address === a.address)) {
+              accs.push({
+                address: a.address,
+                addressType: a.addressType,
+                walletId: user?.walletId || "",
+                icon: user?.wallet?.icon,
+                name: user?.wallet?.name || "Wallet",
+              });
+            }
+          });
+        }
+        return accs;
+  }, [savedWallets, accounts, user]);
+
   // Grab the first Solana address, or fallback to the first available account
   const primaryAccount =
-    accounts.find((a) => a.addressType === "Solana") || accounts[0];
+    allAccounts.find((a) => a.addressType === "Solana") || allAccounts[0];
 
   // Format it beautifully (e.g. 5x12...3kLq)
   const shortAddress = primaryAccount?.address
@@ -57,13 +89,16 @@ export function CustomWalletProfile() {
   const connectedWalletInfo = wallets.find(
     (w) => w.id === user?.walletId || w.name === user?.wallet?.name,
   );
-  const walletIcon = connectedWalletInfo?.icon || user?.wallet?.icon;
-  const walletName =
-    connectedWalletInfo?.name || user?.wallet?.name || "Wallet";
 
-  const getAccountIcon = (addressType: string) => {
-    return walletIcon;
-  };
+  const getWalletIconById = (walletId: string) => {
+      const foundWallet = wallets.find((w) => w.id === walletId);
+      return foundWallet?.icon;
+    };
+
+  // If there are no saved wallets and we are not connected, we have nothing to show.
+  if ((!isConnected || !accounts || accounts.length === 0) && savedWallets.length === 0) {
+    return <CustomConnectButton />;
+  }
 
   return (
     <>
@@ -72,8 +107,8 @@ export function CustomWalletProfile() {
         className="flex items-center gap-2.5 py-1.5 px-3 bg-zinc-900 border border-zinc-800 rounded-full shadow-sm hover:bg-zinc-800 hover:border-zinc-700 transition-colors"
       >
         <div className="flex items-center gap-1.5">
-          {accounts.map((acc, i) => {
-            const icon = getAccountIcon(acc.addressType);
+          {allAccounts.map((acc, i) => {
+            const icon = acc.icon || getWalletIconById(acc.walletId);
             return icon ? (
               <img
                 key={i}
@@ -99,10 +134,15 @@ export function CustomWalletProfile() {
         <Wallet className="w-5 h-5 text-zinc-300" />
       </button>
 
+      <CustomConnectModal
+        isOpen={showConnectModal}
+        onClose={() => setShowConnectModal(false)}
+      />
+
       {showModal &&
         createPortal(
           <div
-            className={`fixed inset-0 z-[100] flex justify-end p-4 transition-all duration-300 ease-out ${
+            className={`fixed inset-0 z-100 flex justify-end p-4 transition-all duration-300 ease-out ${
               isOpen && !isClosing
                 ? "bg-black/60 backdrop-blur-sm"
                 : "bg-transparent backdrop-blur-none"
@@ -111,7 +151,7 @@ export function CustomWalletProfile() {
           >
             <div
               onClick={(e) => e.stopPropagation()}
-              className={`w-full max-w-[400px] h-[calc(100vh-2rem)] flex flex-col bg-[#1A1A1A] border border-zinc-800 rounded-3xl shadow-[0_0_80px_-15px_rgba(0,0,0,0.8)] overflow-hidden transition-transform duration-300 ease-out ${
+              className={`w-full max-w-100 h-[calc(100vh-2rem)] flex flex-col bg-[#1A1A1A] border border-zinc-800 rounded-3xl shadow-[0_0_80px_-15px_rgba(0,0,0,0.8)] overflow-hidden transition-transform duration-300 ease-out ${
                 isOpen && !isClosing ? "translate-x-0" : "translate-x-[110%]"
               }`}
             >
@@ -141,8 +181,8 @@ export function CustomWalletProfile() {
                     className="flex items-center justify-between p-4 hover:bg-zinc-800/50 transition-colors"
                   >
                     <div className="flex items-center gap-2">
-                      {accounts.map((acc, i) => {
-                        const icon = getAccountIcon(acc.addressType);
+                      {allAccounts.map((acc, i) => {
+                        const icon = acc.icon || getWalletIconById(acc.walletId);
                         return icon ? (
                           <img
                             key={i}
@@ -165,7 +205,7 @@ export function CustomWalletProfile() {
                         onClick={(e) => {
                           e.stopPropagation();
                           handleClose();
-                          openModal();
+                          setShowConnectModal(true);
                         }}
                         className="w-6 h-6 rounded-md border border-zinc-700 flex items-center justify-center hover:bg-zinc-700 transition-colors cursor-pointer"
                       >
@@ -174,9 +214,9 @@ export function CustomWalletProfile() {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-semibold text-zinc-300">
-                        {accounts.length}{" "}
+                        {allAccounts.length}{" "}
                         <span className="text-zinc-500">
-                          {accounts.length === 1 ? "Wallet" : "Wallets"}
+                          {allAccounts.length === 1 ? "Wallet" : "Wallets"}
                         </span>
                       </span>
                       <ChevronDown
@@ -188,14 +228,14 @@ export function CustomWalletProfile() {
                   <div
                     className={`flex flex-col transition-all duration-300 overflow-hidden ${
                       isWalletExpanded
-                        ? "max-h-[400px] opacity-100 overflow-y-auto scrollbar-hide"
+                        ? "max-h-100 opacity-100 overflow-y-auto scrollbar-hide"
                         : "max-h-0 opacity-0"
                     }`}
                   >
                     <div className="px-4 pb-2 flex flex-col gap-1">
-                      {accounts.map((account, index) => {
+                      {allAccounts.map((account, index) => {
                         const accShort = `${account.address.slice(0, 5)}...${account.address.slice(-5)}`;
-                        const icon = getAccountIcon(account.addressType);
+                        const icon = account.icon || getWalletIconById(account.walletId);
                         const displayType =
                           account.addressType === "Ethereum"
                             ? "EVM"
@@ -204,7 +244,17 @@ export function CustomWalletProfile() {
                         return (
                           <div
                             key={`${account.address}-${index}`}
-                            className="flex items-center justify-between p-3 rounded-xl hover:bg-zinc-800/50 transition-colors group cursor-pointer"
+                            onClick={async () => {
+                              if (account.walletId !== user?.walletId) {
+                                try {
+                                  await connect({ walletId: account.walletId });
+                                } catch (e: any) {
+                                  console.error("Failed to switch wallet", e);
+                                  alert(`Failed to connect to ${account.name}: ${e?.message || "User rejected request or extension unavailable."}`);
+                                }
+                              }
+                            }}
+                            className={`flex items-center justify-between p-3 rounded-xl transition-colors group cursor-pointer ${account.walletId === user?.walletId ? 'bg-zinc-800/30' : 'hover:bg-zinc-800/50'}`}
                           >
                             <div className="flex items-center gap-3">
                               <div className="w-6 h-6 rounded-md bg-zinc-800 flex items-center justify-center overflow-hidden shrink-0">
@@ -233,12 +283,16 @@ export function CustomWalletProfile() {
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  disconnect();
-                                  handleClose();
+                                  if (account.walletId === user?.walletId) {
+                                    disconnect();
+                                    handleClose();
+                                  } else {
+                                    removeSavedWallet(account.walletId);
+                                  }
                                 }}
-                                disabled={isDisconnecting}
+                                disabled={isDisconnecting && account.walletId === user?.walletId}
                                 className="text-zinc-500 hover:text-zinc-300 transition-colors disabled:opacity-50 ml-1"
-                                title="Disconnect Session"
+                                title={account.walletId === user?.walletId ? "Disconnect Session" : "Remove Wallet"}
                               >
                                 <LogOut className="w-4 h-4" />
                               </button>
@@ -250,7 +304,7 @@ export function CustomWalletProfile() {
                       <button
                         onClick={() => {
                           handleClose();
-                          openModal();
+                          setShowConnectModal(true);
                         }}
                         className="flex items-center gap-3 p-3 mt-1 rounded-xl hover:bg-zinc-800/50 transition-colors group text-zinc-400 hover:text-zinc-200"
                       >

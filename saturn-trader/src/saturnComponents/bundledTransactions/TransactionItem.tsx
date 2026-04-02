@@ -7,7 +7,7 @@ import {
   type QuoteOptions,
   POPULAR_TOKENS,
 } from "./types";
-import { useTokenAccounts } from "@/hooks/useTokenAccounts";
+import { useAllWalletsBalances } from "@/hooks/useAllWalletsBalances";
 import { useTokenList } from "@/hooks/useTokenList";
 import { useTokenPrice } from "@/hooks/useTokenPrice";
 import { TokenInputBlock } from "./transactionItem/TokenInputBlock";
@@ -16,6 +16,7 @@ import { AdvancedSettings as AdvancedSettingsV2 } from "./transactionItem/Settin
 
 interface TransactionItemProps {
   tx: TransactionInstruction;
+  transactions: TransactionInstruction[];
   index: number;
   isLast: boolean;
   handleUpdateTx: (
@@ -34,6 +35,7 @@ interface TransactionItemProps {
 
 export const TransactionItem = React.memo(function TransactionItem({
   tx,
+  transactions,
   index,
   isLast,
   handleUpdateTx,
@@ -41,7 +43,7 @@ export const TransactionItem = React.memo(function TransactionItem({
   handleRemoveTx,
   handleSwapTxTokens,
 }: TransactionItemProps) {
-  const { tokens: ownedTokens } = useTokenAccounts();
+  const { balances, loading } = useAllWalletsBalances();
   const { tokens: allTokens } = useTokenList();
 
   const inputTokenSymbol =
@@ -66,15 +68,81 @@ export const TransactionItem = React.memo(function TransactionItem({
     calculatedOutputAmount = outAmount.toFixed(9).replace(/\.?0+$/, "");
   }
 
+  React.useEffect(() => {
+    if (tx.calculatedOutput !== calculatedOutputAmount) {
+      handleUpdateTx(tx.id, "calculatedOutput", calculatedOutputAmount);
+    }
+  }, [calculatedOutputAmount, handleUpdateTx, tx.id, tx.calculatedOutput]);
+
   const [showSettings, setShowSettings] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
+
+  const connectedAddresses = React.useMemo(
+    () => Object.values(balances).map((w) => w.address),
+    [balances]
+  );
+
+  const activeWalletAddress =
+    tx.userPk && connectedAddresses.includes(tx.userPk)
+      ? tx.userPk
+      : connectedAddresses[0];
+
+  React.useEffect(() => {
+    if (!loading && tx.userPk && !connectedAddresses.includes(tx.userPk)) {
+      handleUpdateTx(
+        tx.id,
+        "userPk",
+        connectedAddresses.length > 0 ? connectedAddresses[0] : undefined
+      );
+    }
+  }, [tx.userPk, connectedAddresses, handleUpdateTx, tx.id, loading]);
+
   const maxDecimals =
     POPULAR_TOKENS.find((t) => t.mint === tx.inputMint)?.decimals ??
-    ownedTokens?.find((t) => t.mint === tx.inputMint)?.decimals ??
+    (activeWalletAddress && balances ? Object.values(balances).find(w => w.address === activeWalletAddress)?.tokens.find((t) => t.mint === tx.inputMint)?.decimals : null) ??
     9;
 
-  const inputTokenBalance =
-    ownedTokens?.find((t) => t.mint === tx.inputMint)?.balance ?? null;
+  const outputMaxDecimals =
+    POPULAR_TOKENS.find((t) => t.mint === tx.outputMint)?.decimals ??
+    (activeWalletAddress && balances ? Object.values(balances).find(w => w.address === activeWalletAddress)?.tokens.find((t) => t.mint === tx.outputMint)?.decimals : null) ??
+    9;
+
+  let actualInputTokenBalance: string | null = null;
+  if (activeWalletAddress && balances) {
+    const activeWallet = Object.values(balances).find(w => w.address === activeWalletAddress);
+    if (activeWallet) {
+      if (tx.inputMint === "So11111111111111111111111111111111111111112") {
+        actualInputTokenBalance = activeWallet.solBalance !== null ? activeWallet.solBalance.toString() : "0";
+      } else {
+        const token = activeWallet.tokens.find(t => t.mint === tx.inputMint);
+        if (token) {
+          actualInputTokenBalance = token.balance;
+        } else {
+          actualInputTokenBalance = "0";
+        }
+      }
+    }
+  }
+
+  let inputTokenBalance = actualInputTokenBalance;
+
+  if (actualInputTokenBalance !== null && transactions) {
+    let simulatedBalance = parseFloat(actualInputTokenBalance);
+    for (let i = 0; i < index; i++) {
+      const prevTx = transactions[i];
+      if (!prevTx) continue;
+      const prevTxWallet = prevTx.userPk || Object.values(balances)[0]?.address;
+      if (prevTxWallet === activeWalletAddress) {
+        if (prevTx.inputMint === tx.inputMint) {
+          simulatedBalance -= parseFloat(prevTx.amount || "0");
+        }
+        if (prevTx.outputMint === tx.inputMint && prevTx.calculatedOutput) {
+          simulatedBalance += parseFloat(prevTx.calculatedOutput || "0");
+        }
+      }
+    }
+    inputTokenBalance = Math.max(0, simulatedBalance).toString();
+  }
 
   const handleSwapTokens = () => {
     handleSwapTxTokens(tx.id, calculatedOutputAmount);
@@ -88,7 +156,7 @@ export const TransactionItem = React.memo(function TransactionItem({
           {index + 1}
         </div>
         {!isLast && (
-          <div className="absolute top-10 -bottom-6 w-[2px] bg-zinc-800/80 group-hover:bg-zinc-700/80 transition-colors" />
+          <div className="absolute top-10 -bottom-6 w-0.5 bg-zinc-800/80 group-hover:bg-zinc-700/80 transition-colors" />
         )}
       </div>
 
@@ -146,7 +214,12 @@ export const TransactionItem = React.memo(function TransactionItem({
                 isInput={true}
                 maxDecimals={maxDecimals}
                 balance={inputTokenBalance}
+                actualBalance={actualInputTokenBalance}
                 usdRate={inputPriceData?.price ?? null}
+                transactions={transactions}
+                index={index}
+                walletAddress={activeWalletAddress}
+                onWalletChange={(address) => handleUpdateTx(tx.id, "userPk", address)}
               />
             </div>
 
@@ -162,9 +235,13 @@ export const TransactionItem = React.memo(function TransactionItem({
                 mint={tx.outputMint}
                 onMintChange={(val) => handleUpdateTx(tx.id, "outputMint", val)}
                 isInput={false}
-                maxDecimals={9}
+                maxDecimals={outputMaxDecimals}
                 balance={null}
                 usdRate={outputPriceData?.price ?? null}
+                transactions={transactions}
+                index={index}
+                walletAddress={activeWalletAddress}
+                onWalletChange={(address) => handleUpdateTx(tx.id, "userPk", address)}
               />
             </div>
           </div>

@@ -15,6 +15,7 @@ const CACHE_TTL = 15000; // 15 seconds cache
 
 export function useSolanaBalance(
   rpcUrl: string = "https://api.devnet.solana.com",
+  customAddress?: string,
 ) {
   const { isConnected, addresses } = usePhantom();
   const [balance, setBalance] = useState<number | null>(null);
@@ -23,14 +24,13 @@ export function useSolanaBalance(
     let mounted = true;
 
     async function fetchBalance() {
-      if (isConnected && addresses.length > 0) {
-        const solAddress = addresses.find(
-          (addr) => addr.addressType === AddressType.solana,
-        );
+      const targetAddress = customAddress || (isConnected && addresses.length > 0 ? addresses.find(
+        (addr) => addr.addressType === AddressType.solana,
+      )?.address : undefined);
 
-        if (solAddress) {
-          const addressPb = solAddress.address;
-          const cacheKey = `${addressPb}-${rpcUrl}`;
+      if (targetAddress) {
+        const addressPb = targetAddress;
+        const cacheKey = `${addressPb}-${rpcUrl}`;
 
           if (!cache[cacheKey]) {
             cache[cacheKey] = { promise: null, data: null, timestamp: 0 };
@@ -74,7 +74,6 @@ export function useSolanaBalance(
           } finally {
             entry.promise = null;
           }
-        }
       } else {
         if (mounted) setBalance(null);
       }
@@ -85,7 +84,7 @@ export function useSolanaBalance(
     return () => {
       mounted = false;
     };
-  }, [isConnected, addresses, rpcUrl]);
+  }, [isConnected, addresses, rpcUrl, customAddress]);
 
   return balance;
 }

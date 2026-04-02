@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import Scrollbar from "smooth-scrollbar";
-import { Plus, Trash2, Save, Layers, CircleDashed, Rocket } from "lucide-react";
+import { Plus, Trash2, Save, Layers, CircleDashed, Rocket, AlertTriangle, X } from "lucide-react";
 import { TemplateSidebar } from "./bundledTransactions/TemplateSidebar";
 import { TransactionItem } from "./bundledTransactions/TransactionItem";
 import {
@@ -25,6 +26,14 @@ export function BundledTransactions() {
   const [activeTemplateId, setActiveTemplateId] = useState<string | null>(
     INITIAL_TEMPLATES[0]?.id || null,
   );
+
+  const [switchWalletModal, setSwitchWalletModal] = useState<{
+    isOpen: boolean;
+    pendingWalletPk: string;
+    pendingMint: string;
+    targetTxId: string;
+    targetField: keyof TransactionInstruction;
+  } | null>(null);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -112,6 +121,25 @@ export function BundledTransactions() {
   const handleUpdateTx = useCallback(
     (txId: string, field: keyof TransactionInstruction, value: any) => {
       if (!activeTemplateId) return;
+
+      const activeTemplate = templates.find((t) => t.id === activeTemplateId);
+      if (!activeTemplate) return;
+
+      const firstWalletPk = activeTemplate.transactions[0]?.userPk;
+      const isWalletField = field === "userPk";
+
+      // If we're updating a wallet address and it conflicts with the established bundle wallet
+      if (isWalletField && firstWalletPk && value !== firstWalletPk) {
+        setSwitchWalletModal({
+          isOpen: true,
+          pendingWalletPk: value,
+          pendingMint: "", // Handled separately if token triggers it
+          targetTxId: txId,
+          targetField: field,
+        });
+        return;
+      }
+
       setTemplates((prev) =>
         prev.map((t) => {
           if (t.id === activeTemplateId) {
@@ -129,8 +157,29 @@ export function BundledTransactions() {
         }),
       );
     },
-    [activeTemplateId],
+    [activeTemplateId, templates],
   );
+
+  const handleUpdateBundleWallet = () => {
+    if (!activeTemplateId || !switchWalletModal) return;
+
+    setTemplates((prev) =>
+      prev.map((t) => {
+        if (t.id === activeTemplateId) {
+          return {
+            ...t,
+            transactions: t.transactions.map((tx) => ({
+              ...tx,
+              userPk: switchWalletModal.pendingWalletPk,
+            })),
+          };
+        }
+        return t;
+      }),
+    );
+
+    setSwitchWalletModal(null);
+  };
 
   const handleUpdateOptions = useCallback(
     (txId: string, field: keyof QuoteOptions, value: any) => {
@@ -233,7 +282,7 @@ export function BundledTransactions() {
           outputMint: tx.outputMint,
           amount: Number(tx.amount) || 0,
           slippageBps: tx.slippageBps,
-          userPk,
+          userPk: tx.userPk || userPk,
           options: tx.options || {
             dexes: [],
             excludeDexes: [],
@@ -341,6 +390,7 @@ export function BundledTransactions() {
                     <TransactionItem
                       key={tx.id}
                       tx={tx}
+                      transactions={activeTemplate.transactions}
                       index={index}
                       isLast={index === activeTemplate.transactions.length - 1}
                       handleUpdateTx={handleUpdateTx}
@@ -381,6 +431,49 @@ export function BundledTransactions() {
           </>
         )}
       </div>
+
+      {switchWalletModal && switchWalletModal.isOpen && typeof document !== "undefined"
+        ? createPortal(
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+              <div className="bg-[#1A1A1A] border border-zinc-800 rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                <div className="p-5 border-b border-zinc-800 flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-amber-500">
+                    <AlertTriangle className="w-5 h-5" />
+                    <h3 className="font-bold text-zinc-100">Switch Bundle Wallet</h3>
+                  </div>
+                  <button
+                    onClick={() => setSwitchWalletModal(null)}
+                    className="text-zinc-500 hover:text-zinc-300 transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="p-6">
+                  <p className="text-zinc-400 text-sm leading-relaxed mb-6">
+                    To ensure fast and reliable execution, all steps in a single bundle must use the same wallet. Do you want to switch the entire bundle to <span className="font-mono text-zinc-300">{switchWalletModal.pendingWalletPk.slice(0, 4)}...{switchWalletModal.pendingWalletPk.slice(-4)}</span>?
+                  </p>
+
+                  <div className="flex items-center gap-3 justify-end">
+                    <button
+                      onClick={() => setSwitchWalletModal(null)}
+                      className="px-4 py-2 rounded-xl text-sm font-semibold text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleUpdateBundleWallet}
+                      className="px-4 py-2 rounded-xl text-sm font-semibold bg-amber-500/10 text-amber-500 hover:bg-amber-500 hover:text-amber-950 transition-colors border border-amber-500/20"
+                    >
+                      Switch Wallet
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
     </div>
   );
 }

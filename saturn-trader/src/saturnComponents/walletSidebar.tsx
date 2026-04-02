@@ -1,7 +1,5 @@
 import { BasicCard } from "./card";
 import { usePhantom } from "@phantom/react-sdk";
-import { CustomConnectButton } from "../components/wallet/CustomConnectButton";
-import { CustomWalletProfile } from "../components/wallet/CustomWalletProfile";
 import { useSolanaBalance } from "../hooks/useSolanaBalance";
 import { useTokenAccounts } from "@/hooks/useTokenAccounts";
 import { RefreshCw, Coins } from "lucide-react";
