@@ -247,37 +247,53 @@ export function CustomWalletProfile() {
                             onClick={async () => {
                               if (account.walletId !== user?.walletId) {
                                 try {
-                                  await connect({ walletId: account.walletId });
+                                  await connect({ provider: "injected", walletId: account.walletId });
                                 } catch (e: any) {
                                   console.error("Failed to switch wallet", e);
                                   alert(`Failed to connect to ${account.name}: ${e?.message || "User rejected request or extension unavailable."}`);
                                 }
                               }
                             }}
-                            className={`flex items-center justify-between p-3 rounded-xl transition-colors group cursor-pointer ${account.walletId === user?.walletId ? 'bg-zinc-800/30' : 'hover:bg-zinc-800/50'}`}
+                            className={`flex items-center justify-between p-3 rounded-xl transition-colors group cursor-pointer border ${
+                              account.walletId === user?.walletId
+                                ? 'bg-emerald-500/5 border-emerald-500/20'
+                                : 'border-transparent hover:bg-zinc-800/50'
+                            }`}
                           >
                             <div className="flex items-center gap-3">
-                              <div className="w-6 h-6 rounded-md bg-zinc-800 flex items-center justify-center overflow-hidden shrink-0">
-                                {icon ? (
-                                  <img
-                                    src={icon}
-                                    alt={account.addressType}
-                                    className="w-full h-full object-cover bg-white"
-                                  />
-                                ) : (
-                                  <span className="text-[10px] font-bold text-zinc-400">
-                                    {account.addressType
-                                      .charAt(0)
-                                      .toUpperCase()}
+                              <div className="relative">
+                                <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center overflow-hidden shrink-0 shadow-sm border border-zinc-700/50">
+                                  {icon ? (
+                                    <img
+                                      src={icon}
+                                      alt={account.addressType}
+                                      className="w-full h-full object-cover bg-white"
+                                    />
+                                  ) : (
+                                    <span className="text-xs font-bold text-zinc-400">
+                                      {account.addressType
+                                        .charAt(0)
+                                        .toUpperCase()}
+                                    </span>
+                                  )}
+                                </div>
+                                {account.walletId === user?.walletId && (
+                                  <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-[#242424] shadow-sm"></div>
+                                )}
+                              </div>
+                              <div className="flex flex-col">
+                                <span className={`text-base font-bold transition-colors ${account.walletId === user?.walletId ? 'text-emerald-400' : 'text-zinc-100 group-hover:text-white'}`}>
+                                  {accShort}
+                                </span>
+                                {account.walletId === user?.walletId && (
+                                  <span className="text-[10px] font-semibold text-emerald-500/80 uppercase tracking-wider">
+                                    Active Session
                                   </span>
                                 )}
                               </div>
-                              <span className="text-base font-bold text-zinc-100 group-hover:text-white transition-colors">
-                                {accShort}
-                              </span>
                             </div>
                             <div className="flex items-center gap-3">
-                              <span className="text-sm font-medium text-zinc-500">
+                              <span className={`text-sm font-medium ${account.walletId === user?.walletId ? 'text-emerald-500/60' : 'text-zinc-500'}`}>
                                 {displayType}
                               </span>
                               <button
@@ -291,7 +307,7 @@ export function CustomWalletProfile() {
                                   }
                                 }}
                                 disabled={isDisconnecting && account.walletId === user?.walletId}
-                                className="text-zinc-500 hover:text-zinc-300 transition-colors disabled:opacity-50 ml-1"
+                                className={`transition-colors disabled:opacity-50 ml-1 ${account.walletId === user?.walletId ? 'text-emerald-500/50 hover:text-emerald-400' : 'text-zinc-500 hover:text-zinc-300'}`}
                                 title={account.walletId === user?.walletId ? "Disconnect Session" : "Remove Wallet"}
                               >
                                 <LogOut className="w-4 h-4" />
