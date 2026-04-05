@@ -24,6 +24,11 @@ export function TemplateSidebar({
   const [templateToDelete, setTemplateToDelete] = useState<Template | null>(
     null,
   );
+  const lastTemplateNameRef = React.useRef<string>("");
+  if (templateToDelete) {
+    lastTemplateNameRef.current = templateToDelete.name;
+  }
+
   const { tokens: allTokens } = useTokenList();
 
   const getTokenSymbol = (mint: string) => {
@@ -55,7 +60,7 @@ export function TemplateSidebar({
           }
         }}
         title="Delete Template"
-        message={`Are you sure you want to delete "${templateToDelete?.name}"?`}
+        message={`Are you sure you want to delete "${templateToDelete?.name || lastTemplateNameRef.current}"?`}
       />
 
       <div className="flex-1 overflow-y-auto p-3 space-y-2">

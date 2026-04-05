@@ -2,7 +2,6 @@
 
 // test on HTTP 2
 
-
-// make refetch of token list
-
 // add 3d animation
+
+// building the user-service with auth, state sync and session-manager

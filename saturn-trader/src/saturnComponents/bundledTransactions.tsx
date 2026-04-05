@@ -13,9 +13,11 @@ import {
 } from "./bundledTransactions/types";
 import { useSignTransaction } from "../components/api/singTransaction";
 import { executeBundle } from "../api/bundle";
-import { usePhantom } from "@phantom/react-sdk";
+import { usePhantom, useDiscoveredWallets } from "@phantom/react-sdk";
 import { AddressType } from "@phantom/browser-sdk";
 import OverscrollPlugin from "smooth-scrollbar/plugins/overscroll";
+import { useConnectedWallets } from "../hooks/useConnectedWallets";
+import { Wallet } from "lucide-react";
 
 Scrollbar.use(OverscrollPlugin);
 
@@ -23,6 +25,8 @@ export function BundledTransactions() {
   const [templates, setTemplates] = useState<Template[]>(INITIAL_TEMPLATES);
   const { handleSignOnly } = useSignTransaction();
   const { addresses } = usePhantom();
+  const { wallets: discoveredWallets } = useDiscoveredWallets();
+  const { savedWallets } = useConnectedWallets();
   const [activeTemplateId, setActiveTemplateId] = useState<string | null>(
     INITIAL_TEMPLATES[0]?.id || null,
   );
@@ -77,6 +81,18 @@ export function BundledTransactions() {
   const activeTemplate =
     templates.find((t) => t.id === activeTemplateId) || templates[0] || null;
 
+  const globalActiveAddress = addresses.find(
+      (addr) => addr.addressType === AddressType.solana,
+    )?.address;
+
+    // The bundle's wallet is either the one saved in the first transaction, or the global one
+    const bundleWalletAddress = activeTemplate?.transactions[0]?.userPk || globalActiveAddress;
+
+    // Find the matching metadata (name, icon) from saved wallets
+    const activeBundleWallet = savedWallets.find(w =>
+      w.accounts.some(a => a.address === bundleWalletAddress)
+    );
+
   const handleAddTemplate = () => {
     const newTemplate: Template = {
       id: `t_${Date.now()}`,
@@ -129,7 +145,7 @@ export function BundledTransactions() {
       const isWalletField = field === "userPk";
 
       // If we're updating a wallet address and it conflicts with the established bundle wallet
-      if (isWalletField && firstWalletPk && value !== firstWalletPk) {
+      if (isWalletField && firstWalletPk && value !== firstWalletPk && value !== undefined) {
         setSwitchWalletModal({
           isOpen: true,
           pendingWalletPk: value,
@@ -343,21 +359,46 @@ export function BundledTransactions() {
           <>
             {/* Editor Header */}
             <div className="px-8 py-5 border-b border-zinc-800 flex flex-wrap items-center justify-between gap-4 bg-zinc-950/50 backdrop-blur-sm shrink-0">
-              <div className="flex flex-col min-w-60">
+              <div className="flex flex-col min-w-160">
                 <input
                   value={activeTemplate.name}
+                  maxLength={43}
                   onChange={(e) =>
                     updateActiveTemplate({
                       ...activeTemplate,
                       name: e.target.value,
                     })
                   }
-                  className="text-2xl font-bold bg-transparent border-none outline-none text-white focus:ring-0 p-0 hover:bg-zinc-900/50 rounded transition-colors"
+                  className="text-2xl font-bold bg-transparent border-none outline-none text-white focus:ring-0 p-0 hover:bg-zinc-900/50 rounded transition-colors truncate"
                   placeholder="Template Name..."
                 />
               </div>
               <div className="flex flex-wrap items-center gap-3">
-                {/* TODO */}
+                {bundleWalletAddress && (
+                   <div
+                     className="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg shadow-sm"
+                     title="This wallet will be used to sign all steps in this bundle."
+                   >
+                     <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mr-1">
+                       Signer
+                     </span>
+                     {activeBundleWallet?.icon || discoveredWallets.find(w => w.name === activeBundleWallet?.name || w.id === activeBundleWallet?.walletId)?.icon ? (
+                       <img
+                         src={activeBundleWallet?.icon || discoveredWallets.find(w => w.name === activeBundleWallet?.name || w.id === activeBundleWallet?.walletId)?.icon}
+                         alt={activeBundleWallet?.name || "Wallet"}
+                         className="w-4 h-4 rounded-sm object-cover bg-white"
+                       />
+                     ) : (
+                       <Wallet className="w-4 h-4 text-blue-400" />
+                     )}
+                     <span className="text-sm font-medium text-zinc-300">
+                       {activeBundleWallet?.name || "Wallet"}
+                       <span className="text-zinc-500 ml-1">
+                         ({bundleWalletAddress.slice(0, 4)}...{bundleWalletAddress.slice(-4)})
+                       </span>
+                     </span>
+                   </div>
+                 )}
               </div>
             </div>
 
@@ -451,7 +492,7 @@ export function BundledTransactions() {
 
                 <div className="p-6">
                   <p className="text-zinc-400 text-sm leading-relaxed mb-6">
-                    To ensure fast and reliable execution, all steps in a single bundle must use the same wallet. Do you want to switch the entire bundle to <span className="font-mono text-zinc-300">{switchWalletModal.pendingWalletPk.slice(0, 4)}...{switchWalletModal.pendingWalletPk.slice(-4)}</span>?
+                    To ensure fast and reliable execution, all steps in a single bundle must use the same wallet. Do you want to switch the entire bundle to <span className="font-mono text-zinc-300">{switchWalletModal.pendingWalletPk?.slice(0, 4)}...{switchWalletModal.pendingWalletPk?.slice(-4)}</span>?
                   </p>
 
                   <div className="flex items-center gap-3 justify-end">

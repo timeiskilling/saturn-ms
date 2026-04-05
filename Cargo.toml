@@ -16,6 +16,7 @@ members = [
     "helius_data",
     "saturn-bundle-tracker",
     "saturn_errors",
+    "user_session_manager",
 ]
 
 exclude = [

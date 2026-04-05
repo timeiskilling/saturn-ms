@@ -88,12 +88,13 @@ export const TransactionItem = React.memo(function TransactionItem({
       : connectedAddresses[0];
 
   React.useEffect(() => {
-    if (!loading && tx.userPk && !connectedAddresses.includes(tx.userPk)) {
-      handleUpdateTx(
-        tx.id,
-        "userPk",
-        connectedAddresses.length > 0 ? connectedAddresses[0] : undefined
-      );
+    if (
+      !loading &&
+      connectedAddresses.length > 0 &&
+      tx.userPk &&
+      !connectedAddresses.includes(tx.userPk)
+    ) {
+      handleUpdateTx(tx.id, "userPk", connectedAddresses[0]);
     }
   }, [tx.userPk, connectedAddresses, handleUpdateTx, tx.id, loading]);
 

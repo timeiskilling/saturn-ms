@@ -175,10 +175,10 @@ export function CustomWalletProfile() {
               </div>
 
               <div className="px-6 flex flex-col gap-4 flex-1 overflow-y-auto scrollbar-hide">
-                <div className="flex flex-col bg-[#242424] rounded-2xl border border-zinc-800/80 overflow-hidden transition-all">
+                <div className="relative flex flex-col bg-[#242424] rounded-2xl border border-zinc-800/80 transition-all z-20">
                   <button
                     onClick={() => setIsWalletExpanded(!isWalletExpanded)}
-                    className="flex items-center justify-between p-4 hover:bg-zinc-800/50 transition-colors"
+                    className="flex items-center justify-between p-4 hover:bg-zinc-800/50 transition-colors rounded-2xl w-full"
                   >
                     <div className="flex items-center gap-2">
                       {allAccounts.map((acc, i) => {
@@ -226,13 +226,13 @@ export function CustomWalletProfile() {
                   </button>
 
                   <div
-                    className={`flex flex-col transition-all duration-300 overflow-hidden ${
+                    className={`absolute left-0 right-0 top-[calc(100%+0.5rem)] bg-[#242424] border border-zinc-800/80 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] flex flex-col transition-all duration-200 origin-top z-50 ${
                       isWalletExpanded
-                        ? "max-h-100 opacity-100 overflow-y-auto scrollbar-hide"
-                        : "max-h-0 opacity-0"
+                        ? "opacity-100 scale-100 pointer-events-auto"
+                        : "opacity-0 scale-95 pointer-events-none"
                     }`}
                   >
-                    <div className="px-4 pb-2 flex flex-col gap-1">
+                    <div className="p-2 flex flex-col gap-1 max-h-75 overflow-y-auto scrollbar-hide">
                       {allAccounts.map((account, index) => {
                         const accShort = `${account.address.slice(0, 5)}...${account.address.slice(-5)}`;
                         const icon = account.icon || getWalletIconById(account.walletId);
@@ -287,7 +287,6 @@ export function CustomWalletProfile() {
                                 </span>
                                 {account.walletId === user?.walletId && (
                                   <span className="text-[10px] font-semibold text-emerald-500/80 uppercase tracking-wider">
-                                    Active Session
                                   </span>
                                 )}
                               </div>

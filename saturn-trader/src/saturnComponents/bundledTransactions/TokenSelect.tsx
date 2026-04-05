@@ -4,6 +4,7 @@ import { POPULAR_TOKENS, type TransactionInstruction } from "./types";
 import { useAllWalletsBalances } from "@/hooks/useAllWalletsBalances";
 import { useTokenList } from "@/hooks/useTokenList";
 import { useNestedScrollbar } from "@/hooks/useNestedScrollbar";
+import { useDiscoveredWallets } from "@phantom/react-sdk";
 
 interface TokenSelectProps {
   value: string;
@@ -30,7 +31,7 @@ export function TokenSelect({
   const [search, setSearch] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-
+  const { wallets: discoveredWallets } = useDiscoveredWallets();
   const { balances, loading: tokensLoading } = useAllWalletsBalances();
   const { tokens: allTokens } = useTokenList();
 
@@ -162,7 +163,7 @@ export function TokenSelect({
       tokens: wallet.tokens.filter(
         (t) =>
           t.mint.toLowerCase().includes(search.toLowerCase()) ||
-          t.symbol.toLowerCase().includes(search.toLowerCase()),
+          t.symbol.toLowerCase().includes(search.toLowerCase())
       ).slice(0, 20)
     })).filter(wallet => wallet.tokens.length > 0);
   }, [isInput, allOwnedTokensByWallet, search]);
@@ -256,13 +257,17 @@ export function TokenSelect({
                   displayTokensByWallet.map((wallet) => (
                     <div key={wallet.walletId} className="mb-2">
                       <div className="flex items-center gap-2 px-3 py-2 bg-zinc-950 border-y border-zinc-800/50 sticky top-0 z-10">
-                        {wallet.icon ? (
-                          <img src={wallet.icon} alt={wallet.name} className="w-4 h-4" />
+                        {wallet.icon || discoveredWallets.find(w => w.name === wallet.name || w.id === wallet.walletId)?.icon ? (
+                          <img
+                            src={wallet.icon || discoveredWallets.find(w => w.name === wallet.name || w.id === wallet.walletId)?.icon}
+                            alt={wallet.name}
+                            className="w-4 h-4 rounded-sm object-cover bg-white"
+                          />
                         ) : (
                           <Wallet className="w-3.5 h-3.5 text-blue-400" />
                         )}
-                        <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-                          {wallet.name} ({wallet.address.slice(0, 4)}...{wallet.address.slice(-4)})
+                        <span className="text-xs font-semibold text-zinc-400 tracking-wider">
+                           ({wallet.address.slice(0, 4)}...{wallet.address.slice(-4)})
                         </span>
                       </div>
                       <table className="w-full text-left text-sm">
