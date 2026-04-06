@@ -32,6 +32,25 @@ pub enum WalletError {
 }
 
 #[derive(Debug)]
+pub enum UserAuthError {
+    InvalidPublicKey,
+    InvalidSignatureFormat,
+    VerificationFailed,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum UserServiceError {
+    InvalidSignature,
+    InvalidNonce,
+    SessionNotFound,
+    SessionExpired,
+    Unauthorized,
+    DatabaseError(String),
+    RedisError(String),
+    InternalError(String),
+}
+
+#[derive(Debug)]
 pub enum PriceServiceError {
     Redis(PriceRedisError),
     Parse(PriceParseError),
@@ -934,6 +953,31 @@ impl fmt::Display for PriceParseError {
     }
 }
 
+impl fmt::Display for UserAuthError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::InvalidPublicKey => write!(f, "Invalid public key format"),
+            Self::InvalidSignatureFormat => write!(f, "Invalid signature format"),
+            Self::VerificationFailed => write!(f, "Signature verification failed"),
+        }
+    }
+}
+
+impl fmt::Display for UserServiceError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::InvalidSignature => write!(f, "Invalid signature"),
+            Self::InvalidNonce => write!(f, "Invalid or expired nonce"),
+            Self::SessionNotFound => write!(f, "Session not found"),
+            Self::SessionExpired => write!(f, "Session expired"),
+            Self::Unauthorized => write!(f, "Unauthorized access"),
+            Self::DatabaseError(msg) => write!(f, "Database error: {}", msg),
+            Self::RedisError(msg) => write!(f, "Redis error: {}", msg),
+            Self::InternalError(msg) => write!(f, "Internal error: {}", msg),
+        }
+    }
+}
+
 impl std::error::Error for WalletError {}
 impl std::error::Error for EncryptionError {}
 impl std::error::Error for KeystoreError {}
@@ -951,3 +995,5 @@ impl std::error::Error for JitoEndpointErr {}
 impl std::error::Error for PriceServiceError {}
 impl std::error::Error for PriceRedisError {}
 impl std::error::Error for PriceParseError {}
+impl std::error::Error for UserAuthError {}
+impl std::error::Error for UserServiceError {}
