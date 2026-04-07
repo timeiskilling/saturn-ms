@@ -1,10 +1,12 @@
-use axum::Json;
-use reqwest::StatusCode;
+use axum::{Json, response::IntoResponse};
 use saturn_errors::error::UserServiceError;
 
 use crate::{
-    auth_manager::signature_check::Verifiable,
-    endpoints::models::{NonceResponse, SolVerifyRequest},
+    auth_manager::{inject_token::inject_token, signature_check::Verifiable},
+    endpoints::{
+        errors::ApiError,
+        models::{NonceResponse, SolVerifyRequest},
+    },
     redis::{self, extractor::RedisConn},
 };
 
@@ -21,15 +23,17 @@ pub async fn get_nonce(mut redis: RedisConn) -> Result<Json<NonceResponse>, User
 pub async fn verify_signature(
     mut redis: RedisConn,
     Json(payload): Json<SolVerifyRequest>,
-) -> Result<StatusCode, UserServiceError> {
+) -> Result<impl IntoResponse, ApiError> {
     let expected_nonce =
         redis::command::fetch_nonce_from_redis(&mut redis.0, &payload.request_id).await?;
+    let _ = redis::command::delete_nonce_from_redis(&mut redis.0, &payload.request_id).await;
     let expected_message = format!("Sign in to Saturn.\n\nNonce: {}", expected_nonce);
+    let public_key = payload.public_key.clone();
     let signature = payload.try_into_domain(expected_message.into_bytes())?;
 
     let _ = signature
         .verify()
         .map_err(|_| UserServiceError::InvalidSignature)?;
 
-    Ok(StatusCode::OK)
+    return inject_token(public_key, &mut redis.0).await;
 }
