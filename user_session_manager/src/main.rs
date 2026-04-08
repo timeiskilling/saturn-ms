@@ -5,6 +5,7 @@ pub mod postgres;
 pub mod redis;
 pub mod state_config;
 pub mod state_manager;
+pub mod middleware;
 
 #[tokio::main]
 async fn main() {

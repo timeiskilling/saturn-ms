@@ -1,4 +1,5 @@
 use axum::{Json, response::IntoResponse};
+use axum_extra::{TypedHeader, headers::UserAgent};
 use saturn_errors::error::UserServiceError;
 
 use crate::{
@@ -7,6 +8,8 @@ use crate::{
         errors::ApiError,
         models::{NonceResponse, SolVerifyRequest},
     },
+    middleware::session_token::AuthenticatedUser,
+    postgres::{extractor::DatabaseConnection, query::insert_wallets},
     redis::{self, extractor::RedisConn},
 };
 
@@ -21,7 +24,10 @@ pub async fn get_nonce(mut redis: RedisConn) -> Result<Json<NonceResponse>, User
 }
 
 pub async fn verify_signature(
+    existing_session: Option<AuthenticatedUser>,
+    db: DatabaseConnection,
     mut redis: RedisConn,
+    TypedHeader(user_agent): TypedHeader<UserAgent>,
     Json(payload): Json<SolVerifyRequest>,
 ) -> Result<impl IntoResponse, ApiError> {
     let expected_nonce =
@@ -35,5 +41,20 @@ pub async fn verify_signature(
         .verify()
         .map_err(|_| UserServiceError::InvalidSignature)?;
 
-    return inject_token(public_key, &mut redis.0).await;
+    match existing_session {
+        Some(user) => {
+            tracing::info!(
+                "User {} is linking a new wallet: {}",
+                user.wallet_address,
+                public_key
+            );
+            let success_response = insert_wallets(db, user, public_key).await?;
+            Ok((axum::http::StatusCode::OK, Json(success_response)).into_response())
+        }
+        None => {
+            tracing::info!("New login for wallet: {}", public_key);
+            let response = inject_token(public_key, &mut redis.0, user_agent.as_str()).await?;
+            Ok(response.into_response())
+        }
+    }
 }

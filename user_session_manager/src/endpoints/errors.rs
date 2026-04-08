@@ -27,6 +27,7 @@ impl IntoResponse for ApiError {
             | UserServiceError::Unauthorized => (StatusCode::UNAUTHORIZED, self.0.to_string()),
             UserServiceError::DatabaseError(_)
             | UserServiceError::RedisError(_)
+            | UserServiceError::PostgresError(_)
             | UserServiceError::InternalError(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Internal server error".to_string(),

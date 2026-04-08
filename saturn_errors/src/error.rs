@@ -47,6 +47,7 @@ pub enum UserServiceError {
     Unauthorized,
     DatabaseError(String),
     RedisError(String),
+    PostgresError(String),
     InternalError(String),
 }
 
@@ -973,6 +974,7 @@ impl fmt::Display for UserServiceError {
             Self::Unauthorized => write!(f, "Unauthorized access"),
             Self::DatabaseError(msg) => write!(f, "Database error: {}", msg),
             Self::RedisError(msg) => write!(f, "Redis error: {}", msg),
+            Self::PostgresError(msg) => write!(f, "Postgres error: {}", msg),
             Self::InternalError(msg) => write!(f, "Internal error: {}", msg),
         }
     }

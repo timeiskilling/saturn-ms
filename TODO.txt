@@ -4,4 +4,5 @@
 
 // add 3d animation
 
-// building the user-service with auth, state sync and session-manager
+// building the state sync and session-manager
+// with sqlx
