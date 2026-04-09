@@ -56,10 +56,12 @@ pub async fn create_session(
     redis_client: &mut Connection,
     user_agent: &str,
 ) -> Result<String, UserServiceError> {
-    let mut rng = rand::rng();
-    let mut token_bytes = [0u8; 32];
-    rand::Rng::fill_bytes(&mut rng, &mut token_bytes);
-    let token = bs58::encode(token_bytes).into_string();
+    let token = {
+        let mut rng = rand::rng();
+        let mut token_bytes = [0u8; 32];
+        rand::Rng::fill_bytes(&mut rng, &mut token_bytes);
+        bs58::encode(token_bytes).into_string()
+    };
 
     let public_session_id = uuid::Uuid::new_v4().to_string();
 
@@ -159,4 +161,65 @@ pub async fn get_devices(
     }
 
     Ok(devices)
+}
+
+pub async fn delete_session(
+    token: &str,
+    redis_client: &mut Connection,
+) -> Result<(), UserServiceError> {
+    let session = get_session(token, redis_client).await?;
+
+    let _: () = redis_client
+        .del(format!("session:{}", token))
+        .await
+        .map_err(|e| UserServiceError::RedisError(e.to_string()))?;
+
+    let _: () = redis_client
+        .del(format!("public_session:{}", session.public_id))
+        .await
+        .map_err(|e| UserServiceError::RedisError(e.to_string()))?;
+
+    let _: () = redis_client
+        .srem(
+            format!("user_devices:{}", session.wallet),
+            session.public_id,
+        )
+        .await
+        .map_err(|e| UserServiceError::RedisError(e.to_string()))?;
+
+    Ok(())
+}
+
+pub async fn disconnect_device(
+    public_id: &str,
+    redis_client: &mut Connection,
+) -> Result<(), UserServiceError> {
+    let token: Option<String> = redis_client
+        .get(format!("public_session:{}", public_id))
+        .await
+        .map_err(|e| UserServiceError::RedisError(e.to_string()))?;
+
+    if let Some(secret_token) = token {
+        delete_session(&secret_token, redis_client).await?;
+    }
+
+    Ok(())
+}
+
+pub async fn delete_all_user_sessions(
+    pub_key: &str,
+    redis_client: &mut Connection,
+) -> Result<(), UserServiceError> {
+    let devices_key = format!("user_devices:{}", pub_key);
+
+    let public_ids: Vec<String> = redis_client
+        .smembers(&devices_key)
+        .await
+        .map_err(|e| UserServiceError::RedisError(e.to_string()))?;
+
+    for public_id in public_ids {
+        let _ = disconnect_device(&public_id, redis_client).await;
+    }
+
+    Ok(())
 }

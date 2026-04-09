@@ -6,3 +6,10 @@
 
 // building the state sync and session-manager
 // with sqlx
+
+// --- Future Scaling Tasks (Post-MVP) ---
+// - Add PgBouncer for PostgreSQL connection pooling to prevent connection exhaustion when scaling instances.
+// - Migrate tower_governor rate limiter to use Redis-backed storage for distributed rate limiting across multiple servers.
+// - Set up PostgreSQL Read Replicas for heavy SELECT queries on the bundles_data JSONB.
+// - Containerize app (Docker) and deploy multiple replicas behind the Load Balancer (K8s HPA).
+// - Consider Redis Cluster upgrade if Redis Sentinel memory becomes a bottleneck for sessions.
