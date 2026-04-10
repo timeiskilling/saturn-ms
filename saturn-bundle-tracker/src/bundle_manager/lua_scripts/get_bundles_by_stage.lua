@@ -1,21 +1,21 @@
--- KEYS[1]: The Sorted Set for the stage (e.g., "bundles:InFlight")
+-- KEYS[1]: The stage string (e.g., "InFlight")
 -- ARGV[1]: Batch Size (limit)
 -- ARGV[2]: Worker ID
 -- ARGV[3]: Current Timestamp (Unix ms)
 -- ARGV[4]: Lock Duration (ms) (e.g., 30000 for 30s)
 
-local stage_key = KEYS[1]
+local stage_key = "bundles_stage:" .. KEYS[1]
 local limit = tonumber(ARGV[1])
 local worker_id = ARGV[2]
 local now = tonumber(ARGV[3])
 local lock_duration = tonumber(ARGV[4])
 
--- Get all candidate bundles (you might want to use ZRANGEBYSCORE to prioritize older ones)
-local candidates = redis.call('ZRANGE', stage_key, 0, -1)
-local locked_bundles = {}
+-- Get all candidate bundles (stored as a Set)
+local candidates = redis.call('SMEMBERS', stage_key)
+local locked_bundles_data = {}
 
 for _, bundle_id in ipairs(candidates) do
-    if #locked_bundles >= limit then
+    if #locked_bundles_data >= limit then
         break
     end
 
@@ -31,8 +31,15 @@ for _, bundle_id in ipairs(candidates) do
         -- Set TTL on lock key so it cleans itself up eventually if bundle is deleted
         redis.call('PEXPIRE', lock_key, lock_duration * 2)
 
-        table.insert(locked_bundles, bundle_id)
+        -- Fetch the actual JSON string from the bundle_tracker Hash
+        local bundle_data = redis.call('HGET', 'bundle_tracker', bundle_id)
+        if bundle_data then
+            table.insert(locked_bundles_data, bundle_data)
+        else
+            -- Cleanup dangling ID if data is somehow missing from the Hash
+            redis.call('SREM', stage_key, bundle_id)
+        end
     end
 end
 
-return locked_bundles
+return locked_bundles_data

@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM user_bundles WHERE wallet_address = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "77b966ca1626f61d4474fd8870e61a0598738189ce1e15e7a50d238a1c2a8f90"
+}

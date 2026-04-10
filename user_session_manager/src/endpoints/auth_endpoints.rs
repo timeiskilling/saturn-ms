@@ -12,10 +12,15 @@ use crate::{
     auth_manager::{inject_token::inject_token, signature_check::Verifiable},
     endpoints::{
         errors::ApiError,
-        models::{DeleteAccountRequest, NonceResponse, PromoteWalletRequest, SolVerifyRequest},
+        models::{
+            DeleteAccountRequest, NonceResponse, PromoteWalletRequest, SolVerifyRequest,
+            TargetPayload,
+        },
     },
     middleware::session_token::AuthenticatedUser,
-    postgres::{extractor::DatabaseConnection, query::insert_wallets},
+    postgres::{
+        extractor::DatabaseConnection, models::UnlinkedWalletResponse, query::insert_wallets,
+    },
     redis::{self, extractor::RedisConn},
 };
 
@@ -138,4 +143,13 @@ pub async fn delete_account(
     let _ = redis::command::delete_all_user_sessions(&user.wallet_address, &mut redis.0).await;
 
     Ok((axum::http::StatusCode::OK, Json(success_response)).into_response())
+}
+
+pub async fn disconnect_wallet_handler(
+    user: crate::middleware::session_token::AuthenticatedUser,
+    db: crate::postgres::extractor::DatabaseConnection,
+    payload: axum::Json<TargetPayload>,
+) -> Result<axum::Json<UnlinkedWalletResponse>, crate::endpoints::errors::ApiError> {
+    let res = crate::postgres::query::disconnect_wallet(user, db, payload).await?;
+    Ok(axum::Json(res))
 }

@@ -872,6 +872,7 @@ dependencies = [
  "jsonwebtoken",
  "tracing",
  "tracing-subscriber",
+ "url",
 ]
 
 [[package]]

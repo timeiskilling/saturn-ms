@@ -2,8 +2,7 @@ use axum::{Json, http::HeaderMap, response::IntoResponse};
 use axum_extra::extract::cookie::Cookie;
 use deadpool_redis::sentinel::Connection;
 use reqwest::header::SET_COOKIE;
-use serde::{Deserialize, Serialize};
-use serde_json::json;
+use serde::Serialize;
 use time::Duration;
 
 use crate::{endpoints::errors::ApiError, redis::command::create_session};

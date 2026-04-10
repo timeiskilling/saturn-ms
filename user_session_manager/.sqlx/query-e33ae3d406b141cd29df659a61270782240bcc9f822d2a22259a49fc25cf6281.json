@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT wallet_address\n        FROM user_bundles\n        WHERE linked_wallets @> jsonb_build_array($1::text)\n        LIMIT 1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "wallet_address",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "e33ae3d406b141cd29df659a61270782240bcc9f822d2a22259a49fc25cf6281"
+}

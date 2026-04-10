@@ -1,5 +1,6 @@
 use jsonwebtoken::{DecodingKey, EncodingKey};
 use std::{fmt, net::SocketAddr};
+use url::Url;
 
 #[derive(Clone)]
 pub struct JwtKeys {
@@ -18,12 +19,12 @@ pub struct Config {
     pub redis_port: u16,
 
     // PostgreSQL configuration.
-    // pub postgres_user: String,
-    // pub postgres_password: String,
-    // pub postgres_host: String,
-    // pub postgres_port: u16,
-    // pub postgres_db: String,
-    // pub postgres_connection_pool: u32,
+    pub postgres_user: String,
+    pub postgres_password: String,
+    pub postgres_host: String,
+    pub postgres_port: u16,
+    pub postgres_db: String,
+    pub postgres_connection_pool: u32,
 
     // JWT configuration.
     // pub jwt_secret: String,
@@ -49,12 +50,27 @@ pub struct Config {
 
     pub price_service_host: String,
     pub price_service_port: u16,
+
+    pub user_manager_sentinel_urls: Vec<String>,
+    pub user_manager_sentinel_master_name: String,
+
+    pub user_manager_host: String,
+    pub user_manager_port: u16,
 }
 
 impl Config {
     pub fn service_socket_addr(&self) -> SocketAddr {
         use std::str::FromStr;
         SocketAddr::from_str(&format!("{}:{}", self.service_host, self.service_port)).unwrap()
+    }
+
+    pub fn user_manager_socket_addr(&self) -> SocketAddr {
+        use std::str::FromStr;
+        SocketAddr::from_str(&format!(
+            "{}:{}",
+            self.user_manager_host, self.user_manager_port
+        ))
+        .unwrap()
     }
 
     pub fn price_service_socket_addr(&self) -> SocketAddr {
@@ -102,16 +118,16 @@ impl Config {
         )
     }
 
-    // pub fn postgres_url(&self) -> String {
-    //     format!(
-    //         "postgresql://{}:{}@{}:{}/{}",
-    //         self.postgres_user,
-    //         self.postgres_password,
-    //         self.postgres_host,
-    //         self.postgres_port,
-    //         self.postgres_db
-    //     )
-    // }
+    pub fn postgres_url(&self) -> String {
+        format!(
+            "postgresql://{}:{}@{}:{}/{}",
+            self.postgres_user,
+            self.postgres_password,
+            self.postgres_host,
+            self.postgres_port,
+            self.postgres_db
+        )
+    }
 }
 
 pub fn load() -> Config {
@@ -136,12 +152,6 @@ pub fn load() -> Config {
         service_port: env_parse("SERVICE_PORT"),
         redis_host: env_get("REDIS_HOST"),
         redis_port: env_parse("REDIS_PORT"),
-        // postgres_user: env_get("POSTGRES_USER"),
-        // postgres_password: env_get("POSTGRES_PASSWORD"),
-        // postgres_host: env_get("POSTGRES_HOST"),
-        // postgres_port: env_parse("POSTGRES_PORT"),
-        // postgres_db: env_get("POSTGRES_DB"),
-        // postgres_connection_pool: env_parse("POSTGRES_CONNECTION_POOL"),
         // jwt_keys: JwtKeys::new(jwt_secret.as_bytes()),
         // jwt_secret,
         // jwt_expire_access_token_seconds: env_parse("JWT_EXPIRE_ACCESS_TOKEN_SECONDS"),
@@ -164,6 +174,19 @@ pub fn load() -> Config {
 
         price_service_host: env_get("PRICE_SERVICE_HOST"),
         price_service_port: env_parse("PRICE_SERVICE_PORT"),
+
+        user_manager_sentinel_urls: env_get_list("USER_MANAGER_SENTINEL_URLS"),
+        user_manager_sentinel_master_name: env_get("USER_MANAGER_SENTINEL_MASTER_NAME"),
+
+        user_manager_host: env_get("USER_MANAGER_HOST"),
+        user_manager_port: env_parse("USER_MANAGER_PORT"),
+
+        postgres_user: env_get_or("POSTGRES_USER", "postgres"),
+        postgres_password: env_get("POSTGRES_PASSWORD"),
+        postgres_host: env_get("POSTGRES_HOST"),
+        postgres_port: env_parse("POSTGRES_PORT"),
+        postgres_db: env_get("POSTGRES_DB"),
+        postgres_connection_pool: env_parse("POSTGRES_CONNECTION_POOL"),
     };
 
     tracing::trace!("configuration: {:#?}", config);
@@ -203,6 +226,15 @@ fn env_get_or(key: &str, default: &str) -> String {
         return val;
     }
     default.to_owned()
+}
+
+#[inline]
+fn env_get_list(key: &str) -> Vec<String> {
+    env_get(key)
+        .split(',')
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect()
 }
 
 #[inline]
