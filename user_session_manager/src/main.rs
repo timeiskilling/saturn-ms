@@ -33,7 +33,7 @@ async fn main() -> Result<(), UserServiceError> {
     let addr = config.user_manager_socket_addr();
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     tracing::info!("Starting server on {}", addr);
-    axum::serve(listener, router).await.unwrap();
+    axum::serve(listener, router.into_make_service_with_connect_info::<std::net::SocketAddr>()).await.unwrap();
 
     Ok(())
 }

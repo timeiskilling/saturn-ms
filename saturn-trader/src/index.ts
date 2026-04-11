@@ -1,7 +1,7 @@
 import { serve } from "bun";
 import index from "./index.html";
 import Redis from "ioredis";
-
+import "./polyfill.ts";
 const redisSubscriber = new Redis({
   host: process.env.REDIS_HOST || "127.0.0.1",
   port: Number(process.env.REDIS_PORT) || 6379,

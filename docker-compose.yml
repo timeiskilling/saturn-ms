@@ -107,7 +107,8 @@ services:
     env_file:
       - .env
     networks:
-      - saturn_redis_net
+      saturn_redis_net:
+        ipv4_address: 10.0.0.20
     ports:
       - "5432:5432"
     volumes:
@@ -119,7 +120,8 @@ services:
       dockerfile: user_session_manager/Dockerfile
     container_name: user-session-manager
     networks:
-      - saturn_redis_net
+      saturn_redis_net:
+        ipv4_address: 10.0.0.21
     ports:
       - "3001:3001"
     env_file:
