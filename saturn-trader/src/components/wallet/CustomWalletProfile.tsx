@@ -6,9 +6,12 @@ import {
   usePhantom,
   useDiscoveredWallets,
   useConnect,
+  useSolana,
 } from "@phantom/react-sdk";
 import { CustomConnectButton, CustomConnectModal } from "./CustomConnectButton";
 import { useConnectedWallets } from "../../hooks/useConnectedWallets";
+import { verifyWallet } from "../../api/verifyWallet";
+import { logout } from "../../api/logout";
 import {
   LogOut,
   Sun,
@@ -18,20 +21,62 @@ import {
   Info,
   ChevronDown,
   Wallet,
+  Sparkles,
 } from "lucide-react";
 
 export function CustomWalletProfile() {
   const { isConnected, user } = usePhantom();
   const { disconnect, isDisconnecting } = useDisconnect();
+  const { solana } = useSolana();
   const accounts = useAccounts();
   const { wallets } = useDiscoveredWallets();
-  const { savedWallets, removeSavedWallet } = useConnectedWallets();
+  const { savedWallets, removeSavedWallet, setWalletVerified } =
+    useConnectedWallets();
   const { connect } = useConnect();
   const [showModal, setShowModal] = useState(false);
   const [showConnectModal, setShowConnectModal] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [isWalletExpanded, setIsWalletExpanded] = useState(true);
+  const [verificationStatus, setVerificationStatus] = useState<
+    Record<string, string>
+  >({});
+
+  const handleVerify = async (accountAddress: string, walletId: string) => {
+    if (!solana) {
+      setVerificationStatus((prev) => ({
+        ...prev,
+        [accountAddress]: "Wallet not ready.",
+      }));
+      return;
+    }
+
+    setVerificationStatus((prev) => ({
+      ...prev,
+      [accountAddress]: "Verifying...",
+    }));
+    try {
+      const success = await verifyWallet(solana, accountAddress);
+      if (success) {
+        setVerificationStatus((prev) => ({
+          ...prev,
+          [accountAddress]: "Verified!",
+        }));
+        setWalletVerified(walletId, true);
+      } else {
+        setVerificationStatus((prev) => ({
+          ...prev,
+          [accountAddress]: "Verification failed.",
+        }));
+      }
+    } catch (error) {
+      console.error(error);
+      setVerificationStatus((prev) => ({
+        ...prev,
+        [accountAddress]: "Error during verification.",
+      }));
+    }
+  };
 
   const handleOpen = () => {
     setShowModal(true);
@@ -48,7 +93,14 @@ export function CustomWalletProfile() {
   };
 
   const allAccounts = useMemo(() => {
-    const accs: { address: string; addressType: string; walletId: string; icon?: string; name: string }[] = [];
+    const accs: {
+      address: string;
+      addressType: string;
+      walletId: string;
+      icon?: string;
+      name: string;
+      isVerified?: boolean;
+    }[] = [];
     savedWallets.forEach((w) => {
       w.accounts.forEach((a) => {
         accs.push({
@@ -57,24 +109,27 @@ export function CustomWalletProfile() {
           walletId: w.walletId,
           icon: w.icon,
           name: w.name,
+          isVerified: w.isVerified,
         });
       });
     });
     // Add current accounts if not already in savedWallets (to prevent flicker)
     if (accounts && isConnected) {
-          accounts.forEach((a) => {
-            if (!accs.find((sa) => sa.address === a.address)) {
-              accs.push({
-                address: a.address,
-                addressType: a.addressType,
-                walletId: user?.walletId || "",
-                icon: user?.wallet?.icon,
-                name: user?.wallet?.name || "Wallet",
-              });
-            }
+      accounts.forEach((a) => {
+        const existing = accs.find((sa) => sa.address === a.address);
+        if (!existing) {
+          accs.push({
+            address: a.address,
+            addressType: a.addressType,
+            walletId: user?.walletId || "",
+            icon: user?.wallet?.icon,
+            name: user?.wallet?.name || "Wallet",
+            isVerified: false,
           });
         }
-        return accs;
+      });
+    }
+    return accs;
   }, [savedWallets, accounts, user]);
 
   // Grab the first Solana address, or fallback to the first available account
@@ -91,12 +146,15 @@ export function CustomWalletProfile() {
   );
 
   const getWalletIconById = (walletId: string) => {
-      const foundWallet = wallets.find((w) => w.id === walletId);
-      return foundWallet?.icon;
-    };
+    const foundWallet = wallets.find((w) => w.id === walletId);
+    return foundWallet?.icon;
+  };
 
   // If there are no saved wallets and we are not connected, we have nothing to show.
-  if ((!isConnected || !accounts || accounts.length === 0) && savedWallets.length === 0) {
+  if (
+    (!isConnected || !accounts || accounts.length === 0) &&
+    savedWallets.length === 0
+  ) {
     return <CustomConnectButton />;
   }
 
@@ -182,7 +240,8 @@ export function CustomWalletProfile() {
                   >
                     <div className="flex items-center gap-2">
                       {allAccounts.map((acc, i) => {
-                        const icon = acc.icon || getWalletIconById(acc.walletId);
+                        const icon =
+                          acc.icon || getWalletIconById(acc.walletId);
                         return icon ? (
                           <img
                             key={i}
@@ -235,83 +294,137 @@ export function CustomWalletProfile() {
                     <div className="p-2 flex flex-col gap-1 max-h-75 overflow-y-auto scrollbar-hide">
                       {allAccounts.map((account, index) => {
                         const accShort = `${account.address.slice(0, 5)}...${account.address.slice(-5)}`;
-                        const icon = account.icon || getWalletIconById(account.walletId);
+                        const icon =
+                          account.icon || getWalletIconById(account.walletId);
                         const displayType =
                           account.addressType === "Ethereum"
                             ? "EVM"
                             : account.addressType;
 
+                        const isPrimary = index === 0;
+                        const isVerified =
+                          isPrimary ||
+                          account.isVerified ||
+                          verificationStatus[account.address] === "Verified!";
+                        const isActive = account.walletId === user?.walletId;
+
                         return (
                           <div
                             key={`${account.address}-${index}`}
-                            onClick={async () => {
-                              if (account.walletId !== user?.walletId) {
-                                try {
-                                  await connect({ provider: "injected", walletId: account.walletId });
-                                } catch (e: any) {
-                                  console.error("Failed to switch wallet", e);
-                                  alert(`Failed to connect to ${account.name}: ${e?.message || "User rejected request or extension unavailable."}`);
-                                }
-                              }
-                            }}
-                            className={`flex items-center justify-between p-3 rounded-xl transition-colors group cursor-pointer border ${
-                              account.walletId === user?.walletId
-                                ? 'bg-emerald-500/5 border-emerald-500/20'
-                                : 'border-transparent hover:bg-zinc-800/50'
+                            className={`flex flex-col gap-2 p-3 rounded-xl transition-colors group border ${
+                              isActive
+                                ? "bg-emerald-500/5 border-emerald-500/20"
+                                : "border-transparent hover:bg-zinc-800/50"
                             }`}
                           >
-                            <div className="flex items-center gap-3">
-                              <div className="relative">
-                                <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center overflow-hidden shrink-0 shadow-sm border border-zinc-700/50">
-                                  {icon ? (
-                                    <img
-                                      src={icon}
-                                      alt={account.addressType}
-                                      className="w-full h-full object-cover bg-white"
-                                    />
-                                  ) : (
-                                    <span className="text-xs font-bold text-zinc-400">
-                                      {account.addressType
-                                        .charAt(0)
-                                        .toUpperCase()}
-                                    </span>
+                            <div
+                              className="flex items-center justify-between cursor-pointer"
+                              onClick={async () => {
+                                if (!isActive) {
+                                  try {
+                                    await connect({
+                                      provider: "injected",
+                                      walletId: account.walletId,
+                                    });
+                                  } catch (e: any) {
+                                    console.error("Failed to switch wallet", e);
+                                    alert(
+                                      `Failed to connect to ${account.name}: ${e?.message || "User rejected request or extension unavailable."}`,
+                                    );
+                                  }
+                                }
+                              }}
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="relative">
+                                  <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center overflow-hidden shrink-0 shadow-sm border border-zinc-700/50">
+                                    {icon ? (
+                                      <img
+                                        src={icon}
+                                        alt={account.addressType}
+                                        className="w-full h-full object-cover bg-white"
+                                      />
+                                    ) : (
+                                      <span className="text-xs font-bold text-zinc-400">
+                                        {account.addressType
+                                          .charAt(0)
+                                          .toUpperCase()}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {isActive && (
+                                    <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-[#242424] shadow-sm"></div>
                                   )}
                                 </div>
-                                {account.walletId === user?.walletId && (
-                                  <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-[#242424] shadow-sm"></div>
-                                )}
-                              </div>
-                              <div className="flex flex-col">
-                                <span className={`text-base font-bold transition-colors ${account.walletId === user?.walletId ? 'text-emerald-400' : 'text-zinc-100 group-hover:text-white'}`}>
-                                  {accShort}
-                                </span>
-                                {account.walletId === user?.walletId && (
-                                  <span className="text-[10px] font-semibold text-emerald-500/80 uppercase tracking-wider">
+                                <div className="flex flex-col">
+                                  <div className="flex items-center gap-2">
+                                    <span
+                                      className={`text-base font-bold transition-colors ${isActive ? "text-emerald-400" : "text-zinc-100 group-hover:text-white"}`}
+                                    >
+                                      {accShort}
+                                    </span>
+                                    {isPrimary ? (
+                                      <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-400 text-blue-950 uppercase tracking-wider">
+                                        Primary
+                                      </span>
+                                    ) : isVerified ? (
+                                      <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/20 text-emerald-400 uppercase tracking-wider">
+                                        Linked
+                                      </span>
+                                    ) : null}
+                                  </div>
+                                  <span
+                                    className={`text-[11px] font-medium ${isActive ? "text-emerald-500/60" : "text-zinc-500"}`}
+                                  >
+                                    {displayType}
                                   </span>
-                                )}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <button
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    if (isActive) {
+                                      if (isPrimary) {
+                                        await logout();
+                                      }
+                                      removeSavedWallet(account.walletId);
+                                      disconnect();
+                                      handleClose();
+                                    } else {
+                                      removeSavedWallet(account.walletId);
+                                    }
+                                  }}
+                                  disabled={isDisconnecting && isActive}
+                                  className={`transition-colors disabled:opacity-50 ml-1 ${isActive ? "text-emerald-500/50 hover:text-emerald-400" : "text-zinc-500 hover:text-zinc-300"}`}
+                                  title={
+                                    isActive
+                                      ? "Disconnect Session"
+                                      : "Remove Wallet"
+                                  }
+                                >
+                                  <LogOut className="w-4 h-4" />
+                                </button>
                               </div>
                             </div>
-                            <div className="flex items-center gap-3">
-                              <span className={`text-sm font-medium ${account.walletId === user?.walletId ? 'text-emerald-500/60' : 'text-zinc-500'}`}>
-                                {displayType}
-                              </span>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (account.walletId === user?.walletId) {
-                                    disconnect();
-                                    handleClose();
-                                  } else {
-                                    removeSavedWallet(account.walletId);
-                                  }
-                                }}
-                                disabled={isDisconnecting && account.walletId === user?.walletId}
-                                className={`transition-colors disabled:opacity-50 ml-1 ${account.walletId === user?.walletId ? 'text-emerald-500/50 hover:text-emerald-400' : 'text-zinc-500 hover:text-zinc-300'}`}
-                                title={account.walletId === user?.walletId ? "Disconnect Session" : "Remove Wallet"}
-                              >
-                                <LogOut className="w-4 h-4" />
-                              </button>
-                            </div>
+
+                            {!isPrimary && isActive && (
+                              <div className="mt-2 pt-2 border-t border-zinc-800/60 flex items-center justify-between">
+                                <span className="text-xs text-zinc-400 font-medium flex items-center gap-1.5">
+                                  <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                                  Secondary wallet
+                                </span>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    alert("Promote functionality coming soon!");
+                                  }}
+                                  className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg text-xs font-semibold text-zinc-200 transition-colors"
+                                >
+                                  Promote
+                                </button>
+                              </div>
+                            )}
                           </div>
                         );
                       })}

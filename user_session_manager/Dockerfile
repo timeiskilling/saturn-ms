@@ -12,7 +12,7 @@ COPY . .
 
 ENV SQLX_OFFLINE=true
 
-RUN cargo fetch
+# RUN cargo fetch
 
 RUN cargo build -p user_session_manager --release
 

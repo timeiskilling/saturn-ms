@@ -6,6 +6,7 @@ export interface SavedWallet {
   name: string;
   icon?: string;
   accounts: { address: string; addressType: string }[];
+  isVerified?: boolean;
 }
 
 export function useConnectedWallets() {
@@ -20,7 +21,9 @@ export function useConnectedWallets() {
       try {
         setSavedWallets((prev) => {
           const parsed = JSON.parse(saved);
-          return JSON.stringify(prev) !== JSON.stringify(parsed) ? parsed : prev;
+          return JSON.stringify(prev) !== JSON.stringify(parsed)
+            ? parsed
+            : prev;
         });
       } catch (e) {
         console.error("Failed to parse saved wallets", e);
@@ -39,7 +42,8 @@ export function useConnectedWallets() {
     };
 
     window.addEventListener("saturn_wallets_updated", handleStorageChange);
-    return () => window.removeEventListener("saturn_wallets_updated", handleStorageChange);
+    return () =>
+      window.removeEventListener("saturn_wallets_updated", handleStorageChange);
   }, []);
 
   const updateStorage = (next: SavedWallet[]) => {
@@ -52,7 +56,9 @@ export function useConnectedWallets() {
     if (isConnected && user?.walletId && accounts && accounts.length > 0) {
       prevWalletIdRef.current = user.walletId;
       setSavedWallets((prev) => {
-        const existingIndex = prev.findIndex((w) => w.walletId === user.walletId);
+        const existingIndex = prev.findIndex(
+          (w) => w.walletId === user.walletId,
+        );
         const newWallet: SavedWallet = {
           walletId: user.walletId!,
           name: user.wallet?.name || "Wallet",
@@ -106,5 +112,15 @@ export function useConnectedWallets() {
     });
   };
 
-  return { savedWallets, removeSavedWallet };
+  const setWalletVerified = (walletId: string, isVerified: boolean) => {
+    setSavedWallets((prev) => {
+      const next = prev.map((w) =>
+        w.walletId === walletId ? { ...w, isVerified } : w,
+      );
+      setTimeout(() => updateStorage(next), 0);
+      return next;
+    });
+  };
+
+  return { savedWallets, removeSavedWallet, setWalletVerified };
 }

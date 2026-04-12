@@ -9,6 +9,7 @@ use axum::{
 use std::sync::Arc;
 use tower_governor::GovernorLayer;
 use tower_governor::governor::GovernorConfigBuilder;
+use tower_http::cors::CorsLayer;
 
 pub fn create_router(app_state: Arc<AppState>) -> Router {
     let governor_conf = GovernorConfigBuilder::default()
@@ -43,6 +44,36 @@ pub fn create_router(app_state: Arc<AppState>) -> Router {
         .nest("/wallet", wallet_routes)
         .nest("/device", device_routes)
         .nest("/bundles", bundle_routes)
+        .layer(
+            CorsLayer::new()
+                .allow_origin([
+                    "http://localhost:3030"
+                        .parse::<axum::http::HeaderValue>()
+                        .unwrap(),
+                    "http://localhost:5173"
+                        .parse::<axum::http::HeaderValue>()
+                        .unwrap(),
+                    "http://127.0.0.1:3030"
+                        .parse::<axum::http::HeaderValue>()
+                        .unwrap(),
+                    "http://127.0.0.1:5173"
+                        .parse::<axum::http::HeaderValue>()
+                        .unwrap(),
+                ])
+                .allow_methods([
+                    axum::http::Method::GET,
+                    axum::http::Method::POST,
+                    axum::http::Method::PUT,
+                    axum::http::Method::DELETE,
+                    axum::http::Method::OPTIONS,
+                ])
+                .allow_headers([
+                    axum::http::header::CONTENT_TYPE,
+                    axum::http::header::AUTHORIZATION,
+                    axum::http::header::ACCEPT,
+                ])
+                .allow_credentials(true),
+        )
         .layer(GovernorLayer::new(governor_conf))
         .with_state(app_state)
 }

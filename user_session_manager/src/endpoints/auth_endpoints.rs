@@ -1,10 +1,7 @@
 use std::sync::Arc;
 
 use axum::{Json, response::IntoResponse};
-use axum_extra::{
-    TypedHeader,
-    headers::{Authorization, UserAgent, authorization::Bearer},
-};
+use axum_extra::{TypedHeader, headers::UserAgent};
 use saturn_errors::error::UserServiceError;
 
 use crate::{
@@ -85,11 +82,24 @@ pub async fn verify_signature(
 
 pub async fn logout(
     mut redis: RedisConn,
-    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    jar: axum_extra::extract::cookie::CookieJar,
 ) -> Result<impl IntoResponse, ApiError> {
-    redis::command::delete_session(auth.token(), &mut redis.0).await?;
+    if let Some(cookie) = jar.get("saturn_session") {
+        let _ = redis::command::delete_session(cookie.value(), &mut redis.0).await;
+    }
 
-    Ok(axum::http::StatusCode::OK)
+    let mut removal_cookie = axum_extra::extract::cookie::Cookie::build(("saturn_session", ""))
+        .path("/")
+        .build();
+    removal_cookie.make_removal();
+
+    let mut headers = axum::http::HeaderMap::new();
+    headers.insert(
+        axum::http::header::SET_COOKIE,
+        removal_cookie.to_string().parse().unwrap(),
+    );
+
+    Ok((headers, axum::http::StatusCode::OK).into_response())
 }
 
 pub async fn promote_wallet(

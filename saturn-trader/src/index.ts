@@ -10,7 +10,7 @@ const redisSubscriber = new Redis({
 let serverRef: any = null;
 
 const server = serve({
-  port: 3001,
+  port: 3030,
   routes: {
     // Serve index.html for all unmatched routes.
     "/*": index,

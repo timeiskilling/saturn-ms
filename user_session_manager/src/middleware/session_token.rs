@@ -36,15 +36,24 @@ where
             .map_err(|e| UserServiceError::RedisError(e.to_string()))?;
         let redis_key = format!("session:{}", token);
 
-        let wallet_address: Option<String> = redis_conn
+        let session_data: Option<String> = redis_conn
             .get(&redis_key)
             .await
             .map_err(|e| UserServiceError::RedisError(e.to_string()))?;
 
-        match wallet_address {
-            Some(address) => Ok(AuthenticatedUser {
-                wallet_address: address,
-            }),
+        match session_data {
+            Some(data) => {
+                let parsed: serde_json::Value = serde_json::from_str(&data)
+                    .map_err(|_| ApiError(UserServiceError::SessionExpired))?;
+                let address = parsed["wallet"]
+                    .as_str()
+                    .ok_or(ApiError(UserServiceError::SessionExpired))?
+                    .to_string();
+
+                Ok(AuthenticatedUser {
+                    wallet_address: address,
+                })
+            }
             None => Err(ApiError(UserServiceError::SessionExpired)),
         }
     }
@@ -78,15 +87,24 @@ where
 
         let redis_key = format!("session:{}", token);
 
-        let wallet_address: Option<String> = redis_conn
+        let session_data: Option<String> = redis_conn
             .get(&redis_key)
             .await
             .map_err(|e| ApiError(UserServiceError::RedisError(e.to_string())))?;
 
-        match wallet_address {
-            Some(address) => Ok(Some(AuthenticatedUser {
-                wallet_address: address,
-            })),
+        match session_data {
+            Some(data) => {
+                let parsed: serde_json::Value = serde_json::from_str(&data)
+                    .map_err(|_| ApiError(UserServiceError::SessionExpired))?;
+                let address = parsed["wallet"]
+                    .as_str()
+                    .ok_or(ApiError(UserServiceError::SessionExpired))?
+                    .to_string();
+
+                Ok(Some(AuthenticatedUser {
+                    wallet_address: address,
+                }))
+            }
             None => Ok(None),
         }
     }
