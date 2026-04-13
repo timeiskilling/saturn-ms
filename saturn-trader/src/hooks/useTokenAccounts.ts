@@ -1,7 +1,10 @@
 import { type TokenAccount } from "@/solanaAccountData/tokenAccount";
 import { usePhantom } from "@phantom/react-sdk";
-import { createSolanaClient,address } from "gill";
-import { TOKEN_PROGRAM_ADDRESS, TOKEN_2022_PROGRAM_ADDRESS } from "gill/programs";
+import { createSolanaClient, address } from "gill";
+import {
+  TOKEN_PROGRAM_ADDRESS,
+  TOKEN_2022_PROGRAM_ADDRESS,
+} from "gill/programs";
 import { useCallback, useEffect, useState } from "react";
 
 interface CacheEntry {
@@ -68,21 +71,26 @@ export function useTokenAccounts(
         const publicKey = address(addressPb);
 
         const [splTokenAccounts, token2022Accounts] = await Promise.all([
-          rpc.getTokenAccountsByOwner(
-            publicKey,
-            { programId: TOKEN_PROGRAM_ADDRESS },
-            {
-              commitment: "confirmed",
-              encoding: "jsonParsed"
-            },
-          ).send(),
-          rpc.getTokenAccountsByOwner(
-            publicKey,
-            { programId: TOKEN_2022_PROGRAM_ADDRESS },
-            {
-              commitment: "confirmed",
-              encoding: "jsonParsed" },
-          ).send(),
+          rpc
+            .getTokenAccountsByOwner(
+              publicKey,
+              { programId: TOKEN_PROGRAM_ADDRESS },
+              {
+                commitment: "confirmed",
+                encoding: "jsonParsed",
+              },
+            )
+            .send(),
+          rpc
+            .getTokenAccountsByOwner(
+              publicKey,
+              { programId: TOKEN_2022_PROGRAM_ADDRESS },
+              {
+                commitment: "confirmed",
+                encoding: "jsonParsed",
+              },
+            )
+            .send(),
         ]);
 
         const allAccounts = [
@@ -106,7 +114,9 @@ export function useTokenAccounts(
         entry.timestamp = Date.now();
         setTokens(data);
       } catch (err) {
-        console.error("Failed to fetch token accounts:", err);
+        console.warn(
+          `Failed to fetch token accounts: ${err instanceof Error ? err.message : String(err)}`,
+        );
         setError(err instanceof Error ? err : new Error(String(err)));
       } finally {
         entry.promise = null;
@@ -117,8 +127,22 @@ export function useTokenAccounts(
   );
 
   useEffect(() => {
-    fetchTokenAccounts();
+    fetchTokenAccounts().catch((err) => {
+      console.warn(
+        `Token accounts fetch error: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    });
   }, [fetchTokenAccounts]);
 
-  return { tokens, loading, error, refetch: () => fetchTokenAccounts(true) };
+  return {
+    tokens,
+    loading,
+    error,
+    refetch: () =>
+      fetchTokenAccounts(true).catch((err) => {
+        console.warn(
+          `Refetch token accounts error: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }),
+  };
 }

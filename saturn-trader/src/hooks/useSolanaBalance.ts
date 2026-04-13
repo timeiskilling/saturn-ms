@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
-import { createSolanaClient,address,LAMPORTS_PER_SOL} from "gill";
-import { TOKEN_PROGRAM_ADDRESS, TOKEN_2022_PROGRAM_ADDRESS} from "gill/programs";
+import { createSolanaClient, address, LAMPORTS_PER_SOL } from "gill";
+import {
+  TOKEN_PROGRAM_ADDRESS,
+  TOKEN_2022_PROGRAM_ADDRESS,
+} from "gill/programs";
 // import { Connection, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { usePhantom } from "@phantom/react-sdk";
 import { AddressType } from "@phantom/browser-sdk";
@@ -24,56 +27,61 @@ export function useSolanaBalance(
     let mounted = true;
 
     async function fetchBalance() {
-      const targetAddress = customAddress || (isConnected && addresses.length > 0 ? addresses.find(
-        (addr) => addr.addressType === AddressType.solana,
-      )?.address : undefined);
+      const targetAddress =
+        customAddress ||
+        (isConnected && addresses.length > 0
+          ? addresses.find((addr) => addr.addressType === AddressType.solana)
+              ?.address
+          : undefined);
 
       if (targetAddress) {
         const addressPb = targetAddress;
         const cacheKey = `${addressPb}-${rpcUrl}`;
 
-          if (!cache[cacheKey]) {
-            cache[cacheKey] = { promise: null, data: null, timestamp: 0 };
-          }
+        if (!cache[cacheKey]) {
+          cache[cacheKey] = { promise: null, data: null, timestamp: 0 };
+        }
 
-          const entry = cache[cacheKey];
-          const now = Date.now();
+        const entry = cache[cacheKey];
+        const now = Date.now();
 
-          if (entry.data !== null && now - entry.timestamp < CACHE_TTL) {
-            if (mounted) setBalance(entry.data);
-            return;
-          }
+        if (entry.data !== null && now - entry.timestamp < CACHE_TTL) {
+          if (mounted) setBalance(entry.data);
+          return;
+        }
 
-          if (entry.promise) {
-            try {
-              const data = await entry.promise;
-              if (mounted) setBalance(data);
-            } catch (error) {
-              if (mounted) setBalance(null);
-            }
-            return;
-          }
-
-          entry.promise = (async () => {
-            const { rpc } = createSolanaClient({
-              urlOrMoniker: rpcUrl,
-            })
-            const publicKey = address(addressPb);
-            const balanceLamports = await rpc.getBalance(publicKey).send();
-            return Number(balanceLamports.value) / Number(LAMPORTS_PER_SOL);
-          })();
-
+        if (entry.promise) {
           try {
             const data = await entry.promise;
-            entry.data = data;
-            entry.timestamp = Date.now();
             if (mounted) setBalance(data);
           } catch (error) {
-            console.error("Failed to fetch balance:", error);
             if (mounted) setBalance(null);
-          } finally {
-            entry.promise = null;
           }
+          return;
+        }
+
+        entry.promise = (async () => {
+          const { rpc } = createSolanaClient({
+            urlOrMoniker: rpcUrl,
+          });
+          const publicKey = address(addressPb);
+          const balanceLamports = await rpc.getBalance(publicKey).send();
+          return Number(balanceLamports.value) / Number(LAMPORTS_PER_SOL);
+        })();
+
+        try {
+          const data = await entry.promise;
+          entry.data = data;
+          entry.timestamp = Date.now();
+          if (mounted) setBalance(data);
+        } catch (error) {
+          console.warn(
+            `Failed to fetch balance: ${error instanceof Error ? error.message : String(error)}`,
+          );
+          if (mounted) setBalance(null);
+        } finally {
+          entry.promise = null;
+        }
       } else {
         if (mounted) setBalance(null);
       }

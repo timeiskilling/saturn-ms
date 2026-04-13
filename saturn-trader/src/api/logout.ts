@@ -9,6 +9,7 @@ export async function logout(): Promise<boolean> {
       throw new Error(`Failed to logout: ${response.statusText}`);
     }
 
+    window.dispatchEvent(new Event("saturn_wallet_logout"));
     return true;
   } catch (error) {
     console.error("Logout error:", error);

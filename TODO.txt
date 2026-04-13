@@ -4,12 +4,11 @@
 
 // add 3d animation
 
-// building the state sync and session-manager
-// with sqlx
-
 // --- Make bundle_status_service Stateless ---
 // - Externalize Bundle Ownership: Replace the local `bundle_ownership` DashMap in `UserStreamNotificationSystem` with Redis (`SET bundle_owner:{bundle_id} {user_id}`).
+
 // - Modify Redis Pub/Sub Listener: Update `start_redis_subscription` so that when a bundle update arrives, it queries Redis for the `user_id` instead of local memory. If the user has an active gRPC stream on the current instance, push the update.
+
 // - Decouple Streams: Add a dedicated `SubscribeToBundles(UserRequest) returns (stream UserBundleUpdate)` gRPC method. This allows clients to reconnect to any load-balanced instance and resume their stream without needing to resend transactions.
 
 // --- Future Scaling Tasks (Post-MVP) ---

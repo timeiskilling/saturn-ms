@@ -79,7 +79,7 @@ export const TransactionItem = React.memo(function TransactionItem({
 
   const connectedAddresses = React.useMemo(
     () => Object.values(balances).map((w) => w.address),
-    [balances]
+    [balances],
   );
 
   const activeWalletAddress =
@@ -100,22 +100,35 @@ export const TransactionItem = React.memo(function TransactionItem({
 
   const maxDecimals =
     POPULAR_TOKENS.find((t) => t.mint === tx.inputMint)?.decimals ??
-    (activeWalletAddress && balances ? Object.values(balances).find(w => w.address === activeWalletAddress)?.tokens.find((t) => t.mint === tx.inputMint)?.decimals : null) ??
+    (activeWalletAddress && balances
+      ? Object.values(balances)
+          .find((w) => w.address === activeWalletAddress)
+          ?.tokens.find((t) => t.mint === tx.inputMint)?.decimals
+      : null) ??
     9;
 
   const outputMaxDecimals =
     POPULAR_TOKENS.find((t) => t.mint === tx.outputMint)?.decimals ??
-    (activeWalletAddress && balances ? Object.values(balances).find(w => w.address === activeWalletAddress)?.tokens.find((t) => t.mint === tx.outputMint)?.decimals : null) ??
+    (activeWalletAddress && balances
+      ? Object.values(balances)
+          .find((w) => w.address === activeWalletAddress)
+          ?.tokens.find((t) => t.mint === tx.outputMint)?.decimals
+      : null) ??
     9;
 
   let actualInputTokenBalance: string | null = null;
   if (activeWalletAddress && balances) {
-    const activeWallet = Object.values(balances).find(w => w.address === activeWalletAddress);
+    const activeWallet = Object.values(balances).find(
+      (w) => w.address === activeWalletAddress,
+    );
     if (activeWallet) {
       if (tx.inputMint === "So11111111111111111111111111111111111111112") {
-        actualInputTokenBalance = activeWallet.solBalance !== null ? activeWallet.solBalance.toString() : "0";
+        actualInputTokenBalance =
+          activeWallet.solBalance !== null
+            ? activeWallet.solBalance.toString()
+            : "0";
       } else {
-        const token = activeWallet.tokens.find(t => t.mint === tx.inputMint);
+        const token = activeWallet.tokens.find((t) => t.mint === tx.inputMint);
         if (token) {
           actualInputTokenBalance = token.balance;
         } else {
@@ -220,7 +233,9 @@ export const TransactionItem = React.memo(function TransactionItem({
                 transactions={transactions}
                 index={index}
                 walletAddress={activeWalletAddress}
-                onWalletChange={(address) => handleUpdateTx(tx.id, "userPk", address)}
+                onWalletChange={(address) =>
+                  handleUpdateTx(tx.id, "userPk", address)
+                }
               />
             </div>
 
@@ -242,7 +257,9 @@ export const TransactionItem = React.memo(function TransactionItem({
                 transactions={transactions}
                 index={index}
                 walletAddress={activeWalletAddress}
-                onWalletChange={(address) => handleUpdateTx(tx.id, "userPk", address)}
+                onWalletChange={(address) =>
+                  handleUpdateTx(tx.id, "userPk", address)
+                }
               />
             </div>
           </div>

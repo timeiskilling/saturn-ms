@@ -59,50 +59,50 @@ export const POPULAR_TOKENS = [
   },
 ];
 
-export const INITIAL_TEMPLATES: Template[] = [
-  {
-    id: "t_1",
-    name: "Yield Strategy (USDC -> SOL -> ETH)",
-    transactions: [
-      {
-        id: "tx_1",
-        inputMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-        outputMint: "So11111111111111111111111111111111111111112",
-        amount: "50",
-        slippageBps: 50,
-      },
-      {
-        id: "tx_2",
-        inputMint: "So11111111111111111111111111111111111111112",
-        outputMint: "7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs",
-        amount: "0.1",
-        slippageBps: 100,
-        options: {
-          dexes: ["Jupiter"],
-          excludeDexes: [],
-          dynamicSlippage: true,
-        },
-      },
-    ],
-  },
-  {
-    id: "t_2",
-    name: "Arb Loop (SOL -> JUP -> SOL)",
-    transactions: [
-      {
-        id: "tx_3",
-        inputMint: "So11111111111111111111111111111111111111112",
-        outputMint: "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
-        amount: "1",
-        slippageBps: 30,
-      },
-      {
-        id: "tx_4",
-        inputMint: "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
-        outputMint: "So11111111111111111111111111111111111111112",
-        amount: "2500",
-        slippageBps: 30,
-      },
-    ],
-  },
-];
+// export const INITIAL_TEMPLATES: Template[] = [
+//   {
+//     id: "t_1",
+//     name: "Yield Strategy (USDC -> SOL -> ETH)",
+//     transactions: [
+//       {
+//         id: "tx_1",
+//         inputMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+//         outputMint: "So11111111111111111111111111111111111111112",
+//         amount: "50",
+//         slippageBps: 50,
+//       },
+//       {
+//         id: "tx_2",
+//         inputMint: "So11111111111111111111111111111111111111112",
+//         outputMint: "7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs",
+//         amount: "0.1",
+//         slippageBps: 100,
+//         options: {
+//           dexes: ["Jupiter"],
+//           excludeDexes: [],
+//           dynamicSlippage: true,
+//         },
+//       },
+//     ],
+//   },
+//   {
+//     id: "t_2",
+//     name: "Arb Loop (SOL -> JUP -> SOL)",
+//     transactions: [
+//       {
+//         id: "tx_3",
+//         inputMint: "So11111111111111111111111111111111111111112",
+//         outputMint: "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
+//         amount: "1",
+//         slippageBps: 30,
+//       },
+//       {
+//         id: "tx_4",
+//         inputMint: "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
+//         outputMint: "So11111111111111111111111111111111111111112",
+//         amount: "2500",
+//         slippageBps: 30,
+//       },
+//     ],
+//   },
+// ];

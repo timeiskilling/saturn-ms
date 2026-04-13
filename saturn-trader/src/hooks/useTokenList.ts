@@ -76,7 +76,8 @@ export function useTokenList() {
         } catch (err) {
           const error = err instanceof Error ? err : new Error(String(err));
           setError(error);
-          throw error;
+          console.warn(`Token list fetch error: ${error.message}`);
+          return globalCache.data || [];
         } finally {
           globalCache.promise = null;
           setLoading(false);
@@ -101,7 +102,7 @@ export function useTokenList() {
         setTokens(data);
         setLoading(false);
       })
-      .catch(console.error);
+      .catch((err) => console.warn(`Token list fetch failed: ${err.message}`));
 
     // Setup polling interval to keep tokens fresh
     const intervalId = setInterval(() => {
@@ -113,7 +114,9 @@ export function useTokenList() {
           setTokens(data);
           setLoading(false);
         })
-        .catch(console.error);
+        .catch((err) =>
+          console.warn(`Token list fetch retry failed: ${err.message}`),
+        );
     }, appConfig.tokenListRefreshIntervalMs);
 
     return () => {
@@ -122,5 +125,14 @@ export function useTokenList() {
     };
   }, [fetchTokenList]);
 
-  return { tokens, loading, error, refetch: () => fetchTokenList(true) };
+  return {
+    tokens,
+    loading,
+    error,
+    refetch: () =>
+      fetchTokenList(true).catch((err) => {
+        console.warn(`Refetch failed: ${err.message}`);
+        return [];
+      }),
+  };
 }

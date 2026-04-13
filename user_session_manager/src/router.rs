@@ -35,15 +35,15 @@ pub fn create_router(app_state: Arc<AppState>) -> Router {
         .route("/", get(device::connected_devices))
         .route("/{public_id}", delete(device::disconnect_target_device));
 
-    // Persistent User Bundles / State
-    let bundle_routes = Router::<Arc<AppState>>::new().route("/", post(query::save_user_bundles));
-
     // Combine all routes and inject the application state
     Router::new()
         .nest("/auth", auth_routes)
         .nest("/wallet", wallet_routes)
         .nest("/device", device_routes)
-        .nest("/bundles", bundle_routes)
+        .route(
+            "/bundles",
+            post(query::save_user_bundles).get(query::get_user_bundles),
+        )
         .layer(
             CorsLayer::new()
                 .allow_origin([

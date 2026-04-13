@@ -104,6 +104,11 @@ export function useConnectedWallets() {
     }
   }, [user, accounts, isConnected]);
 
+  const clearSavedWallets = () => {
+    setSavedWallets([]);
+    setTimeout(() => updateStorage([]), 0);
+  };
+
   const removeSavedWallet = (walletId: string) => {
     setSavedWallets((prev) => {
       const next = prev.filter((w) => w.walletId !== walletId);
@@ -122,5 +127,10 @@ export function useConnectedWallets() {
     });
   };
 
-  return { savedWallets, removeSavedWallet, setWalletVerified };
+  return {
+    savedWallets,
+    removeSavedWallet,
+    setWalletVerified,
+    clearSavedWallets,
+  };
 }

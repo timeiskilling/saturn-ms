@@ -57,6 +57,7 @@ export async function verifyWallet(
       throw new Error(`Failed to verify wallet: ${verifyResponse.statusText}`);
     }
 
+    window.dispatchEvent(new Event("saturn_wallet_verified"));
     return true;
   } catch (error) {
     console.error("Wallet verification error:", error);

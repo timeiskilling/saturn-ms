@@ -32,6 +32,25 @@ pub async fn save_user_bundles(
     Ok("Success!")
 }
 
+pub async fn get_user_bundles(
+    user: AuthenticatedUser,
+    mut db: DatabaseConnection,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    let result = sqlx::query_scalar!(
+        r#"
+        SELECT bundles_data
+        FROM user_bundles
+        WHERE wallet_address = $1
+        "#,
+        user.wallet_address
+    )
+    .fetch_optional(&mut *db.0)
+    .await
+    .map_err(|e| UserServiceError::PostgresError(e.to_string()))?;
+
+    Ok(Json(result.unwrap_or_else(|| serde_json::json!([]))))
+}
+
 pub async fn insert_wallets(
     mut db: DatabaseConnection,
     user: AuthenticatedUser,
