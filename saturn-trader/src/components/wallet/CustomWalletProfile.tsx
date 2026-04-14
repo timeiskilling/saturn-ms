@@ -84,6 +84,13 @@ export function CustomWalletProfile() {
   const hasCheckedSession = useRef<Record<string, boolean>>({});
 
   useEffect(() => {
+    if (!isConnected) {
+      hasCheckedSession.current = {};
+      setVerificationStatus({});
+    }
+  }, [isConnected]);
+
+  useEffect(() => {
     let mounted = true;
     const checkAndVerify = async () => {
       if (

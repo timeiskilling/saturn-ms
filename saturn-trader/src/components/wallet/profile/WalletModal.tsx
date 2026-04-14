@@ -85,6 +85,7 @@ export function WalletModal({
             onClose={onClose}
             onRemove={onRemove}
             onConnectAnother={onConnectAnother}
+            onClearAll={onClearAll}
           />
 
           <div className="flex items-center gap-6 border-b border-zinc-800 mt-2">

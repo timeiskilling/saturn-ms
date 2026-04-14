@@ -5,11 +5,9 @@ import { WalletSidebar } from "./saturnComponents/walletSidebar";
 import { BottomPanel } from "./saturnComponents/bottomPanel";
 import { BundledTransactions } from "./saturnComponents/bundledTransactions";
 
-import { PhantomProvider, darkTheme,usePhantom } from "@phantom/react-sdk";
+import { PhantomProvider, darkTheme, usePhantom } from "@phantom/react-sdk";
 import { AddressType } from "@phantom/browser-sdk";
 import { CustomWalletProfile } from "./components/wallet/CustomWalletProfile";
-import { CustomConnectButton } from "./components/wallet/CustomConnectButton";
-import { useConnectedWallets } from "./hooks/useConnectedWallets";
 
 function AppContent() {
   const [activeTab, setActiveTab] = useState<"trading" | "bundles">("trading");

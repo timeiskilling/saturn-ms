@@ -3,7 +3,6 @@ import { LogOut, Sparkles } from "lucide-react";
 import { type AccountInfo } from "./types";
 import { useConnect, useDisconnect } from "@phantom/react-sdk";
 import { logout } from "../../../api/logout";
-import { useConnectedWallets } from "../../../hooks/useConnectedWallets";
 
 interface WalletDropdownItemProps {
   account: AccountInfo;
@@ -16,6 +15,7 @@ interface WalletDropdownItemProps {
   onVerify: (address: string, walletId: string) => void;
   onClose: () => void;
   onRemove: (walletId: string) => void;
+  onClearAll: () => void;
 }
 
 export function WalletDropdownItem({
@@ -29,10 +29,10 @@ export function WalletDropdownItem({
   onVerify,
   onClose,
   onRemove,
+  onClearAll,
 }: WalletDropdownItemProps) {
   const { connect } = useConnect();
   const { disconnect, isDisconnecting } = useDisconnect();
-  const { clearSavedWallets } = useConnectedWallets();
 
   const accShort = `${account.address.slice(0, 5)}...${account.address.slice(-5)}`;
   const displayType =
@@ -138,7 +138,7 @@ export function WalletDropdownItem({
               if (isActive) {
                 if (isPrimary) {
                   await logout();
-                  clearSavedWallets();
+                  onClearAll();
                 } else {
                   onRemove(account.walletId);
                 }

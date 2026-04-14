@@ -164,13 +164,19 @@ export function TokenInputBlock({
         <input
           type="text"
           inputMode="decimal"
-          value={isInput ? displayAmount : formatTokenDisplay(displayAmount, maxDecimals)}
+          value={
+            isInput
+              ? displayAmount
+              : formatTokenDisplay(displayAmount, maxDecimals)
+          }
           onChange={(e) => {
             const val = formatDecimalInput(e.target.value, maxDecimals);
             onAmountChange(val);
           }}
           className={`bg-transparent text-3xl font-medium outline-none w-full mr-4 placeholder:text-zinc-700 transition-all duration-300 ${
-            isInsufficientBalance || isWalletDisconnected ? "text-red-400" : "text-zinc-100"
+            isInsufficientBalance || isWalletDisconnected
+              ? "text-red-400"
+              : "text-zinc-100"
           } ${isUpdating && !isInput ? "opacity-40 scale-[0.98] blur-[1px]" : "opacity-100 scale-100 blur-none"}`}
           placeholder="0.00"
           readOnly={!isInput}
@@ -201,24 +207,30 @@ export function TokenInputBlock({
           <span className="text-red-400/80 transition-colors flex items-center gap-1">
             Wallet disconnected
           </span>
-        ) : isInput && balance !== null && (
-          <span
-            className={`cursor-pointer hover:underline decoration-zinc-500 underline-offset-2 transition-colors flex items-center gap-1 ${
-              isInsufficientBalance ? "text-red-400/80" : "text-zinc-500"
-            }`}
-            onClick={handleMaxClick}
-            title={actualBalance !== null && actualBalance !== balance ? `Real balance: ${parseFloat(actualBalance).toLocaleString(undefined, { maximumFractionDigits: 4 })}` : undefined}
-          >
-            Balance:{" "}
-            {parseFloat(balance).toLocaleString(undefined, {
-              maximumFractionDigits: 4,
-            })}
-            {actualBalance !== null && parseFloat(actualBalance) !== parseFloat(balance) && (
-              <span className="text-[10px] opacity-70">
-                (Simulated)
-              </span>
-            )}
-          </span>
+        ) : (
+          isInput &&
+          balance !== null && (
+            <span
+              className={`cursor-pointer hover:underline decoration-zinc-500 underline-offset-2 transition-colors flex items-center gap-1 ${
+                isInsufficientBalance ? "text-red-400/80" : "text-zinc-500"
+              }`}
+              onClick={handleMaxClick}
+              title={
+                actualBalance !== null && actualBalance !== balance
+                  ? `Real balance: ${parseFloat(actualBalance).toLocaleString(undefined, { maximumFractionDigits: 4 })}`
+                  : undefined
+              }
+            >
+              Balance:{" "}
+              {parseFloat(balance).toLocaleString(undefined, {
+                maximumFractionDigits: 4,
+              })}
+              {actualBalance !== null &&
+                parseFloat(actualBalance) !== parseFloat(balance) && (
+                  <span className="text-[10px] opacity-70">(Simulated)</span>
+                )}
+            </span>
+          )
         )}
       </div>
     </div>

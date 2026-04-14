@@ -19,11 +19,8 @@ import { useSignTransaction } from "../components/api/singTransaction";
 import { executeBundle } from "../api/bundle";
 import { usePhantom, useDiscoveredWallets } from "@phantom/react-sdk";
 import { AddressType } from "@phantom/browser-sdk";
-import OverscrollPlugin from "smooth-scrollbar/plugins/overscroll";
 import { useConnectedWallets } from "../hooks/useConnectedWallets";
 import { saveBundle, fetchBundles } from "../api/saveBundle";
-
-Scrollbar.use(OverscrollPlugin);
 
 export function BundledTransactions() {
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -55,14 +52,6 @@ export function BundledTransactions() {
         renderByPixels: true,
         alwaysShowTracks: true,
         continuousScrolling: true,
-        plugins: {
-          overscroll: {
-            enable: true,
-            effect: "bounce",
-            damping: 0.15,
-            maxOverscroll: 150,
-          },
-        },
       });
 
       scrollbar.addListener((status) => {
@@ -81,7 +70,7 @@ export function BundledTransactions() {
         if (scrollbar) scrollbar.destroy();
       };
     }
-  }, []);
+  }, [activeTemplateId, isFetchingBundles]);
 
   useEffect(() => {
     const loadBundles = async () => {

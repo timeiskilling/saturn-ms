@@ -14,6 +14,7 @@ interface WalletDropdownProps {
   onClose: () => void;
   onRemove: (walletId: string) => void;
   onConnectAnother: () => void;
+  onClearAll: () => void;
 }
 
 export function WalletDropdown({
@@ -27,6 +28,7 @@ export function WalletDropdown({
   onClose,
   onRemove,
   onConnectAnother,
+  onClearAll,
 }: WalletDropdownProps) {
   return (
     <div className="relative flex flex-col bg-[#242424] rounded-2xl border border-zinc-800/80 transition-all z-20">
@@ -109,6 +111,7 @@ export function WalletDropdown({
                 onVerify={onVerify}
                 onClose={onClose}
                 onRemove={onRemove}
+                onClearAll={onClearAll}
               />
             );
           })}

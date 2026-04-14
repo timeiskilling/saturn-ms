@@ -93,6 +93,14 @@ export function useConnectedWallets() {
     } else if (!isConnected && prevWalletIdRef.current) {
       const disconnectedId = prevWalletIdRef.current;
       prevWalletIdRef.current = null;
+
+      // Fully clear the Phantom connection state out of the browser storage
+      // so it prompts for connection again correctly next time.
+      localStorage.removeItem("phantom-wallet");
+      localStorage.removeItem("phantom-wallet-connected");
+      localStorage.clear();
+      sessionStorage.clear();
+
       setSavedWallets((prev) => {
         if (!prev.some((w) => w.walletId === disconnectedId)) {
           return prev;
@@ -105,6 +113,10 @@ export function useConnectedWallets() {
   }, [user, accounts, isConnected]);
 
   const clearSavedWallets = () => {
+    localStorage.removeItem("phantom-wallet");
+    localStorage.removeItem("phantom-wallet-connected");
+    localStorage.clear();
+    sessionStorage.clear();
     setSavedWallets([]);
     setTimeout(() => updateStorage([]), 0);
   };
