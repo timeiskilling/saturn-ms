@@ -3,7 +3,6 @@ import { Layers, Plus, ArrowRight, Play, Trash2 } from "lucide-react";
 import { type Template, POPULAR_TOKENS } from "./types";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 import { useTokenList } from "@/hooks/useTokenList";
-// Припускаю, що ви зберегли хук в папці hooks, змініть шлях за потреби
 import { useNestedScrollbar } from "@/hooks/useNestedScrollbar";
 
 interface TemplateSidebarProps {
@@ -37,8 +36,6 @@ export function TemplateSidebar({
   const getTokenSymbol = (mint: string) => {
     return allTokens.find((t) => t.mint === mint)?.symbol || "Custom";
   };
-
-  // Викликаємо хук. Передаємо true, бо сайдбар завжди відображається
   const scrollRef = useNestedScrollbar(true);
 
   return (
@@ -69,12 +66,7 @@ export function TemplateSidebar({
         message={`Are you sure you want to delete "${templateToDelete?.name || lastTemplateNameRef.current}"?`}
       />
 
-      {/* Додано ref={scrollRef}.
-        Замінено overflow-y-auto на overflow-hidden.
-        Додано h-full для правильного розрахунку висоти бібліотекою.
-      */}
       <div ref={scrollRef} className="flex-1 overflow-hidden h-full">
-        {/* Внутрішня обгортка для відступів, щоб smooth-scrollbar коректно працював з контентом */}
         <div className="p-3 space-y-2">
           {templates.map((template) => (
             <div

@@ -16,7 +16,9 @@ use crate::{
     },
     middleware::session_token::AuthenticatedUser,
     postgres::{
-        extractor::DatabaseConnection, models::UnlinkedWalletResponse, query::insert_wallets,
+        extractor::DatabaseConnection,
+        models::UnlinkedWalletResponse,
+        query::{insert_wallets, unlink_wallet},
     },
     redis::{self, extractor::RedisConn},
 };
@@ -78,6 +80,41 @@ pub async fn verify_signature(
             Ok(response.into_response())
         }
     }
+}
+
+pub async fn verify_unlink(
+    mut redis: RedisConn,
+    mut db: DatabaseConnection,
+    Json(payload): Json<SolVerifyRequest>,
+) -> Result<impl IntoResponse, ApiError> {
+    let expected_nonce =
+        redis::command::fetch_nonce_from_redis(&mut redis.0, &payload.request_id).await?;
+    let _ = redis::command::delete_nonce_from_redis(&mut redis.0, &payload.request_id).await;
+    let public_key = payload.public_key.clone();
+
+    let is_linked_to_primary =
+        crate::postgres::query::check_if_is_linked_wallet(&mut db, &public_key).await?;
+
+    if is_linked_to_primary.is_none() {
+        tracing::warn!(
+            "Rejected unlink: Wallet is not linked to primary wallet {}.",
+            public_key,
+        );
+
+        return Err(ApiError(UserServiceError::InternalError(
+            "Target wallet is not linked to this primary account".to_string(),
+        )));
+    }
+
+    let expected_message = format!("Unlink from any primary account. Nonce: {}", expected_nonce);
+    let signature = payload.try_into_domain(expected_message.into_bytes())?;
+
+    let _ = signature
+        .verify()
+        .map_err(|_| UserServiceError::InvalidSignature)?;
+
+    let response = unlink_wallet(db, public_key).await?;
+    Ok((axum::http::StatusCode::OK, Json(response)).into_response())
 }
 
 pub async fn logout(

@@ -28,7 +28,8 @@ pub fn create_router(app_state: Arc<AppState>) -> Router {
     // Wallet management operations
     let wallet_routes = Router::<Arc<AppState>>::new()
         .route("/promote", post(auth_endpoints::promote_wallet))
-        .route("/unlink", post(disconnect_wallet_handler));
+        .route("/disconnect", post(disconnect_wallet_handler))
+        .route("/unlink", delete(auth_endpoints::verify_unlink));
 
     // Connected device management
     let device_routes = Router::<Arc<AppState>>::new()

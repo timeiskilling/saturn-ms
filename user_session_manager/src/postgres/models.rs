@@ -28,3 +28,9 @@ pub struct PromoteWalletResponse {
 pub struct DeleteAccountResponse {
     pub status: String,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UnlinkWalletResponse {
+    pub status: String,
+    pub new_primary: String,
+}

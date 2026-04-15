@@ -1,6 +1,6 @@
 use crate::postgres::models::{
     DeleteAccountResponse, LinkedWalletResponse, PromoteWalletResponse, SaveBundlesPayload,
-    UnlinkedWalletResponse,
+    UnlinkWalletResponse, UnlinkedWalletResponse,
 };
 use crate::{
     endpoints::errors::ApiError, middleware::session_token::AuthenticatedUser,
@@ -145,6 +145,34 @@ pub async fn promote_wallet(
         status: "promoted".to_string(),
         new_primary: target_wallet,
     })
+}
+
+pub async fn unlink_wallet(
+    mut db: DatabaseConnection,
+    target_wallet: String,
+) -> Result<UnlinkWalletResponse, ApiError> {
+    let result = sqlx::query!(
+        r#"
+        UPDATE user_bundles
+        SET linked_wallets = linked_wallets - $1
+        WHERE linked_wallets @> jsonb_build_array($1::text)
+        RETURNING wallet_address
+        "#,
+        target_wallet
+    )
+    .fetch_optional(&mut *db.0)
+    .await
+    .map_err(|e| UserServiceError::PostgresError(e.to_string()))?;
+
+    match result {
+        Some(row) => Ok(UnlinkWalletResponse {
+            status: "unlinked".to_string(),
+            new_primary: row.wallet_address,
+        }),
+        None => Err(ApiError(UserServiceError::InternalError(
+            "Target wallet is not a linked wallet".to_string(),
+        ))),
+    }
 }
 
 pub async fn delete_account(
