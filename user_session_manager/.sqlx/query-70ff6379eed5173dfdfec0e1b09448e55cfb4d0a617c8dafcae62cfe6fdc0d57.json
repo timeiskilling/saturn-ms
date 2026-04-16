@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE user_bundles\n        SET linked_wallets = linked_wallets - $1\n        WHERE linked_wallets @> jsonb_build_array($1::text)\n        RETURNING wallet_address\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "wallet_address",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "70ff6379eed5173dfdfec0e1b09448e55cfb4d0a617c8dafcae62cfe6fdc0d57"
+}

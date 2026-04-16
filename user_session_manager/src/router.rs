@@ -13,8 +13,8 @@ use tower_http::cors::CorsLayer;
 
 pub fn create_router(app_state: Arc<AppState>) -> Router {
     let governor_conf = GovernorConfigBuilder::default()
-        .per_second(1)
-        .burst_size(5)
+        .per_second(2)
+        .burst_size(10)
         .finish()
         .unwrap();
 
@@ -29,7 +29,8 @@ pub fn create_router(app_state: Arc<AppState>) -> Router {
     let wallet_routes = Router::<Arc<AppState>>::new()
         .route("/promote", post(auth_endpoints::promote_wallet))
         .route("/disconnect", post(disconnect_wallet_handler))
-        .route("/unlink", delete(auth_endpoints::verify_unlink));
+        .route("/unlink", delete(auth_endpoints::verify_unlink))
+        .route("/linked", get(query::get_linked_wallets));
 
     // Connected device management
     let device_routes = Router::<Arc<AppState>>::new()
@@ -45,6 +46,7 @@ pub fn create_router(app_state: Arc<AppState>) -> Router {
             "/bundles",
             post(query::save_user_bundles).get(query::get_user_bundles),
         )
+        .layer(GovernorLayer::new(governor_conf))
         .layer(
             CorsLayer::new()
                 .allow_origin([
@@ -75,6 +77,5 @@ pub fn create_router(app_state: Arc<AppState>) -> Router {
                 ])
                 .allow_credentials(true),
         )
-        .layer(GovernorLayer::new(governor_conf))
         .with_state(app_state)
 }

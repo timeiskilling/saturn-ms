@@ -92,6 +92,8 @@ pub async fn verify_unlink(
     let _ = redis::command::delete_nonce_from_redis(&mut redis.0, &payload.request_id).await;
     let public_key = payload.public_key.clone();
 
+    tracing::info!("Call Verify unlink for wallet {}", public_key);
+
     let is_linked_to_primary =
         crate::postgres::query::check_if_is_linked_wallet(&mut db, &public_key).await?;
 
@@ -136,6 +138,8 @@ pub async fn logout(
         removal_cookie.to_string().parse().unwrap(),
     );
 
+    tracing::info!("Delete session Logout wallet");
+
     Ok((headers, axum::http::StatusCode::OK).into_response())
 }
 
@@ -148,6 +152,8 @@ pub async fn promote_wallet(
     let expected_nonce =
         redis::command::fetch_nonce_from_redis(&mut redis.0, &payload.request_id).await?;
     let _ = redis::command::delete_nonce_from_redis(&mut redis.0, &payload.request_id).await;
+
+    tracing::info!("Promote wallet {}", payload.target_wallet);
 
     let expected_message = format!(
         "Promote wallet {}. Nonce: {}",
@@ -178,6 +184,8 @@ pub async fn delete_account(
         redis::command::fetch_nonce_from_redis(&mut redis.0, &payload.request_id).await?;
     let _ = redis::command::delete_nonce_from_redis(&mut redis.0, &payload.request_id).await;
 
+    tracing::info!("Delete account for wallet {}", user.wallet_address);
+
     let expected_message = format!("Delete account. Nonce: {}", expected_nonce);
     let signature = payload.try_into_domain(&user.wallet_address, expected_message.into_bytes())?;
 
@@ -197,6 +205,8 @@ pub async fn disconnect_wallet_handler(
     db: crate::postgres::extractor::DatabaseConnection,
     payload: axum::Json<TargetPayload>,
 ) -> Result<axum::Json<UnlinkedWalletResponse>, crate::endpoints::errors::ApiError> {
+    tracing::info!("Disconnect linked wallet {}", payload.target_wallet);
+
     let res = crate::postgres::query::disconnect_wallet(user, db, payload).await?;
     Ok(axum::Json(res))
 }

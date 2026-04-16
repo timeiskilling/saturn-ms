@@ -36,9 +36,32 @@ pub async fn get_user_bundles(
     user: AuthenticatedUser,
     mut db: DatabaseConnection,
 ) -> Result<Json<serde_json::Value>, ApiError> {
+    tracing::info!("Get bundles for wallet {}", user.wallet_address);
+
     let result = sqlx::query_scalar!(
         r#"
         SELECT bundles_data
+        FROM user_bundles
+        WHERE wallet_address = $1
+        "#,
+        user.wallet_address
+    )
+    .fetch_optional(&mut *db.0)
+    .await
+    .map_err(|e| UserServiceError::PostgresError(e.to_string()))?;
+
+    Ok(Json(result.unwrap_or_else(|| serde_json::json!([]))))
+}
+
+pub async fn get_linked_wallets(
+    user: AuthenticatedUser,
+    mut db: DatabaseConnection,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    tracing::info!("Get linked wallets for wallet {}", user.wallet_address);
+
+    let result = sqlx::query_scalar!(
+        r#"
+        SELECT linked_wallets
         FROM user_bundles
         WHERE wallet_address = $1
         "#,
@@ -56,6 +79,28 @@ pub async fn insert_wallets(
     user: AuthenticatedUser,
     public_key: String,
 ) -> Result<LinkedWalletResponse, ApiError> {
+    tracing::info!(
+        "Insert wallet {} for user {}",
+        public_key,
+        user.wallet_address
+    );
+
+    if user.wallet_address == public_key {
+        return Ok(LinkedWalletResponse {
+            status: "linked".to_string(),
+            primary_wallet: user.wallet_address,
+            linked_wallet: public_key,
+        });
+    }
+
+    sqlx::query!(
+        "DELETE FROM user_bundles WHERE wallet_address = $1",
+        public_key
+    )
+    .execute(&mut *db.0)
+    .await
+    .map_err(|e| UserServiceError::PostgresError(e.to_string()))?;
+
     sqlx::query!(
             r#"
             INSERT INTO user_bundles (wallet_address, linked_wallets)
@@ -123,11 +168,11 @@ pub async fn promote_wallet(
 ) -> Result<PromoteWalletResponse, ApiError> {
     let result = sqlx::query!(
         r#"
-        UPDATE user_bundles
-        SET wallet_address = $1,
-            linked_wallets = linked_wallets - $1
-        WHERE wallet_address = $2 AND linked_wallets @> jsonb_build_array($1::text)
-        "#,
+            UPDATE user_bundles
+            SET wallet_address = $1,
+                linked_wallets = (linked_wallets - $1) || jsonb_build_array($2::text)
+            WHERE wallet_address = $2 AND linked_wallets @> jsonb_build_array($1::text)
+            "#,
         target_wallet,
         user.wallet_address
     )
