@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO linked_wallets (primary_wallet, address, wallet_id, name, address_type)\n            VALUES ($1, $2, $3, $4, $5)\n            ON CONFLICT (address) DO NOTHING\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "06658382606847f75a3fef424e04f28200625a0ae33f8bfc358480370b1c2b23"
+}

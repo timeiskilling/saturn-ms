@@ -11,11 +11,17 @@ export type SolVerifyRequest = {
   request_id: string;
   public_key: string;
   signature: string;
+  wallet_id: string;
+  name: string;
+  address_type: string;
 };
 
 export async function verifyWallet(
   solana: ISolanaChain,
   publicKey: string,
+  walletId: string = "phantom",
+  name: string = "Linked Wallet",
+  addressType: string = "Solana",
 ): Promise<boolean> {
   try {
     // 1. Request a nonce and message template from the backend
@@ -42,6 +48,9 @@ export async function verifyWallet(
       request_id: nonceData.request_id,
       public_key: publicKey,
       signature: signatureBase58,
+      wallet_id: walletId,
+      name: name,
+      address_type: addressType,
     };
 
     const verifyResponse = await fetch("http://localhost:3001/auth/verify", {

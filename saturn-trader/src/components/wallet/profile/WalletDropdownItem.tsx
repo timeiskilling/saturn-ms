@@ -3,6 +3,9 @@ import { LogOut, Sparkles } from "lucide-react";
 import { type AccountInfo } from "./types";
 import { useConnect, useDisconnect } from "@phantom/react-sdk";
 import { logout } from "../../../api/logout";
+import { PromoteButton } from "./PromoteButton";
+import { LinkButton } from "./LinkButton";
+import { useAllAccounts } from "./useAllAccounts";
 
 interface WalletDropdownItemProps {
   account: AccountInfo;
@@ -33,6 +36,7 @@ export function WalletDropdownItem({
 }: WalletDropdownItemProps) {
   const { connect } = useConnect();
   const { disconnect, isDisconnecting } = useDisconnect();
+  const { primaryAccount } = useAllAccounts();
 
   const accShort = `${account.address.slice(0, 5)}...${account.address.slice(-5)}`;
   const displayType =
@@ -110,16 +114,10 @@ export function WalletDropdownItem({
                 </span>
               ) : null}
               {!isVerified && isActive && isPrimary && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onVerify(account.address, account.walletId);
-                  }}
-                  disabled={isVerifying}
-                  className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 transition-colors uppercase tracking-wider disabled:opacity-50"
-                >
-                  {isVerifying ? "Verifying..." : "Verify"}
-                </button>
+                <LinkButton
+                  onVerify={() => onVerify(account.address, account.walletId)}
+                  isVerifying={isVerifying}
+                />
               )}
             </div>
             <span
@@ -167,15 +165,22 @@ export function WalletDropdownItem({
             <Sparkles className="w-3.5 h-3.5 text-purple-400" />
             Secondary wallet
           </span>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              alert("Promote functionality coming soon!");
-            }}
-            className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg text-xs font-semibold text-zinc-200 transition-colors"
-          >
-            Promote
-          </button>
+          <div className="flex items-center gap-2">
+            {!isVerified ? (
+              <LinkButton
+                onVerify={() => onVerify(account.address, account.walletId)}
+                isVerifying={isVerifying}
+              />
+            ) : (
+              <PromoteButton
+                targetAddress={account.address}
+                oldPrimaryWalletId={primaryAccount?.walletId || "unknown"}
+                oldPrimaryName={primaryAccount?.name || "Linked Wallet"}
+                oldPrimaryAddressType={primaryAccount?.addressType || "Solana"}
+                onSuccess={onClose}
+              />
+            )}
+          </div>
         </div>
       )}
     </div>

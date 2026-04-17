@@ -23,6 +23,18 @@ fn decode_sol_signature(
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct VerifySignature {
+    pub request_id: String,
+    pub public_key: String,
+    pub signature: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PromoteSignature {
+    pub signature: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct NonceResponse {
     pub nonce: String,
     pub request_id: String,
@@ -31,9 +43,11 @@ pub struct NonceResponse {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SolVerifyRequest {
-    pub request_id: String,
-    pub public_key: String, // Base58 encoded string from Phantom
-    pub signature: String,  // Base58 encoded string from Phantom
+    #[serde(flatten)]
+    pub verify_data: VerifySignature,
+    pub wallet_id: String,
+    pub address_type: String,
+    pub name: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -49,18 +63,31 @@ pub struct DeleteAccountRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PromoteWalletRequest {
+    #[serde(flatten)]
+    pub verify_data: PromoteSignature,
     pub request_id: String,
     pub target_wallet: String,
-    pub signature: String,
+    pub wallet_id: String,
+    pub name: String,
+    pub address_type: String,
 }
 
-impl PromoteWalletRequest {
+impl PromoteSignature {
     pub fn try_into_domain(
         self,
         public_key: &str,
         expected_message: Vec<u8>,
     ) -> Result<SolSignature<Unverified>, UserServiceError> {
         decode_sol_signature(public_key, &self.signature, expected_message)
+    }
+}
+
+impl VerifySignature {
+    pub fn try_into_domain(
+        self,
+        expected_message: Vec<u8>,
+    ) -> Result<SolSignature<Unverified>, UserServiceError> {
+        decode_sol_signature(&self.public_key, &self.signature, expected_message)
     }
 }
 
@@ -71,14 +98,5 @@ impl DeleteAccountRequest {
         expected_message: Vec<u8>,
     ) -> Result<SolSignature<Unverified>, UserServiceError> {
         decode_sol_signature(public_key, &self.signature, expected_message)
-    }
-}
-
-impl SolVerifyRequest {
-    pub fn try_into_domain(
-        self,
-        expected_message: Vec<u8>,
-    ) -> Result<SolSignature<Unverified>, UserServiceError> {
-        decode_sol_signature(&self.public_key, &self.signature, expected_message)
     }
 }

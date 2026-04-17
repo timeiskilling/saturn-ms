@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM linked_wallets WHERE address = $1 AND primary_wallet = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7a3c383ed44296077fe8982917206910d08ee45a0a9d2d2d61cebac4a859ff27"
+}

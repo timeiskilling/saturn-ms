@@ -4,10 +4,19 @@ import { promoteWallet } from "../../../api/promoteWallet";
 
 interface PromoteButtonProps {
   targetAddress: string;
+  oldPrimaryWalletId: string;
+  oldPrimaryName: string;
+  oldPrimaryAddressType: string;
   onSuccess?: () => void;
 }
 
-export function PromoteButton({ targetAddress, onSuccess }: PromoteButtonProps) {
+export function PromoteButton({
+  targetAddress,
+  oldPrimaryWalletId,
+  oldPrimaryName,
+  oldPrimaryAddressType,
+  onSuccess,
+}: PromoteButtonProps) {
   const { solana } = useSolana();
   const [isPromoting, setIsPromoting] = useState(false);
 
@@ -21,7 +30,13 @@ export function PromoteButton({ targetAddress, onSuccess }: PromoteButtonProps) 
 
     setIsPromoting(true);
     try {
-      const success = await promoteWallet(solana, targetAddress);
+      const success = await promoteWallet(
+        solana,
+        targetAddress,
+        oldPrimaryWalletId,
+        oldPrimaryName,
+        oldPrimaryAddressType,
+      );
       if (success) {
         onSuccess?.();
       } else {

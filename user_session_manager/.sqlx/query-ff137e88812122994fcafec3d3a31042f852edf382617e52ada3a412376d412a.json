@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE linked_wallets SET primary_wallet = $1 WHERE primary_wallet = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ff137e88812122994fcafec3d3a31042f852edf382617e52ada3a412376d412a"
+}

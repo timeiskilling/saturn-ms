@@ -42,11 +42,16 @@ pub async fn verify_signature(
     Json(payload): Json<SolVerifyRequest>,
 ) -> Result<impl IntoResponse, ApiError> {
     let expected_nonce =
-        redis::command::fetch_nonce_from_redis(&mut redis.0, &payload.request_id).await?;
-    let _ = redis::command::delete_nonce_from_redis(&mut redis.0, &payload.request_id).await;
+        redis::command::fetch_nonce_from_redis(&mut redis.0, &payload.verify_data.request_id)
+            .await?;
+    let _ = redis::command::delete_nonce_from_redis(&mut redis.0, &payload.verify_data.request_id)
+        .await;
     let expected_message = format!("Sign in to Saturn.\n\nNonce: {}", expected_nonce);
-    let public_key = payload.public_key.clone();
-    let signature = payload.try_into_domain(expected_message.into_bytes())?;
+    let public_key = payload.verify_data.public_key.clone();
+
+    let signature = payload
+        .verify_data
+        .try_into_domain(expected_message.into_bytes())?;
 
     let _ = signature
         .verify()
@@ -54,12 +59,44 @@ pub async fn verify_signature(
 
     match existing_session {
         Some(user) => {
+            let is_primary =
+                crate::postgres::query::check_if_is_primary_wallet(&mut db, &public_key).await?;
+
+            if is_primary && user.wallet_address != public_key {
+                tracing::warn!(
+                    "Rejected linking wallet {}. Already registered as a primary account.",
+                    public_key
+                );
+                return Err(ApiError(UserServiceError::Unauthorized));
+            }
+
+            let is_linked_to_primary =
+                crate::postgres::query::check_if_is_linked_wallet(&mut db, &public_key).await?;
+
+            if let Some(primary_wallet) = is_linked_to_primary
+                && primary_wallet != user.wallet_address
+            {
+                tracing::warn!(
+                    "Rejected linking wallet {}. Already linked to {}.",
+                    public_key,
+                    primary_wallet
+                );
+                return Err(ApiError(UserServiceError::Unauthorized));
+            }
             tracing::info!(
                 "User {} is linking a new wallet: {}",
                 user.wallet_address,
                 public_key
             );
-            let success_response = insert_wallets(db, user, public_key).await?;
+            let success_response = insert_wallets(
+                db,
+                user,
+                public_key,
+                payload.wallet_id,
+                payload.name,
+                payload.address_type,
+            )
+            .await?;
             Ok((axum::http::StatusCode::OK, Json(success_response)).into_response())
         }
         None => {
@@ -88,9 +125,11 @@ pub async fn verify_unlink(
     Json(payload): Json<SolVerifyRequest>,
 ) -> Result<impl IntoResponse, ApiError> {
     let expected_nonce =
-        redis::command::fetch_nonce_from_redis(&mut redis.0, &payload.request_id).await?;
-    let _ = redis::command::delete_nonce_from_redis(&mut redis.0, &payload.request_id).await;
-    let public_key = payload.public_key.clone();
+        redis::command::fetch_nonce_from_redis(&mut redis.0, &payload.verify_data.request_id)
+            .await?;
+    let _ = redis::command::delete_nonce_from_redis(&mut redis.0, &payload.verify_data.request_id)
+        .await;
+    let public_key = payload.verify_data.public_key.clone();
 
     tracing::info!("Call Verify unlink for wallet {}", public_key);
 
@@ -109,7 +148,9 @@ pub async fn verify_unlink(
     }
 
     let expected_message = format!("Unlink from any primary account. Nonce: {}", expected_nonce);
-    let signature = payload.try_into_domain(expected_message.into_bytes())?;
+    let signature = payload
+        .verify_data
+        .try_into_domain(expected_message.into_bytes())?;
 
     let _ = signature
         .verify()
@@ -159,15 +200,24 @@ pub async fn promote_wallet(
         "Promote wallet {}. Nonce: {}",
         payload.target_wallet, expected_nonce
     );
-    let target_wallet = payload.target_wallet.clone();
-    let signature = payload.try_into_domain(&user.wallet_address, expected_message.into_bytes())?;
+
+    let signature = payload
+        .verify_data
+        .try_into_domain(&user.wallet_address, expected_message.into_bytes())?;
 
     let _ = signature
         .verify()
         .map_err(|_| UserServiceError::InvalidSignature)?;
 
-    let success_response =
-        crate::postgres::query::promote_wallet(db, user.clone(), target_wallet).await?;
+    let success_response = crate::postgres::query::promote_wallet(
+        db,
+        user.clone(),
+        payload.target_wallet,
+        payload.wallet_id,
+        payload.name,
+        payload.address_type,
+    )
+    .await?;
 
     let _ = redis::command::delete_all_user_sessions(&user.wallet_address, &mut redis.0).await;
 

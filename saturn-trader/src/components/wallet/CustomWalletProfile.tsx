@@ -40,12 +40,25 @@ export function CustomWalletProfile() {
       return;
     }
 
+    const accountInfo = allAccounts.find((a) => a.address === accountAddress);
+    const name = accountInfo?.name || "Wallet";
+    const addressType = accountInfo?.addressType || "Solana";
+
     setVerificationStatus((prev) => ({
       ...prev,
       [accountAddress]: "Verifying...",
     }));
     try {
-      const success = await verifyWallet(solana, accountAddress);
+      const accInfo = allAccounts.find((a) => a.address === accountAddress);
+      const walletName = accInfo?.name || "Linked Wallet";
+      const addressType = accInfo?.addressType || "Solana";
+      const success = await verifyWallet(
+        solana,
+        accountAddress,
+        walletId,
+        walletName,
+        addressType,
+      );
       if (success) {
         setVerificationStatus((prev) => ({
           ...prev,

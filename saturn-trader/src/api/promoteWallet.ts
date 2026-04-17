@@ -6,11 +6,17 @@ export type PromoteWalletRequest = {
   request_id: string;
   target_wallet: string;
   signature: string;
+  wallet_id: string;
+  name: string;
+  address_type: string;
 };
 
 export async function promoteWallet(
   solana: ISolanaChain,
   targetWalletPublicKey: string,
+  walletId: string,
+  name: string,
+  addressType: string,
 ): Promise<boolean> {
   try {
     const nonceResponse = await fetch("http://localhost:3001/auth/nonce", {
@@ -37,6 +43,9 @@ export async function promoteWallet(
       request_id: nonceData.request_id,
       target_wallet: targetWalletPublicKey,
       signature: signatureBase58,
+      wallet_id: walletId,
+      name: name,
+      address_type: addressType,
     };
 
     const response = await fetch("http://localhost:3001/wallet/promote", {

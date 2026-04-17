@@ -43,7 +43,13 @@ function WalletComponent() {
 
     setVerificationStatus("Verifying...");
     try {
-      const success = await verifyWallet(solana, solana.publicKey);
+      const success = await verifyWallet(
+        solana,
+        solana.publicKey,
+        user?.walletId,
+        user?.wallet?.name,
+        "Solana",
+      );
       if (success) {
         setVerificationStatus("Wallet successfully verified!");
       } else {
