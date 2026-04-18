@@ -41,6 +41,8 @@ pub struct Config {
 
     pub notification_redis_host: String,
     pub notification_redis_port: u16,
+    pub notification_sentinel_urls: Vec<String>,
+    pub notification_sentinel_master_name: String,
 
     pub alt_redis_host: String,
     pub alt_redis_port: u16,
@@ -168,6 +170,8 @@ pub fn load() -> Config {
 
         notification_redis_host: env_get("NOTIFICATION_REDIS_HOST"),
         notification_redis_port: env_parse("NOTIFICATION_REDIS_PORT"),
+        notification_sentinel_urls: env_get_list("NOTIFICATION_SENTINEL_URLS"),
+        notification_sentinel_master_name: env_get("NOTIFICATION_SENTINEL_MASTER_NAME"),
 
         price_redis_host: env_get("PRICE_REDIS_HOST"),
         price_redis_port: env_parse("PRICE_REDIS_PORT"),

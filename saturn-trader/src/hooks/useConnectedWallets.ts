@@ -1,6 +1,9 @@
 import { useEffect, useState, useRef } from "react";
 import { usePhantom, useAccounts } from "@phantom/react-sdk";
 
+let lastFetchTime = 0;
+let fetchPromise: Promise<any> | null = null;
+
 export interface SavedWallet {
   walletId: string;
   name: string;
@@ -46,6 +49,101 @@ export function useConnectedWallets() {
       window.removeEventListener("saturn_wallets_updated", handleStorageChange);
   }, []);
 
+  useEffect(() => {
+    const fetchLinkedWallets = async () => {
+      if (!isConnected) return;
+
+      const now = Date.now();
+      if (now - lastFetchTime < 2000) return;
+      lastFetchTime = now;
+
+      try {
+        if (!fetchPromise) {
+          fetchPromise = fetch("http://localhost:3001/wallet/linked", {
+            credentials: "include",
+          })
+            .then((res) => {
+              fetchPromise = null;
+              return res.ok ? res.json() : null;
+            })
+            .catch((e) => {
+              fetchPromise = null;
+              throw e;
+            });
+        }
+
+        const linked:
+          | {
+              address: string;
+              wallet_id: string;
+              name: string;
+              address_type: string;
+            }[]
+          | null = await fetchPromise;
+
+        if (linked) {
+          setSavedWallets((prev) => {
+            const next = [...prev];
+            let changed = false;
+
+            linked.forEach((lw) => {
+              const existingIndex = next.findIndex(
+                (w) => w.walletId === lw.wallet_id,
+              );
+
+              if (existingIndex >= 0) {
+                const existingWallet: SavedWallet = { ...next[existingIndex]! };
+                const currentAccounts = existingWallet.accounts || [];
+                const accountExists = currentAccounts.some(
+                  (a) => a.address === lw.address,
+                );
+
+                if (!accountExists) {
+                  existingWallet.accounts = [
+                    ...currentAccounts,
+                    { address: lw.address, addressType: lw.address_type },
+                  ];
+                  changed = true;
+                }
+
+                if (!existingWallet.isVerified) {
+                  existingWallet.isVerified = true;
+                  changed = true;
+                }
+                next[existingIndex] = existingWallet;
+              } else {
+                const newLinkedWallet: SavedWallet = {
+                  walletId: lw.wallet_id,
+                  name: lw.name,
+                  accounts: [
+                    { address: lw.address, addressType: lw.address_type },
+                  ],
+                  isVerified: true,
+                };
+                next.push(newLinkedWallet);
+                changed = true;
+              }
+            });
+
+            if (changed) {
+              // Only trigger update if the actual data changed to prevent infinite loops
+              const isDifferent = JSON.stringify(prev) !== JSON.stringify(next);
+              if (isDifferent) {
+                setTimeout(() => updateStorage(next), 0);
+                return next;
+              }
+            }
+            return prev;
+          });
+        }
+      } catch (e) {
+        console.error("Failed to fetch linked wallets", e);
+      }
+    };
+
+    fetchLinkedWallets();
+  }, [isConnected]);
+
   const updateStorage = (next: SavedWallet[]) => {
     localStorage.setItem("saturn_saved_wallets", JSON.stringify(next));
     window.dispatchEvent(new Event("saturn_wallets_updated"));
@@ -59,28 +157,42 @@ export function useConnectedWallets() {
         const existingIndex = prev.findIndex(
           (w) => w.walletId === user.walletId,
         );
-        const newWallet: SavedWallet = {
-          walletId: user.walletId!,
-          name: user.wallet?.name || "Wallet",
-          icon: user.wallet?.icon,
-          accounts: accounts.map((a) => ({
-            address: a.address,
-            addressType: a.addressType,
-          })),
-        };
-
         let next;
         let isChanged = false;
         if (existingIndex >= 0) {
-          const existing = prev[existingIndex];
-          if (JSON.stringify(existing) !== JSON.stringify(newWallet)) {
+          const existing = prev[existingIndex]!;
+          const updatedWallet: SavedWallet = {
+            walletId: user.walletId!,
+            name: user.wallet?.name || existing.name || "Wallet",
+            icon: user.wallet?.icon || existing.icon,
+            accounts: [
+              ...(existing.accounts || []).filter(
+                (ea) => !accounts.some((a) => a.address === ea.address),
+              ),
+              ...accounts.map((a) => ({
+                address: a.address,
+                addressType: a.addressType,
+              })),
+            ],
+            isVerified: existing.isVerified,
+          };
+          if (JSON.stringify(existing) !== JSON.stringify(updatedWallet)) {
             next = [...prev];
-            next[existingIndex] = newWallet;
+            next[existingIndex] = updatedWallet;
             isChanged = true;
           } else {
             next = prev;
           }
         } else {
+          const newWallet: SavedWallet = {
+            walletId: user.walletId!,
+            name: user.wallet?.name || "Wallet",
+            icon: user.wallet?.icon,
+            accounts: accounts.map((a) => ({
+              address: a.address,
+              addressType: a.addressType,
+            })),
+          };
           next = [...prev, newWallet];
           isChanged = true;
         }
@@ -98,8 +210,7 @@ export function useConnectedWallets() {
       // so it prompts for connection again correctly next time.
       localStorage.removeItem("phantom-wallet");
       localStorage.removeItem("phantom-wallet-connected");
-      localStorage.clear();
-      sessionStorage.clear();
+      localStorage.removeItem("saturn_saved_wallets");
 
       setSavedWallets((prev) => {
         if (!prev.some((w) => w.walletId === disconnectedId)) {
@@ -115,8 +226,7 @@ export function useConnectedWallets() {
   const clearSavedWallets = () => {
     localStorage.removeItem("phantom-wallet");
     localStorage.removeItem("phantom-wallet-connected");
-    localStorage.clear();
-    sessionStorage.clear();
+    localStorage.removeItem("saturn_saved_wallets");
     setSavedWallets([]);
     setTimeout(() => updateStorage([]), 0);
   };

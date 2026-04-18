@@ -1,6 +1,5 @@
 use crate::constant::{self, HEADER_SIZE};
 use crate::prelude::*;
-use async_trait::async_trait;
 use common::traits::{InstructionParser, TransactionBuilder};
 use jupiter_trader_data::models::jupiter_models::JupiterSwapInstructionsRsponse;
 use redis::AsyncCommands;
@@ -226,7 +225,7 @@ impl<P> SolanaTransactionsBuilder<P> {
     }
 }
 
-#[async_trait]
+// #[async_trait]
 impl<P> TransactionBuilder<JupiterSwapInstructionsRsponse, (Hash, Pubkey)>
     for SolanaTransactionsBuilder<P>
 where

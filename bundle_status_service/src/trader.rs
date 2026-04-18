@@ -44,7 +44,7 @@ pub struct JupiterTrader {
 impl JupiterTrader {
     pub async fn new(
         helius_api_key: &str,
-        /*keypair: Keypair*/ notification_redis_url: String,
+        /*keypair: Keypair*/ _notification_redis_url: String,
         jito_manager: Arc<JitoHttpManager>,
         http_client: Arc<dyn JupiterProvider>,
     ) -> Self {
@@ -76,12 +76,20 @@ impl JupiterTrader {
             jito_tip_redis: Arc::new(Mutex::new(
                 redis_con::connection::jito_tip_redis_conn(&config).await,
             )),
-            config,
+            config: config.clone(),
             notification_system: {
-                let ns = Arc::new(UserStreamNotificationSystem::new());
-                if let Ok(client) = redis::Client::open(notification_redis_url.as_str()) {
-                    ns.start_redis_subscription(client).await;
-                }
+                let ns = Arc::new(UserStreamNotificationSystem::new(
+                    config.notification_sentinel_urls.clone(),
+                    config.notification_sentinel_master_name.clone(),
+                ));
+                let ns_clone = ns.clone();
+                tokio::spawn(async move {
+                    if let Ok(_conn) = ns_clone.get_redis_connection().await {
+                        let client =
+                            redis::Client::open(config.notification_redis_url().as_str()).unwrap();
+                        ns_clone.sentinal_start_redis_subscription(client).await;
+                    }
+                });
                 ns
             },
             tip_cache: Arc::new(RwLock::new(None)),
@@ -286,7 +294,8 @@ impl JupiterTrader {
                         tracing::info!("Bundle sent successfully with UUID: {}", bundle_uuid);
 
                         self.notification_system
-                            .register_user_bundle(user_pbk, bundle_uuid);
+                            .sentinel_register_user_bundle(user_pbk, bundle_uuid)
+                            .await?;
 
                         if let Err(e) = self.queue_bundle_for_tracking(bundle_uuid).await {
                             tracing::error!("Failed to queue bundle {}: {}", bundle_uuid, e);

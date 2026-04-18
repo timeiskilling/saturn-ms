@@ -36,7 +36,9 @@ export function WalletDropdownItem({
 }: WalletDropdownItemProps) {
   const { connect } = useConnect();
   const { disconnect, isDisconnecting } = useDisconnect();
-  const { primaryAccount } = useAllAccounts();
+  const { primaryAccount, user } = useAllAccounts();
+
+  const isPrimaryActive = primaryAccount?.walletId === user?.walletId;
 
   const accShort = `${account.address.slice(0, 5)}...${account.address.slice(-5)}`;
   const displayType =
@@ -159,30 +161,43 @@ export function WalletDropdownItem({
         </div>
       </div>
 
-      {!isPrimary && isActive && (
-        <div className="mt-2 pt-2 border-t border-zinc-800/60 flex items-center justify-between">
-          <span className="text-xs text-zinc-400 font-medium flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-            Secondary wallet
-          </span>
-          <div className="flex items-center gap-2">
-            {!isVerified ? (
-              <LinkButton
-                onVerify={() => onVerify(account.address, account.walletId)}
-                isVerifying={isVerifying}
-              />
-            ) : (
-              <PromoteButton
-                targetAddress={account.address}
-                oldPrimaryWalletId={primaryAccount?.walletId || "unknown"}
-                oldPrimaryName={primaryAccount?.name || "Linked Wallet"}
-                oldPrimaryAddressType={primaryAccount?.addressType || "Solana"}
-                onSuccess={onClose}
-              />
-            )}
+      {!isPrimary &&
+        ((isActive && !isVerified) || (isPrimaryActive && isVerified)) && (
+          <div className="mt-2 pt-2 border-t border-zinc-800/60 flex items-center justify-between">
+            <span className="text-xs text-zinc-400 font-medium flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+              Secondary wallet
+            </span>
+            <div className="flex items-center gap-2">
+              {!isVerified ? (
+                <LinkButton
+                  onVerify={() => onVerify(account.address, account.walletId)}
+                  isVerifying={isVerifying}
+                />
+              ) : (
+                <PromoteButton
+                  targetAddress={account.address}
+                  oldPrimaryWalletId={primaryAccount?.walletId || "unknown"}
+                  oldPrimaryName={primaryAccount?.name || "Linked Wallet"}
+                  oldPrimaryAddressType={
+                    primaryAccount?.addressType || "Solana"
+                  }
+                  onSuccess={async () => {
+                    try {
+                      await logout();
+                    } catch (e) {
+                      console.error("Logout error:", e);
+                    }
+                    onClearAll();
+                    await disconnect();
+                    onClose();
+                    window.location.reload();
+                  }}
+                />
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
     </div>
   );
 }

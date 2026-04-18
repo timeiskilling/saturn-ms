@@ -15,6 +15,14 @@ pub enum SaturnTransactionsServiceError {
     Jito(JitoEndpointErr),
 }
 
+impl From<redis::RedisError> for SaturnTransactionsServiceError {
+    fn from(error: redis::RedisError) -> Self {
+        SaturnTransactionsServiceError::Redis(RedisErr::QueryExecute {
+            issue: error.to_string(),
+        })
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum WalletError {
     Encryption(EncryptionError),

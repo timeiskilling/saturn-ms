@@ -178,7 +178,20 @@ impl BundleService for TransactionService {
             let user_id = user_id_for_stream.clone();
 
             async move {
-                let active_bundles = notification_system.get_user_bundles(&user_id);
+                let active_bundles = match notification_system.get_user_bundles(&user_id).await {
+                    Ok(bundles) => bundles,
+                    Err(e) => {
+                        tracing::error!(
+                            "Failed to get user bundles from Redis for user {}: {}",
+                            user_id,
+                            e
+                        );
+                        // If we fail to talk to Redis, we probably shouldn't close the stream immediately.
+                        // But for safety, we return an empty vec or handle it gracefully. Let's return an empty vec to let it close.
+                        vec![]
+                    }
+                };
+
                 if active_bundles.is_empty() {
                     tracing::info!("User {} has no more bundles, closing stream.", user_id);
                     return None;

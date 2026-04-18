@@ -3,10 +3,14 @@ use common::bundle_stage_api::{BundleStage, BundleStatusUpdate};
 use dashmap::DashMap;
 use futures::StreamExt;
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::broadcast;
+
+use deadpool_redis::Runtime;
+use deadpool_redis::sentinel::Pool;
+use redis::{AsyncCommands, RedisError};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserBundleUpdate {
@@ -26,26 +30,38 @@ struct UserStats {
 
 #[derive(Debug, Clone)]
 pub struct UserStreamNotificationSystem {
+    redis_pool: Pool,
     user_streams: Arc<DashMap<String, broadcast::Sender<UserBundleUpdate>, RandomState>>,
-    bundle_ownership: Arc<DashMap<String, String, RandomState>>,
-    user_bundles: Arc<DashMap<String, HashSet<String>, RandomState>>,
     active_users: Arc<DashMap<String, UserStats, RandomState>>,
 }
 
-impl Default for UserStreamNotificationSystem {
-    fn default() -> Self {
+impl UserStreamNotificationSystem {
+    pub fn new(sentinel_urls: Vec<String>, master_name: String) -> Self {
+        let cfg = deadpool_redis::sentinel::Config {
+            urls: Some(sentinel_urls),
+            server_type: deadpool_redis::sentinel::SentinelServerType::Master,
+            master_name,
+            ..Default::default()
+        };
+
+        let pool = cfg
+            .create_pool(Some(Runtime::Tokio1))
+            .expect("Failed to create Redis Sentinel pool");
+
         Self {
             user_streams: Arc::new(DashMap::with_hasher(RandomState::new())),
-            bundle_ownership: Arc::new(DashMap::with_hasher(RandomState::new())),
-            user_bundles: Arc::new(DashMap::with_hasher(RandomState::new())),
             active_users: Arc::new(DashMap::with_hasher(RandomState::new())),
+            redis_pool: pool,
         }
     }
-}
 
-impl UserStreamNotificationSystem {
-    pub fn new() -> Self {
-        Self::default()
+    pub async fn get_redis_connection(
+        &self,
+    ) -> Result<deadpool_redis::sentinel::Connection, RedisError> {
+        self.redis_pool
+            .get()
+            .await
+            .map_err(|e| RedisError::from((redis::ErrorKind::Io, "Pool error", e.to_string())))
     }
 
     pub fn subscribe_to_user_stream(
@@ -85,7 +101,50 @@ impl UserStreamNotificationSystem {
         });
     }
 
-    pub async fn start_redis_subscription(&self, redis_client: redis::Client) {
+    pub async fn cleanup_inactive_users(&self) {
+        let cuttof = tokio::time::Instant::now() - Duration::from_secs(300);
+        let inactive_users: Vec<String> = self
+            .active_users
+            .iter()
+            .filter(|entry| entry.value().last_activity < cuttof)
+            .map(|entry| entry.key().clone())
+            .collect();
+
+        self.active_users.retain(|_, user_data| {
+            let is_active = user_data.last_activity >= cuttof;
+            if !is_active {
+                tracing::info!("Cleaning up inactive user");
+            }
+            is_active
+        });
+
+        for user_id in inactive_users {
+            self.user_streams.remove(&user_id);
+        }
+    }
+
+    pub async fn sentinel_register_user_bundle(
+        &self,
+        user_id: &str,
+        bundle_id: &str,
+    ) -> Result<(), RedisError> {
+        let mut conn = self.get_redis_connection().await?;
+        let owner_key = format!("bundle_owner:{}", bundle_id);
+        let user_bundles_key = format!("user_bundles:{}", user_id);
+
+        // 1. Set the owner for the specific bundle with TTL
+        let _: () = conn.set_ex(owner_key, user_id, 3600).await?;
+
+        // 2. Add the bundle to the user's set of active bundles
+        let _: () = conn.sadd(&user_bundles_key, bundle_id).await?;
+
+        // 3. Set/Refresh TTL on the user's bundle set
+        let _: () = conn.expire(user_bundles_key, 3600).await?;
+
+        Ok(())
+    }
+
+    pub async fn sentinal_start_redis_subscription(&self, redis_client: redis::Client) {
         let notification_system = self.clone();
         tokio::spawn(async move {
             let mut conn = match redis_client.get_async_pubsub().await {
@@ -115,14 +174,29 @@ impl UserStreamNotificationSystem {
                 tracing::info!("Received Redis Update: {}", payload);
 
                 if let Ok(bundle_update) = serde_json::from_str::<BundleStatusUpdate>(&payload) {
-                    let user_id = if let Some(owner) = notification_system
-                        .bundle_ownership
-                        .get(&bundle_update.bundle_id)
-                    {
-                        owner.value().clone()
-                    } else {
-                        tracing::error!("Failed to deserialize update: {}", payload);
-                        continue;
+                    let key = format!("bundle_owner:{}", bundle_update.bundle_id);
+
+                    let mut conn = match notification_system.get_redis_connection().await {
+                        Ok(c) => c,
+                        Err(e) => {
+                            tracing::error!("Failed to get redis connection: {}", e);
+                            continue;
+                        }
+                    };
+
+                    let user_id = match conn.get::<_, Option<String>>(&key).await {
+                        Ok(Some(owner)) => owner,
+                        Ok(None) => {
+                            tracing::warn!(
+                                "Bundle ownership not found for: {}",
+                                bundle_update.bundle_id
+                            );
+                            continue;
+                        }
+                        Err(e) => {
+                            tracing::error!("Failed to get bundle ownership from redis: {}", e);
+                            continue;
+                        }
                     };
 
                     if notification_system.user_streams.contains_key(&user_id) {
@@ -152,86 +226,48 @@ impl UserStreamNotificationSystem {
         });
     }
 
-    pub async fn cleanup_inactive_users(&self) {
-        let cuttof = tokio::time::Instant::now() - Duration::from_secs(300);
+    pub async fn user_owns_bundle(
+        &self,
+        user_id: &str,
+        bundle_id: &str,
+    ) -> Result<bool, RedisError> {
+        let mut conn = self.get_redis_connection().await?;
+        let key = format!("bundle_owner:{}", bundle_id);
+        let owner: Option<String> = conn.get(key).await?;
+        Ok(owner.as_deref() == Some(user_id))
+    }
 
-        let inactive_users: Vec<String> = self
-            .active_users
-            .iter()
-            .filter(|entry| entry.value().last_activity < cuttof)
-            .map(|entry| entry.key().clone())
-            .collect();
+    pub async fn get_user_bundles(&self, user_id: &str) -> Result<Vec<String>, RedisError> {
+        let mut conn = self.get_redis_connection().await?;
+        let key = format!("user_bundles:{}", user_id);
+        let bundles: Vec<String> = conn.smembers(key).await?;
+        Ok(bundles)
+    }
 
-        self.active_users.retain(|_, user_data| {
-            let is_active = user_data.last_activity >= cuttof;
-            if !is_active {
-                tracing::info!("Cleaning up inactive user");
-            }
-            is_active
-        });
+    pub async fn get_user_id(&self, bundle_id: &str) -> Result<Option<String>, RedisError> {
+        let mut conn = self.get_redis_connection().await?;
+        let key = format!("bundle_owner:{}", bundle_id);
+        let user_id: Option<String> = conn.get(key).await?;
+        Ok(user_id)
+    }
 
-        for user_id in inactive_users {
-            self.user_streams.remove(&user_id);
+    pub async fn cleanup_bundle(&self, bundle_id: &str) -> Result<(), RedisError> {
+        let mut conn = self.get_redis_connection().await?;
+        let owner_key = format!("bundle_owner:{}", bundle_id);
 
-            if let Some((_, bundles)) = self.user_bundles.remove(&user_id) {
-                for bundle_id in bundles {
-                    self.bundle_ownership.remove(&bundle_id);
-                }
-            }
+        if let Some(user_id) = conn.get::<_, Option<String>>(&owner_key).await? {
+            let user_bundles_key = format!("user_bundles:{}", user_id);
+            let _: () = conn.srem(user_bundles_key, bundle_id).await?;
         }
-    }
 
-    pub fn register_user_bundle(&self, user_id: &str, bundle_id: &str) {
-        self.bundle_ownership
-            .insert(bundle_id.to_string(), user_id.to_string());
-
-        self.user_bundles
-            .entry(user_id.to_string())
-            .or_insert_with(HashSet::new)
-            .insert(bundle_id.to_string());
-    }
-
-    pub fn user_owns_bundle(&self, user_id: &str, bundle_id: &str) -> bool {
-        self.bundle_ownership
-            .get(bundle_id)
-            .map(|owner| owner.value() == user_id)
-            .unwrap_or(false)
-    }
-
-    pub fn get_user_bundles(&self, user_id: &str) -> Vec<String> {
-        self.user_bundles
-            .get(user_id)
-            .map(|bundles| bundles.iter().cloned().collect())
-            .unwrap_or_default()
-    }
-
-    pub fn get_user_id(&self, bundle_id: &str) -> Option<String> {
-        self.bundle_ownership
-            .get(bundle_id)
-            .map(|entry| entry.value().clone())
-    }
-
-    pub fn cleanup_bundle(&self, bundle_id: &str) {
-        if let Some((_, user_id)) = self.bundle_ownership.remove(bundle_id)
-            && let Some(mut user_bundles) = self.user_bundles.get_mut(&user_id)
-        {
-            user_bundles.remove(bundle_id);
-        }
+        let _: () = conn.del(owner_key).await?;
+        Ok(())
     }
 
     pub fn get_stats(&self) -> HashMap<String, usize> {
         let mut stats = HashMap::new();
         stats.insert("active_user_streams".to_string(), self.user_streams.len());
-        stats.insert("total_bundles".to_string(), self.bundle_ownership.len());
         stats.insert("active_users".to_string(), self.active_users.len());
-
-        let total_user_bundles: usize = self
-            .user_bundles
-            .iter()
-            .map(|entry| entry.value().len())
-            .sum();
-        stats.insert("total_user_bundles".to_string(), total_user_bundles);
-
         stats
     }
 
