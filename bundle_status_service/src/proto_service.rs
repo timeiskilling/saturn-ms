@@ -11,6 +11,7 @@ use crate::trader::JupiterTrader;
 use proto_models::grpc::bundle_service_server::{BundleService, BundleServiceServer};
 use proto_models::grpc::{
     BuiltTransaction, BundleDelta, SignedTransactions, TransactionsBuld, TransactionsToSign,
+    UserBundleRequest,
 };
 use tokio_stream::{Stream, wrappers::BroadcastStream};
 use tonic::{Request, Response, Status};
@@ -23,6 +24,21 @@ pub struct TransactionService {
 
 #[tonic::async_trait]
 impl BundleService for TransactionService {
+    type SubscribeToBundlesStream = Pin<
+        Box<
+            dyn Stream<Item = Result<proto_models::grpc::UserBundleUpdate, Status>>
+                + Send
+                + 'static,
+        >,
+    >;
+
+    type SendTransactionsStream = Pin<
+        Box<
+            dyn Stream<Item = Result<proto_models::grpc::UserBundleUpdate, Status>>
+                + Send
+                + 'static,
+        >,
+    >;
     #[instrument(skip_all, level = "info")]
     async fn create_transactions(
         &self,
@@ -135,13 +151,6 @@ impl BundleService for TransactionService {
         }))
     }
 
-    type SendTransactionsStream = Pin<
-        Box<
-            dyn Stream<Item = Result<proto_models::grpc::UserBundleUpdate, Status>>
-                + Send
-                + 'static,
-        >,
-    >;
     async fn send_transactions(
         &self,
         request: Request<SignedTransactions>,
@@ -167,14 +176,23 @@ impl BundleService for TransactionService {
             }
         }
 
-        let user_id_for_stream = transactions.user_pk.clone();
-
+        let user_id = transactions.user_pk.clone();
         let not_sys = self.trader.get_notification_system();
 
-        let rx = not_sys.subscribe_to_user_stream(transactions.user_pk);
+        // Fetch current statuses for the user's active bundles
+        let initial_updates = not_sys
+            .get_active_bundle_updates(&user_id)
+            .await
+            .unwrap_or_default();
 
-        let stream = BroadcastStream::new(rx).filter_map(move |result_from_broadcast| {
-            let notification_system = not_sys.clone();
+        let initial_stream = tokio_stream::iter(initial_updates.into_iter().map(|u| Ok(u.into())));
+
+        let rx = not_sys.subscribe_to_user_stream(user_id.clone());
+        let user_id_for_stream = user_id.clone();
+        let not_sys_clone = not_sys.clone();
+
+        let broadcast_stream = BroadcastStream::new(rx).filter_map(move |result_from_broadcast| {
+            let notification_system = not_sys_clone.clone();
             let user_id = user_id_for_stream.clone();
 
             async move {
@@ -186,8 +204,6 @@ impl BundleService for TransactionService {
                             user_id,
                             e
                         );
-                        // If we fail to talk to Redis, we probably shouldn't close the stream immediately.
-                        // But for safety, we return an empty vec or handle it gracefully. Let's return an empty vec to let it close.
                         vec![]
                     }
                 };
@@ -206,7 +222,101 @@ impl BundleService for TransactionService {
             }
         });
 
+        let stream = initial_stream.chain(broadcast_stream);
         let response_stream: Self::SendTransactionsStream = Box::pin(stream);
+
+        Ok(Response::new(response_stream))
+    }
+
+    async fn subscribe_to_bundles(
+        &self,
+        request: Request<UserBundleRequest>,
+    ) -> Result<Response<Self::SubscribeToBundlesStream>, Status> {
+        let req = request.into_inner();
+        let user_id = req.user_pk.clone();
+        let target_bundle_id = req.bundle_id.clone();
+
+        let not_sys = self.trader.get_notification_system();
+
+        // Fetch current statuses for the user's active bundles
+        let initial_updates = not_sys
+            .get_active_bundle_updates(&user_id)
+            .await
+            .unwrap_or_default();
+
+        let filter_id = target_bundle_id.clone();
+        let initial_stream = tokio_stream::iter(
+            initial_updates
+                .into_iter()
+                .filter(move |u| match &filter_id {
+                    Some(id) if !id.is_empty() => u.bundle_id == *id,
+                    _ => true,
+                })
+                .map(|u| Ok(u.into())),
+        );
+
+        let rx = not_sys.subscribe_to_user_stream(user_id.clone());
+        let user_id_for_stream = user_id.clone();
+        let not_sys_clone = not_sys.clone();
+
+        let broadcast_stream = BroadcastStream::new(rx).filter_map(move |result_from_broadcast| {
+            let notification_system = not_sys_clone.clone();
+            let user_id = user_id_for_stream.clone();
+            let filter_bundle_id = target_bundle_id.clone();
+
+            async move {
+                match result_from_broadcast {
+                    Ok(internal_update) => {
+                        let is_final_state = matches!(
+                            internal_update.new_status,
+                            common::bundle_stage_api::BundleStage::Finalized
+                                | common::bundle_stage_api::BundleStage::Failed
+                        );
+
+                        if is_final_state {
+                            match notification_system.get_user_bundles(&user_id).await {
+                                Ok(bundles) => {
+                                    if bundles.is_empty()
+                                        || (bundles.len() == 1
+                                            && bundles.contains(&internal_update.bundle_id))
+                                    {
+                                        tracing::info!(
+                                            "User {} has no more active bundles.",
+                                            user_id
+                                        );
+                                    }
+                                }
+                                Err(e) => {
+                                    tracing::error!(
+                                        "Failed to get user bundles from Redis for user {}: {}",
+                                        user_id,
+                                        e
+                                    );
+                                }
+                            }
+                        }
+
+                        let should_emit = match &filter_bundle_id {
+                            Some(id) if !id.is_empty() => internal_update.bundle_id == *id,
+                            _ => true,
+                        };
+
+                        if should_emit {
+                            Some(Ok(internal_update.into()))
+                        } else {
+                            None
+                        }
+                    }
+                    Err(e) => {
+                        tracing::error!("Stream for user {} lagged: {}", user_id, e);
+                        Some(Err(Status::internal("Internal stream error")))
+                    }
+                }
+            }
+        });
+
+        let stream = initial_stream.chain(broadcast_stream);
+        let response_stream: Self::SubscribeToBundlesStream = Box::pin(stream);
 
         Ok(Response::new(response_stream))
     }

@@ -8,6 +8,7 @@ service BundleService {
   // rpc UserPubK (UserPk) returns (Response);
   rpc CreateTransactions(TransactionsBuld) returns (TransactionsToSign) {}
   rpc SendTransactions(SignedTransactions) returns (stream UserBundleUpdate) {}
+  rpc SubscribeToBundles(UserBundleRequest) returns (stream UserBundleUpdate) {}
 }
 // pub struct WebTakeQoute {
 //     pub input_mint: String,
@@ -16,6 +17,11 @@ service BundleService {
 //     pub slippage_bps: u16,
 //     pub option: Option<QuoteOptions>,
 // }
+
+message UserBundleRequest {
+  string user_pk = 1;
+  optional string bundle_id = 2;
+}
 
 message SignedTransactions {
   repeated string transactions = 1;

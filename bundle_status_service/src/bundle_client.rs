@@ -244,6 +244,41 @@ impl UserStreamNotificationSystem {
         Ok(bundles)
     }
 
+    pub async fn get_active_bundle_updates(
+        &self,
+        user_id: &str,
+    ) -> Result<Vec<UserBundleUpdate>, RedisError> {
+        let bundle_ids = self.get_user_bundles(user_id).await?;
+        if bundle_ids.is_empty() {
+            return Ok(vec![]);
+        }
+
+        let mut conn = self.get_redis_connection().await?;
+        let statuses: Vec<Option<String>> = conn.hmget("bundle_tracker", &bundle_ids).await?;
+
+        let updates = statuses
+            .into_iter()
+            .zip(bundle_ids)
+            .filter_map(|(status_json, bundle_id)| {
+                status_json.and_then(|json| {
+                    serde_json::from_str::<BundleStatusUpdate>(&json)
+                        .ok()
+                        .map(|bundle_update| UserBundleUpdate {
+                            bundle_id,
+                            old_status: bundle_update
+                                .old_status
+                                .unwrap_or_else(|| "Unknown".to_string()),
+                            new_status: bundle_update.stage,
+                            timestamp: bundle_update.timestamp,
+                            slot: bundle_update.slot,
+                        })
+                })
+            })
+            .collect();
+
+        Ok(updates)
+    }
+
     pub async fn get_user_id(&self, bundle_id: &str) -> Result<Option<String>, RedisError> {
         let mut conn = self.get_redis_connection().await?;
         let key = format!("bundle_owner:{}", bundle_id);

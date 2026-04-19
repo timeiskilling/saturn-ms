@@ -6,14 +6,22 @@ import { fetchBundles } from "../../api/saveBundle";
 import { useAllAccounts } from "./profile/useAllAccounts";
 import { ProfileButton } from "./profile/ProfileButton";
 import { WalletModal } from "./profile/WalletModal";
+import { DevicesModal } from "./DevicesModal";
+import { Monitor } from "lucide-react";
 
 export function CustomWalletProfile() {
   const { solana } = useSolana();
   const { wallets } = useDiscoveredWallets();
   const [showModal, setShowModal] = useState(false);
+  const [showDevicesModal, setShowDevicesModal] = useState(false);
   const [showConnectModal, setShowConnectModal] = useState(false);
+
   const [isOpen, setIsOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+
+  const [isDevicesOpen, setIsDevicesOpen] = useState(false);
+  const [isDevicesClosing, setIsDevicesClosing] = useState(false);
+
   const [isWalletExpanded, setIsWalletExpanded] = useState(true);
   const [verificationStatus, setVerificationStatus] = useState<
     Record<string, string>
@@ -94,6 +102,20 @@ export function CustomWalletProfile() {
     }, 300);
   };
 
+  const handleOpenDevices = () => {
+    setShowDevicesModal(true);
+    requestAnimationFrame(() => setIsDevicesOpen(true));
+  };
+
+  const handleCloseDevices = () => {
+    setIsDevicesClosing(true);
+    setTimeout(() => {
+      setShowDevicesModal(false);
+      setIsDevicesOpen(false);
+      setIsDevicesClosing(false);
+    }, 300);
+  };
+
   const hasCheckedSession = useRef<Record<string, boolean>>({});
 
   useEffect(() => {
@@ -160,7 +182,17 @@ export function CustomWalletProfile() {
   }
 
   return (
-    <>
+    <div className="flex items-center gap-3">
+      <button
+        onClick={handleOpenDevices}
+        className="flex items-center gap-2 py-1.5 px-3 bg-zinc-900 border border-zinc-800 rounded-full shadow-sm hover:bg-zinc-800 hover:border-zinc-700 transition-colors"
+      >
+        <span className="text-[15px] text-zinc-100 font-medium tracking-wide">
+          Devices
+        </span>
+        <Monitor className="w-4 h-4 text-zinc-300" />
+      </button>
+
       <ProfileButton allAccounts={allAccounts} onClick={handleOpen} />
 
       <CustomConnectModal
@@ -187,6 +219,13 @@ export function CustomWalletProfile() {
           setShowConnectModal(true);
         }}
       />
-    </>
+
+      <DevicesModal
+        showModal={showDevicesModal}
+        isOpen={isDevicesOpen}
+        isClosing={isDevicesClosing}
+        onClose={handleCloseDevices}
+      />
+    </div>
   );
 }
