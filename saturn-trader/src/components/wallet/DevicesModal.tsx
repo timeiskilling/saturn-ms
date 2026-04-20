@@ -64,7 +64,7 @@ export function DevicesModal({
             </span>
             <Info className="w-4 h-4 text-zinc-500" />
           </div>
-          <p className="text-[10px] text-zinc-500 max-w-[180px]">
+          <p className="text-[10px] text-zinc-500 max-w-45">
             Unrecognized activity? Disconnect the device and update your
             security settings.
           </p>

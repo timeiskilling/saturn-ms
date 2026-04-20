@@ -41,6 +41,7 @@ pub struct Config {
 
     pub notification_redis_host: String,
     pub notification_redis_port: u16,
+
     pub notification_sentinel_urls: Vec<String>,
     pub notification_sentinel_master_name: String,
 
