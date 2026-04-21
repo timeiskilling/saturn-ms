@@ -11,6 +11,9 @@
 
 // - Decouple Streams: Add a dedicated `SubscribeToBundles(UserRequest) returns (stream UserBundleUpdate)` gRPC method. This allows clients to reconnect to any load-balanced instance and resume their stream without needing to resend transactions.
 
+launch
+
+
 // --- Future Scaling Tasks (Post-MVP) ---
 // - Add PgBouncer for PostgreSQL connection pooling to prevent connection exhaustion when scaling instances.
 // - Migrate tower_governor rate limiter to use Redis-backed storage for distributed rate limiting across multiple servers.
