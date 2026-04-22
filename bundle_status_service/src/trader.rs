@@ -11,7 +11,7 @@ use core::str;
 use proto_models::grpc::TransactionDelta;
 
 use jupiter_trader_data::models::jupiter_models::{
-    JupiterQuoteResponse, JupiterSwapInstructionsRsponse, SwapRequestParams,
+    JupiterSwapInstructionsRsponse, SwapRequestParams,
 };
 use redis::AsyncCommands;
 use saturn_errors::error::{
@@ -127,7 +127,7 @@ impl JupiterTrader {
             ))
         })?;
 
-        let (quote, swap_instructions) = self
+        let swap_instructions = self
             .http_client
             .create_swap_transaction(
                 params.input_mint,
@@ -149,7 +149,7 @@ impl JupiterTrader {
             solana_sdk::hash::Hash::new_from_array(bytes)
         };
 
-        let delta = self.build_delta(&quote, 0, 0)?;
+        let delta = self.build_delta(&swap_instructions, 0, 0)?;
 
         let (swap_transaction, swap_fee) = self
             .build_transaction_from_instructions(
@@ -223,7 +223,7 @@ impl JupiterTrader {
 
     pub fn build_delta(
         &self,
-        quote: &JupiterQuoteResponse,
+        quote: &JupiterSwapInstructionsRsponse,
         jito_tip_lamports: u64,
         network_tips: u64,
     ) -> Result<TransactionDelta, SaturnTransactionsServiceError> {
@@ -409,7 +409,7 @@ impl JupiterTrader {
 
         // let blockhash = blockhash.get().await.blockhash;
 
-        let (_quote, swap_instructions) = self
+        let swap_instructions = self
             .http_client
             .create_swap_transaction(
                 params.input_mint,

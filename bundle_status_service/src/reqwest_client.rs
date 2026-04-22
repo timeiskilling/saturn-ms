@@ -8,9 +8,7 @@ use governor::{
 };
 use jupiter_trader_data::models::{
     api_models::{ImageFetch, TokenPricesV2},
-    jupiter_models::{
-        JupiterQuoteResponse, JupiterSwapInstructionsRsponse, QuoteOptions, QuoteRequestParams,
-    },
+    jupiter_models::{JupiterSwapInstructionsRsponse, QuoteOptions, QuoteRequestParams},
 };
 use reqwest::Client;
 use std::{num::NonZeroU32, sync::atomic::Ordering, time::Duration};
@@ -36,10 +34,7 @@ pub trait JupiterProvider: Send + Sync {
         slippage_bps: u16,
         options: QuoteOptions,
         pubkey: &'a Pubkey,
-    ) -> Result<
-        (JupiterQuoteResponse, JupiterSwapInstructionsRsponse),
-        SaturnTransactionsServiceError,
-    >;
+    ) -> Result<JupiterSwapInstructionsRsponse, SaturnTransactionsServiceError>;
 
     async fn get_list_of_tokens<'a>(
         &'a self,
@@ -184,7 +179,7 @@ impl HttpManager {
         pubkey_log: Vec<u8>,
         params: QuoteRequestParams,
         pubkey_str: String,
-    ) -> anyhow::Result<(JupiterQuoteResponse, JupiterSwapInstructionsRsponse)> {
+    ) -> anyhow::Result<JupiterSwapInstructionsRsponse> {
         let url = format!("{}/swap/v2/build", base_url);
 
         let mut query = vec![
@@ -242,8 +237,6 @@ impl HttpManager {
 
         let bytes = response.bytes().await?;
 
-        let quote: JupiterQuoteResponse = serde_json::from_slice(&bytes)
-            .map_err(|e| anyhow::anyhow!("Failed to parse build quote response: {}", e))?;
         let swap_instructions: JupiterSwapInstructionsRsponse = serde_json::from_slice(&bytes)
             .map_err(|e| {
                 anyhow::anyhow!("Failed to parse build swap instructions response: {}", e)
@@ -254,7 +247,7 @@ impl HttpManager {
             "Successfully created swap transaction instructions"
         );
 
-        Ok((quote, swap_instructions))
+        Ok(swap_instructions)
     }
 
     pub async fn get_list_of_tokens(
@@ -455,10 +448,7 @@ impl JupiterProvider for HttpManager {
         slippage_bps: u16,
         options: QuoteOptions,
         pubkey: &'a Pubkey,
-    ) -> Result<
-        (JupiterQuoteResponse, JupiterSwapInstructionsRsponse),
-        SaturnTransactionsServiceError,
-    > {
+    ) -> Result<JupiterSwapInstructionsRsponse, SaturnTransactionsServiceError> {
         let pubkey_string = pubkey.to_string();
         let pubkey_bytes = pubkey.as_array().to_vec();
 

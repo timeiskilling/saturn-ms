@@ -25,6 +25,9 @@ pub struct JupiterSwapInstructionsRsponse {
     #[serde(rename = "otherInstructions", default)]
     pub other_instructions: Vec<Instruction>,
 
+    #[serde(rename = "tipInstruction")]
+    pub tip_instruction: Option<Instruction>,
+
     #[serde(rename = "addressLookupTableAddresses", default)]
     pub address_lookup_table_addresses: Vec<String>,
 
@@ -42,6 +45,33 @@ pub struct JupiterSwapInstructionsRsponse {
 
     #[serde(rename = "blockhashWithMetadata")]
     pub blockhash_with_metadata: BlockhashWithMetadata,
+
+    #[serde(rename = "inputMint", with = "pubkey_string")]
+    pub input_mint: Pubkey,
+
+    #[serde(rename = "inAmount")]
+    pub in_amount: String,
+
+    #[serde(rename = "outputMint", with = "pubkey_string")]
+    pub output_mint: Pubkey,
+
+    #[serde(rename = "outAmount")]
+    pub out_amount: String,
+
+    #[serde(rename = "otherAmountThreshold")]
+    pub other_amount_threshold: String,
+
+    #[serde(rename = "swapMode")]
+    pub swap_mode: SwapMode,
+
+    #[serde(rename = "slippageBps")]
+    pub slippage_bps: u64,
+
+    #[serde(rename = "routePlan", default)]
+    pub route_plan: Vec<RoutePlan>,
+
+    #[serde(rename = "swapUsdValue")]
+    pub swap_usd_value: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -231,7 +261,7 @@ pub struct JupiterSwapResponse {
     #[serde(rename = "simulationError")]
     pub simulation_error: Option<SimulationError>,
     #[serde(rename = "addressesByLookupTableAddress")]
-    pub addresses_by_lookup_table_address: Option<String>,
+    pub addresses_by_lookup_table_address: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -277,6 +307,9 @@ pub struct RoutePlan {
     #[serde(rename = "swapInfo")]
     pub swap_info: SwapInfo,
     pub percent: u8,
+    pub bps: Option<u64>,
+    #[serde(rename = "usdValue")]
+    pub usd_value: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

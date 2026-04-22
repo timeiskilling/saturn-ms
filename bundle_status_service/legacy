@@ -1,0 +1,132 @@
+Language Rust
+
+async fn fetch_address_lookup_tables(
+        &self,
+        alt_address: &[String],
+    ) -> Result<Vec<AddressLookupTableAccount>, SaturnTransactionsServiceError> {
+        use constant::TTL_FOR_ATL;
+
+        let mut con = self.alt_redis.clone();
+        let keys: Vec<String> = alt_address.to_vec();
+
+        let cached_data: Vec<Option<Vec<u8>>> = con.mget(keys).await.map_err(|e| {
+            SaturnTransactionsServiceError::Redis(RedisErr::MgetALT {
+                redis_issue: e.to_string(),
+            })
+        })?;
+
+        let mut results = vec![None; alt_address.len()];
+        let mut missing_indices = Vec::with_capacity(alt_address.len());
+        let mut missing_pubkeys = Vec::with_capacity(alt_address.len());
+
+        for (i, (addr_str, cache_hit)) in alt_address.iter().zip(cached_data).enumerate() {
+            let pubkey = Pubkey::from_str(addr_str).map_err(|e| {
+                SaturnTransactionsServiceError::ATlError(ATlError::PubkeyConvertingErr {
+                    bad_bytes: addr_str.as_bytes().to_vec(),
+                    issue: e.to_string(),
+                })
+            })?;
+
+            match cache_hit {
+                Some(data) => {
+                    results[i] = Some(AddressLookupTableAccount {
+                        key: pubkey,
+                        addresses: self.parse_lookup_table(&data)?,
+                    });
+                }
+                None => {
+                    missing_indices.push(i);
+                    missing_pubkeys.push(pubkey);
+                }
+            }
+        }
+
+        if !missing_pubkeys.is_empty() {
+            tracing::info!("Fetching {} missing ALTs from RPC", missing_pubkeys.len());
+
+            let accounts_data = self
+                .rpc_client
+                .get_multiple_accounts(&missing_pubkeys)
+                .await
+                .map_err(|_| {
+                    SaturnTransactionsServiceError::ATlError(ATlError::FetchALTs {
+                        alt_pubkeys: missing_pubkeys.iter().map(|k| k.to_string()).collect(),
+                    })
+                })?;
+            let mut pipe = redis::pipe();
+
+            for ((&original_idx, pubkey), account_opt) in missing_indices
+                .iter()
+                .zip(&missing_pubkeys)
+                .zip(accounts_data)
+            {
+                if let Some(account) = account_opt {
+                    pipe.set_ex(pubkey.to_string(), &account.data, TTL_FOR_ATL);
+
+                    results[original_idx] = Some(AddressLookupTableAccount {
+                        key: *pubkey,
+                        addresses: self.parse_lookup_table(&account.data)?,
+                    });
+                } else {
+                    return Err(SaturnTransactionsServiceError::ATlError(
+                        ATlError::NotFound {
+                            pubkey: pubkey.to_string(),
+                        },
+                    ));
+                }
+            }
+
+            let _: () = pipe.query_async(&mut con).await.map_err(|e| {
+                SaturnTransactionsServiceError::Redis(RedisErr::QueryExecute {
+                    issue: e.to_string(),
+                })
+            })?;
+        }
+
+        let final_results: Result<Vec<_>, _> = results
+            .into_iter()
+            .map(|opt| {
+                opt.ok_or_else(|| {
+                    SaturnTransactionsServiceError::ATlError(ATlError::NotFound {
+                        pubkey: "Unknown error during ALT reconstruction".to_string(),
+                    })
+                })
+            })
+            .collect();
+
+        final_results
+    }
+
+#[instrument(skip_all, level = "info")]
+    fn parse_lookup_table(
+        &self,
+        account_data: &[u8],
+    ) -> Result<Vec<Pubkey>, SaturnTransactionsServiceError> {
+        if account_data.len() < HEADER_SIZE {
+            return Err(SaturnTransactionsServiceError::ATlError(
+                ATlError::ParseLookupTable {
+                    pubkey_header_size: "invalid size too short".to_string(),
+                },
+            ));
+        };
+
+        let address_data: &[u8] = &account_data[HEADER_SIZE..];
+        let address_count = address_data.len() / 32;
+
+        let mut address = Vec::with_capacity(address_count + 1);
+
+        for i in 0..address_count {
+            let start = i * 32;
+            let end = start + 32;
+            let pubkey_bytes = &address_data[start..end];
+            let pubkey = Pubkey::try_from(pubkey_bytes).map_err(|e| {
+                SaturnTransactionsServiceError::ATlError(ATlError::PubkeyConvertingErr {
+                    bad_bytes: pubkey_bytes.to_vec(),
+                    issue: e.to_string(),
+                })
+            })?;
+            address.push(pubkey);
+        }
+
+        Ok(address)
+    }
