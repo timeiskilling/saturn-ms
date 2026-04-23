@@ -1,0 +1,115 @@
+# -----------------------------------------------------------------------------
+# Redis Sentinel Cluster for Saturn Bundle Tracker
+# -----------------------------------------------------------------------------
+# Subnet: 10.0.0.0/24
+# Master: 10.0.0.10
+# Replica: 10.0.0.11
+# Sentinels: 10.0.0.1, 10.0.0.2, 10.0.0.3
+# -----------------------------------------------------------------------------
+
+networks:
+  bundle_tracker_net:
+    ipam:
+      driver: default
+      config:
+        - subnet: "10.0.0.0/24"
+          gateway: "10.0.0.254"
+
+services:
+  redis-master:
+    image: bitnami/redis:latest
+    container_name: tracker-redis-master
+    environment:
+      - REDIS_REPLICATION_MODE=master
+      - ALLOW_EMPTY_PASSWORD=yes
+    networks:
+      bundle_tracker_net:
+        ipv4_address: 10.0.0.10
+    ports:
+      - "6379:6379"
+
+  redis-replica:
+    image: bitnami/redis:latest
+    container_name: tracker-redis-replica
+    environment:
+      - REDIS_REPLICATION_MODE=slave
+      - REDIS_MASTER_HOST=10.0.0.10
+      - ALLOW_EMPTY_PASSWORD=yes
+    networks:
+      bundle_tracker_net:
+        ipv4_address: 10.0.0.11
+    depends_on:
+      - redis-master
+
+  redis-sentinel-1:
+    image: bitnami/redis-sentinel:latest
+    container_name: tracker-sentinel-1
+    environment:
+      - REDIS_MASTER_HOST=10.0.0.10
+      - REDIS_MASTER_SET=mymaster
+      - REDIS_SENTINEL_QUORUM=2
+      - REDIS_SENTINEL_DOWN_AFTER_MILLISECONDS=5000
+      - REDIS_SENTINEL_FAILOVER_TIMEOUT=10000
+    networks:
+      bundle_tracker_net:
+        ipv4_address: 10.0.0.1
+    ports:
+      - "26379:26379"
+    depends_on:
+      - redis-master
+      - redis-replica
+
+  redis-sentinel-2:
+    image: bitnami/redis-sentinel:latest
+    container_name: tracker-sentinel-2
+    environment:
+      - REDIS_MASTER_HOST=10.0.0.10
+      - REDIS_MASTER_SET=mymaster
+      - REDIS_SENTINEL_QUORUM=2
+      - REDIS_SENTINEL_DOWN_AFTER_MILLISECONDS=5000
+      - REDIS_SENTINEL_FAILOVER_TIMEOUT=10000
+    networks:
+      bundle_tracker_net:
+        ipv4_address: 10.0.0.2
+    ports:
+      - "26380:26379"
+    depends_on:
+      - redis-master
+      - redis-replica
+
+  redis-sentinel-3:
+    image: bitnami/redis-sentinel:latest
+    container_name: tracker-sentinel-3
+    environment:
+      - REDIS_MASTER_HOST=10.0.0.10
+      - REDIS_MASTER_SET=mymaster
+      - REDIS_SENTINEL_QUORUM=2
+      - REDIS_SENTINEL_DOWN_AFTER_MILLISECONDS=5000
+      - REDIS_SENTINEL_FAILOVER_TIMEOUT=10000
+    networks:
+      bundle_tracker_net:
+        ipv4_address: 10.0.0.3
+    ports:
+      - "26381:26379"
+    depends_on:
+      - redis-master
+      - redis-replica
+
+  bundle-tracker:
+    build:
+      context: ..
+      dockerfile: saturn-bundle-tracker/Dockerfile
+    container_name: saturn-bundle-tracker
+    networks:
+      bundle_tracker_net:
+        ipv4_address: 10.0.0.30
+    ports:
+      - "3002:3001"
+    environment:
+      - REDIS_SENTINEL_URLS=redis://10.0.0.1:26379,redis://10.0.0.2:26379,redis://10.0.0.3:26379
+      - REDIS_MASTER_SET=mymaster
+      - JITO_API_URL=https://frankfurt.mainnet.block-engine.jito.wtf/api/v1
+    depends_on:
+      - redis-sentinel-1
+      - redis-sentinel-2
+      - redis-sentinel-3

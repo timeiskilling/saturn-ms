@@ -21,13 +21,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ..TrackerConfig::default()
     };
 
-    let redis_urls = vec![
-        "redis://127.0.0.1:16379".to_string(),
-        "redis://127.0.0.1:16379".to_string(),
-    ];
+    let redis_urls = std::env::var("REDIS_SENTINEL_URLS")
+        .unwrap_or_else(|_| "redis://127.0.0.1:26379".to_string())
+        .split(',')
+        .map(|s| s.to_string())
+        .collect::<Vec<String>>();
+
+    let master_set = std::env::var("REDIS_MASTER_SET").unwrap_or_else(|_| "mymaster".to_string());
+
+    let jito_url = std::env::var("JITO_API_URL")
+        .unwrap_or_else(|_| "https://frankfurt.mainnet.block-engine.jito.wtf/api/v1".to_string());
 
     let jito_manager = Arc::new(JitoHttpManager::new(
-        "https://frankfurt.mainnet.block-engine.jito.wtf/api/v1".to_string(),
+        jito_url,
         50,
         RetryConfig::default(),
         None,
@@ -36,14 +42,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let worker_id = uuid::Uuid::new_v4().to_string();
 
     let bundle_tracker = Arc::new(
-        SaturnBundleTracker::new(
-            redis_urls,
-            String::from("mymaster"),
-            config,
-            jito_manager,
-            worker_id,
-        )
-        .await?,
+        SaturnBundleTracker::new(redis_urls, master_set, config, jito_manager, worker_id).await?,
     );
 
     let tracker_clone = bundle_tracker.clone();
