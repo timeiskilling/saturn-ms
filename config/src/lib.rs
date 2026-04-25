@@ -1,6 +1,5 @@
 use jsonwebtoken::{DecodingKey, EncodingKey};
 use std::{fmt, net::SocketAddr};
-use url::Url;
 
 #[derive(Clone)]
 pub struct JwtKeys {

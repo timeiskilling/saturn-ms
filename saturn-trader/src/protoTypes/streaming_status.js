@@ -1,20 +1,22 @@
 /*eslint-disable block-scoped-var, id-length, no-control-regex, no-magic-numbers, no-prototype-builtins, no-redeclare, no-shadow, no-var, sort-vars*/
-import * as $protobuf from "protobufjs/minimal";
+"use strict";
+
+var $protobuf = require("protobufjs/minimal");
 
 // Common aliases
-const $Reader = $protobuf.Reader, $Writer = $protobuf.Writer, $util = $protobuf.util;
+var $Reader = $protobuf.Reader, $Writer = $protobuf.Writer, $util = $protobuf.util;
 
 // Exported root namespace
-const $root = $protobuf.roots["default"] || ($protobuf.roots["default"] = {});
+var $root = $protobuf.roots["default"] || ($protobuf.roots["default"] = {});
 
-export const streaming = $root.streaming = (() => {
+$root.streaming = (function() {
 
     /**
      * Namespace streaming.
      * @exports streaming
      * @namespace
      */
-    const streaming = {};
+    var streaming = {};
 
     streaming.BundleService = (function() {
 
@@ -114,7 +116,282 @@ export const streaming = $root.streaming = (() => {
          * @variation 2
          */
 
+        /**
+         * Callback as used by {@link streaming.BundleService#subscribeToBundles}.
+         * @memberof streaming.BundleService
+         * @typedef SubscribeToBundlesCallback
+         * @type {function}
+         * @param {Error|null} error Error, if any
+         * @param {streaming.UserBundleUpdate} [response] UserBundleUpdate
+         */
+
+        /**
+         * Calls SubscribeToBundles.
+         * @function subscribeToBundles
+         * @memberof streaming.BundleService
+         * @instance
+         * @param {streaming.IUserBundleRequest} request UserBundleRequest message or plain object
+         * @param {streaming.BundleService.SubscribeToBundlesCallback} callback Node-style callback called with the error, if any, and UserBundleUpdate
+         * @returns {undefined}
+         * @variation 1
+         */
+        Object.defineProperty(BundleService.prototype.subscribeToBundles = function subscribeToBundles(request, callback) {
+            return this.rpcCall(subscribeToBundles, $root.streaming.UserBundleRequest, $root.streaming.UserBundleUpdate, request, callback);
+        }, "name", { value: "SubscribeToBundles" });
+
+        /**
+         * Calls SubscribeToBundles.
+         * @function subscribeToBundles
+         * @memberof streaming.BundleService
+         * @instance
+         * @param {streaming.IUserBundleRequest} request UserBundleRequest message or plain object
+         * @returns {Promise<streaming.UserBundleUpdate>} Promise
+         * @variation 2
+         */
+
         return BundleService;
+    })();
+
+    streaming.UserBundleRequest = (function() {
+
+        /**
+         * Properties of a UserBundleRequest.
+         * @memberof streaming
+         * @interface IUserBundleRequest
+         * @property {string|null} [userPk] UserBundleRequest userPk
+         * @property {string|null} [bundleId] UserBundleRequest bundleId
+         */
+
+        /**
+         * Constructs a new UserBundleRequest.
+         * @memberof streaming
+         * @classdesc Represents a UserBundleRequest.
+         * @implements IUserBundleRequest
+         * @constructor
+         * @param {streaming.IUserBundleRequest=} [properties] Properties to set
+         */
+        function UserBundleRequest(properties) {
+            if (properties)
+                for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null)
+                        this[keys[i]] = properties[keys[i]];
+        }
+
+        /**
+         * UserBundleRequest userPk.
+         * @member {string} userPk
+         * @memberof streaming.UserBundleRequest
+         * @instance
+         */
+        UserBundleRequest.prototype.userPk = "";
+
+        /**
+         * UserBundleRequest bundleId.
+         * @member {string|null|undefined} bundleId
+         * @memberof streaming.UserBundleRequest
+         * @instance
+         */
+        UserBundleRequest.prototype.bundleId = null;
+
+        // OneOf field names bound to virtual getters and setters
+        var $oneOfFields;
+
+        // Virtual OneOf for proto3 optional field
+        Object.defineProperty(UserBundleRequest.prototype, "_bundleId", {
+            get: $util.oneOfGetter($oneOfFields = ["bundleId"]),
+            set: $util.oneOfSetter($oneOfFields)
+        });
+
+        /**
+         * Creates a new UserBundleRequest instance using the specified properties.
+         * @function create
+         * @memberof streaming.UserBundleRequest
+         * @static
+         * @param {streaming.IUserBundleRequest=} [properties] Properties to set
+         * @returns {streaming.UserBundleRequest} UserBundleRequest instance
+         */
+        UserBundleRequest.create = function create(properties) {
+            return new UserBundleRequest(properties);
+        };
+
+        /**
+         * Encodes the specified UserBundleRequest message. Does not implicitly {@link streaming.UserBundleRequest.verify|verify} messages.
+         * @function encode
+         * @memberof streaming.UserBundleRequest
+         * @static
+         * @param {streaming.IUserBundleRequest} message UserBundleRequest message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        UserBundleRequest.encode = function encode(message, writer) {
+            if (!writer)
+                writer = $Writer.create();
+            if (message.userPk != null && Object.hasOwnProperty.call(message, "userPk"))
+                writer.uint32(/* id 1, wireType 2 =*/10).string(message.userPk);
+            if (message.bundleId != null && Object.hasOwnProperty.call(message, "bundleId"))
+                writer.uint32(/* id 2, wireType 2 =*/18).string(message.bundleId);
+            return writer;
+        };
+
+        /**
+         * Encodes the specified UserBundleRequest message, length delimited. Does not implicitly {@link streaming.UserBundleRequest.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof streaming.UserBundleRequest
+         * @static
+         * @param {streaming.IUserBundleRequest} message UserBundleRequest message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        UserBundleRequest.encodeDelimited = function encodeDelimited(message, writer) {
+            return this.encode(message, writer).ldelim();
+        };
+
+        /**
+         * Decodes a UserBundleRequest message from the specified reader or buffer.
+         * @function decode
+         * @memberof streaming.UserBundleRequest
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {streaming.UserBundleRequest} UserBundleRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        UserBundleRequest.decode = function decode(reader, length, error) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.UserBundleRequest();
+            while (reader.pos < end) {
+                var tag = reader.uint32();
+                if (tag === error)
+                    break;
+                switch (tag >>> 3) {
+                case 1: {
+                        message.userPk = reader.string();
+                        break;
+                    }
+                case 2: {
+                        message.bundleId = reader.string();
+                        break;
+                    }
+                default:
+                    reader.skipType(tag & 7);
+                    break;
+                }
+            }
+            return message;
+        };
+
+        /**
+         * Decodes a UserBundleRequest message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof streaming.UserBundleRequest
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {streaming.UserBundleRequest} UserBundleRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        UserBundleRequest.decodeDelimited = function decodeDelimited(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies a UserBundleRequest message.
+         * @function verify
+         * @memberof streaming.UserBundleRequest
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        UserBundleRequest.verify = function verify(message) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            var properties = {};
+            if (message.userPk != null && message.hasOwnProperty("userPk"))
+                if (!$util.isString(message.userPk))
+                    return "userPk: string expected";
+            if (message.bundleId != null && message.hasOwnProperty("bundleId")) {
+                properties._bundleId = 1;
+                if (!$util.isString(message.bundleId))
+                    return "bundleId: string expected";
+            }
+            return null;
+        };
+
+        /**
+         * Creates a UserBundleRequest message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof streaming.UserBundleRequest
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {streaming.UserBundleRequest} UserBundleRequest
+         */
+        UserBundleRequest.fromObject = function fromObject(object) {
+            if (object instanceof $root.streaming.UserBundleRequest)
+                return object;
+            var message = new $root.streaming.UserBundleRequest();
+            if (object.userPk != null)
+                message.userPk = String(object.userPk);
+            if (object.bundleId != null)
+                message.bundleId = String(object.bundleId);
+            return message;
+        };
+
+        /**
+         * Creates a plain object from a UserBundleRequest message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof streaming.UserBundleRequest
+         * @static
+         * @param {streaming.UserBundleRequest} message UserBundleRequest
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        UserBundleRequest.toObject = function toObject(message, options) {
+            if (!options)
+                options = {};
+            var object = {};
+            if (options.defaults)
+                object.userPk = "";
+            if (message.userPk != null && message.hasOwnProperty("userPk"))
+                object.userPk = message.userPk;
+            if (message.bundleId != null && message.hasOwnProperty("bundleId")) {
+                object.bundleId = message.bundleId;
+                if (options.oneofs)
+                    object._bundleId = "bundleId";
+            }
+            return object;
+        };
+
+        /**
+         * Converts this UserBundleRequest to JSON.
+         * @function toJSON
+         * @memberof streaming.UserBundleRequest
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        UserBundleRequest.prototype.toJSON = function toJSON() {
+            return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        /**
+         * Gets the default type url for UserBundleRequest
+         * @function getTypeUrl
+         * @memberof streaming.UserBundleRequest
+         * @static
+         * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns {string} The default type url
+         */
+        UserBundleRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+            if (typeUrlPrefix === undefined) {
+                typeUrlPrefix = "type.googleapis.com";
+            }
+            return typeUrlPrefix + "/streaming.UserBundleRequest";
+        };
+
+        return UserBundleRequest;
     })();
 
     streaming.SignedTransactions = (function() {
@@ -138,7 +415,7 @@ export const streaming = $root.streaming = (() => {
         function SignedTransactions(properties) {
             this.transactions = [];
             if (properties)
-                for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                     if (properties[keys[i]] != null)
                         this[keys[i]] = properties[keys[i]];
         }
@@ -184,7 +461,7 @@ export const streaming = $root.streaming = (() => {
             if (!writer)
                 writer = $Writer.create();
             if (message.transactions != null && message.transactions.length)
-                for (let i = 0; i < message.transactions.length; ++i)
+                for (var i = 0; i < message.transactions.length; ++i)
                     writer.uint32(/* id 1, wireType 2 =*/10).string(message.transactions[i]);
             if (message.userPk != null && Object.hasOwnProperty.call(message, "userPk"))
                 writer.uint32(/* id 2, wireType 2 =*/18).string(message.userPk);
@@ -218,9 +495,9 @@ export const streaming = $root.streaming = (() => {
         SignedTransactions.decode = function decode(reader, length, error) {
             if (!(reader instanceof $Reader))
                 reader = $Reader.create(reader);
-            let end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.SignedTransactions();
+            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.SignedTransactions();
             while (reader.pos < end) {
-                let tag = reader.uint32();
+                var tag = reader.uint32();
                 if (tag === error)
                     break;
                 switch (tag >>> 3) {
@@ -272,7 +549,7 @@ export const streaming = $root.streaming = (() => {
             if (message.transactions != null && message.hasOwnProperty("transactions")) {
                 if (!Array.isArray(message.transactions))
                     return "transactions: array expected";
-                for (let i = 0; i < message.transactions.length; ++i)
+                for (var i = 0; i < message.transactions.length; ++i)
                     if (!$util.isString(message.transactions[i]))
                         return "transactions: string[] expected";
             }
@@ -293,12 +570,12 @@ export const streaming = $root.streaming = (() => {
         SignedTransactions.fromObject = function fromObject(object) {
             if (object instanceof $root.streaming.SignedTransactions)
                 return object;
-            let message = new $root.streaming.SignedTransactions();
+            var message = new $root.streaming.SignedTransactions();
             if (object.transactions) {
                 if (!Array.isArray(object.transactions))
                     throw TypeError(".streaming.SignedTransactions.transactions: array expected");
                 message.transactions = [];
-                for (let i = 0; i < object.transactions.length; ++i)
+                for (var i = 0; i < object.transactions.length; ++i)
                     message.transactions[i] = String(object.transactions[i]);
             }
             if (object.userPk != null)
@@ -318,14 +595,14 @@ export const streaming = $root.streaming = (() => {
         SignedTransactions.toObject = function toObject(message, options) {
             if (!options)
                 options = {};
-            let object = {};
+            var object = {};
             if (options.arrays || options.defaults)
                 object.transactions = [];
             if (options.defaults)
                 object.userPk = "";
             if (message.transactions && message.transactions.length) {
                 object.transactions = [];
-                for (let j = 0; j < message.transactions.length; ++j)
+                for (var j = 0; j < message.transactions.length; ++j)
                     object.transactions[j] = message.transactions[j];
             }
             if (message.userPk != null && message.hasOwnProperty("userPk"))
@@ -382,7 +659,7 @@ export const streaming = $root.streaming = (() => {
          */
         function BuiltTransaction(properties) {
             if (properties)
-                for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                     if (properties[keys[i]] != null)
                         this[keys[i]] = properties[keys[i]];
         }
@@ -461,9 +738,9 @@ export const streaming = $root.streaming = (() => {
         BuiltTransaction.decode = function decode(reader, length, error) {
             if (!(reader instanceof $Reader))
                 reader = $Reader.create(reader);
-            let end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.BuiltTransaction();
+            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.BuiltTransaction();
             while (reader.pos < end) {
-                let tag = reader.uint32();
+                var tag = reader.uint32();
                 if (tag === error)
                     break;
                 switch (tag >>> 3) {
@@ -530,7 +807,7 @@ export const streaming = $root.streaming = (() => {
         BuiltTransaction.fromObject = function fromObject(object) {
             if (object instanceof $root.streaming.BuiltTransaction)
                 return object;
-            let message = new $root.streaming.BuiltTransaction();
+            var message = new $root.streaming.BuiltTransaction();
             if (object.id != null)
                 message.id = String(object.id);
             if (object.transactionBase58 != null)
@@ -550,7 +827,7 @@ export const streaming = $root.streaming = (() => {
         BuiltTransaction.toObject = function toObject(message, options) {
             if (!options)
                 options = {};
-            let object = {};
+            var object = {};
             if (options.defaults) {
                 object.id = "";
                 object.transactionBase58 = "";
@@ -612,7 +889,7 @@ export const streaming = $root.streaming = (() => {
         function TransactionsToSign(properties) {
             this.transactions = [];
             if (properties)
-                for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                     if (properties[keys[i]] != null)
                         this[keys[i]] = properties[keys[i]];
         }
@@ -658,7 +935,7 @@ export const streaming = $root.streaming = (() => {
             if (!writer)
                 writer = $Writer.create();
             if (message.transactions != null && message.transactions.length)
-                for (let i = 0; i < message.transactions.length; ++i)
+                for (var i = 0; i < message.transactions.length; ++i)
                     $root.streaming.BuiltTransaction.encode(message.transactions[i], writer.uint32(/* id 1, wireType 2 =*/10).fork()).ldelim();
             if (message.delta != null && Object.hasOwnProperty.call(message, "delta"))
                 $root.streaming.BundleDelta.encode(message.delta, writer.uint32(/* id 2, wireType 2 =*/18).fork()).ldelim();
@@ -692,9 +969,9 @@ export const streaming = $root.streaming = (() => {
         TransactionsToSign.decode = function decode(reader, length, error) {
             if (!(reader instanceof $Reader))
                 reader = $Reader.create(reader);
-            let end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.TransactionsToSign();
+            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.TransactionsToSign();
             while (reader.pos < end) {
-                let tag = reader.uint32();
+                var tag = reader.uint32();
                 if (tag === error)
                     break;
                 switch (tag >>> 3) {
@@ -746,14 +1023,14 @@ export const streaming = $root.streaming = (() => {
             if (message.transactions != null && message.hasOwnProperty("transactions")) {
                 if (!Array.isArray(message.transactions))
                     return "transactions: array expected";
-                for (let i = 0; i < message.transactions.length; ++i) {
-                    let error = $root.streaming.BuiltTransaction.verify(message.transactions[i]);
+                for (var i = 0; i < message.transactions.length; ++i) {
+                    var error = $root.streaming.BuiltTransaction.verify(message.transactions[i]);
                     if (error)
                         return "transactions." + error;
                 }
             }
             if (message.delta != null && message.hasOwnProperty("delta")) {
-                let error = $root.streaming.BundleDelta.verify(message.delta);
+                var error = $root.streaming.BundleDelta.verify(message.delta);
                 if (error)
                     return "delta." + error;
             }
@@ -771,12 +1048,12 @@ export const streaming = $root.streaming = (() => {
         TransactionsToSign.fromObject = function fromObject(object) {
             if (object instanceof $root.streaming.TransactionsToSign)
                 return object;
-            let message = new $root.streaming.TransactionsToSign();
+            var message = new $root.streaming.TransactionsToSign();
             if (object.transactions) {
                 if (!Array.isArray(object.transactions))
                     throw TypeError(".streaming.TransactionsToSign.transactions: array expected");
                 message.transactions = [];
-                for (let i = 0; i < object.transactions.length; ++i) {
+                for (var i = 0; i < object.transactions.length; ++i) {
                     if (typeof object.transactions[i] !== "object")
                         throw TypeError(".streaming.TransactionsToSign.transactions: object expected");
                     message.transactions[i] = $root.streaming.BuiltTransaction.fromObject(object.transactions[i]);
@@ -802,14 +1079,14 @@ export const streaming = $root.streaming = (() => {
         TransactionsToSign.toObject = function toObject(message, options) {
             if (!options)
                 options = {};
-            let object = {};
+            var object = {};
             if (options.arrays || options.defaults)
                 object.transactions = [];
             if (options.defaults)
                 object.delta = null;
             if (message.transactions && message.transactions.length) {
                 object.transactions = [];
-                for (let j = 0; j < message.transactions.length; ++j)
+                for (var j = 0; j < message.transactions.length; ++j)
                     object.transactions[j] = $root.streaming.BuiltTransaction.toObject(message.transactions[j], options);
             }
             if (message.delta != null && message.hasOwnProperty("delta"))
@@ -868,7 +1145,7 @@ export const streaming = $root.streaming = (() => {
         function BundleDelta(properties) {
             this.swaps = [];
             if (properties)
-                for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                     if (properties[keys[i]] != null)
                         this[keys[i]] = properties[keys[i]];
         }
@@ -922,7 +1199,7 @@ export const streaming = $root.streaming = (() => {
             if (!writer)
                 writer = $Writer.create();
             if (message.swaps != null && message.swaps.length)
-                for (let i = 0; i < message.swaps.length; ++i)
+                for (var i = 0; i < message.swaps.length; ++i)
                     $root.streaming.TransactionDelta.encode(message.swaps[i], writer.uint32(/* id 1, wireType 2 =*/10).fork()).ldelim();
             if (message.jitoTipLamports != null && Object.hasOwnProperty.call(message, "jitoTipLamports"))
                 writer.uint32(/* id 2, wireType 0 =*/16).uint64(message.jitoTipLamports);
@@ -958,9 +1235,9 @@ export const streaming = $root.streaming = (() => {
         BundleDelta.decode = function decode(reader, length, error) {
             if (!(reader instanceof $Reader))
                 reader = $Reader.create(reader);
-            let end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.BundleDelta();
+            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.BundleDelta();
             while (reader.pos < end) {
-                let tag = reader.uint32();
+                var tag = reader.uint32();
                 if (tag === error)
                     break;
                 switch (tag >>> 3) {
@@ -1016,8 +1293,8 @@ export const streaming = $root.streaming = (() => {
             if (message.swaps != null && message.hasOwnProperty("swaps")) {
                 if (!Array.isArray(message.swaps))
                     return "swaps: array expected";
-                for (let i = 0; i < message.swaps.length; ++i) {
-                    let error = $root.streaming.TransactionDelta.verify(message.swaps[i]);
+                for (var i = 0; i < message.swaps.length; ++i) {
+                    var error = $root.streaming.TransactionDelta.verify(message.swaps[i]);
                     if (error)
                         return "swaps." + error;
                 }
@@ -1042,12 +1319,12 @@ export const streaming = $root.streaming = (() => {
         BundleDelta.fromObject = function fromObject(object) {
             if (object instanceof $root.streaming.BundleDelta)
                 return object;
-            let message = new $root.streaming.BundleDelta();
+            var message = new $root.streaming.BundleDelta();
             if (object.swaps) {
                 if (!Array.isArray(object.swaps))
                     throw TypeError(".streaming.BundleDelta.swaps: array expected");
                 message.swaps = [];
-                for (let i = 0; i < object.swaps.length; ++i) {
+                for (var i = 0; i < object.swaps.length; ++i) {
                     if (typeof object.swaps[i] !== "object")
                         throw TypeError(".streaming.BundleDelta.swaps: object expected");
                     message.swaps[i] = $root.streaming.TransactionDelta.fromObject(object.swaps[i]);
@@ -1086,24 +1363,24 @@ export const streaming = $root.streaming = (() => {
         BundleDelta.toObject = function toObject(message, options) {
             if (!options)
                 options = {};
-            let object = {};
+            var object = {};
             if (options.arrays || options.defaults)
                 object.swaps = [];
             if (options.defaults) {
                 if ($util.Long) {
-                    let long = new $util.Long(0, 0, true);
+                    var long = new $util.Long(0, 0, true);
                     object.jitoTipLamports = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
                 } else
                     object.jitoTipLamports = options.longs === String ? "0" : 0;
                 if ($util.Long) {
-                    let long = new $util.Long(0, 0, true);
+                    var long = new $util.Long(0, 0, true);
                     object.totalNetworkFeeLamports = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
                 } else
                     object.totalNetworkFeeLamports = options.longs === String ? "0" : 0;
             }
             if (message.swaps && message.swaps.length) {
                 object.swaps = [];
-                for (let j = 0; j < message.swaps.length; ++j)
+                for (var j = 0; j < message.swaps.length; ++j)
                     object.swaps[j] = $root.streaming.TransactionDelta.toObject(message.swaps[j], options);
             }
             if (message.jitoTipLamports != null && message.hasOwnProperty("jitoTipLamports"))
@@ -1168,7 +1445,7 @@ export const streaming = $root.streaming = (() => {
         function TransactionsBuld(properties) {
             this.transactions = [];
             if (properties)
-                for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                     if (properties[keys[i]] != null)
                         this[keys[i]] = properties[keys[i]];
         }
@@ -1206,7 +1483,7 @@ export const streaming = $root.streaming = (() => {
             if (!writer)
                 writer = $Writer.create();
             if (message.transactions != null && message.transactions.length)
-                for (let i = 0; i < message.transactions.length; ++i)
+                for (var i = 0; i < message.transactions.length; ++i)
                     $root.streaming.TrasnactionInstruction.encode(message.transactions[i], writer.uint32(/* id 1, wireType 2 =*/10).fork()).ldelim();
             return writer;
         };
@@ -1238,9 +1515,9 @@ export const streaming = $root.streaming = (() => {
         TransactionsBuld.decode = function decode(reader, length, error) {
             if (!(reader instanceof $Reader))
                 reader = $Reader.create(reader);
-            let end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.TransactionsBuld();
+            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.TransactionsBuld();
             while (reader.pos < end) {
-                let tag = reader.uint32();
+                var tag = reader.uint32();
                 if (tag === error)
                     break;
                 switch (tag >>> 3) {
@@ -1288,8 +1565,8 @@ export const streaming = $root.streaming = (() => {
             if (message.transactions != null && message.hasOwnProperty("transactions")) {
                 if (!Array.isArray(message.transactions))
                     return "transactions: array expected";
-                for (let i = 0; i < message.transactions.length; ++i) {
-                    let error = $root.streaming.TrasnactionInstruction.verify(message.transactions[i]);
+                for (var i = 0; i < message.transactions.length; ++i) {
+                    var error = $root.streaming.TrasnactionInstruction.verify(message.transactions[i]);
                     if (error)
                         return "transactions." + error;
                 }
@@ -1308,12 +1585,12 @@ export const streaming = $root.streaming = (() => {
         TransactionsBuld.fromObject = function fromObject(object) {
             if (object instanceof $root.streaming.TransactionsBuld)
                 return object;
-            let message = new $root.streaming.TransactionsBuld();
+            var message = new $root.streaming.TransactionsBuld();
             if (object.transactions) {
                 if (!Array.isArray(object.transactions))
                     throw TypeError(".streaming.TransactionsBuld.transactions: array expected");
                 message.transactions = [];
-                for (let i = 0; i < object.transactions.length; ++i) {
+                for (var i = 0; i < object.transactions.length; ++i) {
                     if (typeof object.transactions[i] !== "object")
                         throw TypeError(".streaming.TransactionsBuld.transactions: object expected");
                     message.transactions[i] = $root.streaming.TrasnactionInstruction.fromObject(object.transactions[i]);
@@ -1334,12 +1611,12 @@ export const streaming = $root.streaming = (() => {
         TransactionsBuld.toObject = function toObject(message, options) {
             if (!options)
                 options = {};
-            let object = {};
+            var object = {};
             if (options.arrays || options.defaults)
                 object.transactions = [];
             if (message.transactions && message.transactions.length) {
                 object.transactions = [];
-                for (let j = 0; j < message.transactions.length; ++j)
+                for (var j = 0; j < message.transactions.length; ++j)
                     object.transactions[j] = $root.streaming.TrasnactionInstruction.toObject(message.transactions[j], options);
             }
             return object;
@@ -1401,7 +1678,7 @@ export const streaming = $root.streaming = (() => {
          */
         function TransactionDelta(properties) {
             if (properties)
-                for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                     if (properties[keys[i]] != null)
                         this[keys[i]] = properties[keys[i]];
         }
@@ -1550,9 +1827,9 @@ export const streaming = $root.streaming = (() => {
         TransactionDelta.decode = function decode(reader, length, error) {
             if (!(reader instanceof $Reader))
                 reader = $Reader.create(reader);
-            let end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.TransactionDelta();
+            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.TransactionDelta();
             while (reader.pos < end) {
-                let tag = reader.uint32();
+                var tag = reader.uint32();
                 if (tag === error)
                     break;
                 switch (tag >>> 3) {
@@ -1668,7 +1945,7 @@ export const streaming = $root.streaming = (() => {
         TransactionDelta.fromObject = function fromObject(object) {
             if (object instanceof $root.streaming.TransactionDelta)
                 return object;
-            let message = new $root.streaming.TransactionDelta();
+            var message = new $root.streaming.TransactionDelta();
             if (object.inputMint != null)
                 message.inputMint = String(object.inputMint);
             if (object.inputAmount != null)
@@ -1737,32 +2014,32 @@ export const streaming = $root.streaming = (() => {
         TransactionDelta.toObject = function toObject(message, options) {
             if (!options)
                 options = {};
-            let object = {};
+            var object = {};
             if (options.defaults) {
                 object.inputMint = "";
                 if ($util.Long) {
-                    let long = new $util.Long(0, 0, true);
+                    var long = new $util.Long(0, 0, true);
                     object.inputAmount = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
                 } else
                     object.inputAmount = options.longs === String ? "0" : 0;
                 object.outputMint = "";
                 if ($util.Long) {
-                    let long = new $util.Long(0, 0, true);
+                    var long = new $util.Long(0, 0, true);
                     object.expectedOutput = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
                 } else
                     object.expectedOutput = options.longs === String ? "0" : 0;
                 if ($util.Long) {
-                    let long = new $util.Long(0, 0, true);
+                    var long = new $util.Long(0, 0, true);
                     object.minimumOutput = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
                 } else
                     object.minimumOutput = options.longs === String ? "0" : 0;
                 if ($util.Long) {
-                    let long = new $util.Long(0, 0, true);
+                    var long = new $util.Long(0, 0, true);
                     object.jitoTipLamports = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
                 } else
                     object.jitoTipLamports = options.longs === String ? "0" : 0;
                 if ($util.Long) {
-                    let long = new $util.Long(0, 0, true);
+                    var long = new $util.Long(0, 0, true);
                     object.networkFeeLamports = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
                 } else
                     object.networkFeeLamports = options.longs === String ? "0" : 0;
@@ -1859,7 +2136,7 @@ export const streaming = $root.streaming = (() => {
          */
         function TrasnactionInstruction(properties) {
             if (properties)
-                for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                     if (properties[keys[i]] != null)
                         this[keys[i]] = properties[keys[i]];
         }
@@ -1988,9 +2265,9 @@ export const streaming = $root.streaming = (() => {
         TrasnactionInstruction.decode = function decode(reader, length, error) {
             if (!(reader instanceof $Reader))
                 reader = $Reader.create(reader);
-            let end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.TrasnactionInstruction();
+            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.TrasnactionInstruction();
             while (reader.pos < end) {
-                let tag = reader.uint32();
+                var tag = reader.uint32();
                 if (tag === error)
                     break;
                 switch (tag >>> 3) {
@@ -2070,7 +2347,7 @@ export const streaming = $root.streaming = (() => {
                 if (!$util.isInteger(message.slippageBps))
                     return "slippageBps: integer expected";
             if (message.options != null && message.hasOwnProperty("options")) {
-                let error = $root.streaming.QuoteOptions.verify(message.options);
+                var error = $root.streaming.QuoteOptions.verify(message.options);
                 if (error)
                     return "options." + error;
             }
@@ -2094,7 +2371,7 @@ export const streaming = $root.streaming = (() => {
         TrasnactionInstruction.fromObject = function fromObject(object) {
             if (object instanceof $root.streaming.TrasnactionInstruction)
                 return object;
-            let message = new $root.streaming.TrasnactionInstruction();
+            var message = new $root.streaming.TrasnactionInstruction();
             if (object.inputMint != null)
                 message.inputMint = String(object.inputMint);
             if (object.outputMint != null)
@@ -2134,12 +2411,12 @@ export const streaming = $root.streaming = (() => {
         TrasnactionInstruction.toObject = function toObject(message, options) {
             if (!options)
                 options = {};
-            let object = {};
+            var object = {};
             if (options.defaults) {
                 object.inputMint = "";
                 object.outputMint = "";
                 if ($util.Long) {
-                    let long = new $util.Long(0, 0, true);
+                    var long = new $util.Long(0, 0, true);
                     object.amount = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
                 } else
                     object.amount = options.longs === String ? "0" : 0;
@@ -2226,7 +2503,7 @@ export const streaming = $root.streaming = (() => {
             this.dexes = [];
             this.excludeDexes = [];
             if (properties)
-                for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                     if (properties[keys[i]] != null)
                         this[keys[i]] = properties[keys[i]];
         }
@@ -2304,7 +2581,7 @@ export const streaming = $root.streaming = (() => {
         QuoteOptions.prototype.blockhashSlotsToExpiry = null;
 
         // OneOf field names bound to virtual getters and setters
-        let $oneOfFields;
+        var $oneOfFields;
 
         // Virtual OneOf for proto3 optional field
         Object.defineProperty(QuoteOptions.prototype, "_swapMode", {
@@ -2375,10 +2652,10 @@ export const streaming = $root.streaming = (() => {
             if (message.swapMode != null && Object.hasOwnProperty.call(message, "swapMode"))
                 writer.uint32(/* id 1, wireType 0 =*/8).uint32(message.swapMode);
             if (message.dexes != null && message.dexes.length)
-                for (let i = 0; i < message.dexes.length; ++i)
+                for (var i = 0; i < message.dexes.length; ++i)
                     writer.uint32(/* id 2, wireType 2 =*/18).string(message.dexes[i]);
             if (message.excludeDexes != null && message.excludeDexes.length)
-                for (let i = 0; i < message.excludeDexes.length; ++i)
+                for (var i = 0; i < message.excludeDexes.length; ++i)
                     writer.uint32(/* id 3, wireType 2 =*/26).string(message.excludeDexes[i]);
             if (message.dynamicSlippage != null && Object.hasOwnProperty.call(message, "dynamicSlippage"))
                 writer.uint32(/* id 4, wireType 0 =*/32).bool(message.dynamicSlippage);
@@ -2422,9 +2699,9 @@ export const streaming = $root.streaming = (() => {
         QuoteOptions.decode = function decode(reader, length, error) {
             if (!(reader instanceof $Reader))
                 reader = $Reader.create(reader);
-            let end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.QuoteOptions();
+            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.QuoteOptions();
             while (reader.pos < end) {
-                let tag = reader.uint32();
+                var tag = reader.uint32();
                 if (tag === error)
                     break;
                 switch (tag >>> 3) {
@@ -2503,7 +2780,7 @@ export const streaming = $root.streaming = (() => {
         QuoteOptions.verify = function verify(message) {
             if (typeof message !== "object" || message === null)
                 return "object expected";
-            let properties = {};
+            var properties = {};
             if (message.swapMode != null && message.hasOwnProperty("swapMode")) {
                 properties._swapMode = 1;
                 if (!$util.isInteger(message.swapMode))
@@ -2512,14 +2789,14 @@ export const streaming = $root.streaming = (() => {
             if (message.dexes != null && message.hasOwnProperty("dexes")) {
                 if (!Array.isArray(message.dexes))
                     return "dexes: array expected";
-                for (let i = 0; i < message.dexes.length; ++i)
+                for (var i = 0; i < message.dexes.length; ++i)
                     if (!$util.isString(message.dexes[i]))
                         return "dexes: string[] expected";
             }
             if (message.excludeDexes != null && message.hasOwnProperty("excludeDexes")) {
                 if (!Array.isArray(message.excludeDexes))
                     return "excludeDexes: array expected";
-                for (let i = 0; i < message.excludeDexes.length; ++i)
+                for (var i = 0; i < message.excludeDexes.length; ++i)
                     if (!$util.isString(message.excludeDexes[i]))
                         return "excludeDexes: string[] expected";
             }
@@ -2567,21 +2844,21 @@ export const streaming = $root.streaming = (() => {
         QuoteOptions.fromObject = function fromObject(object) {
             if (object instanceof $root.streaming.QuoteOptions)
                 return object;
-            let message = new $root.streaming.QuoteOptions();
+            var message = new $root.streaming.QuoteOptions();
             if (object.swapMode != null)
                 message.swapMode = object.swapMode >>> 0;
             if (object.dexes) {
                 if (!Array.isArray(object.dexes))
                     throw TypeError(".streaming.QuoteOptions.dexes: array expected");
                 message.dexes = [];
-                for (let i = 0; i < object.dexes.length; ++i)
+                for (var i = 0; i < object.dexes.length; ++i)
                     message.dexes[i] = String(object.dexes[i]);
             }
             if (object.excludeDexes) {
                 if (!Array.isArray(object.excludeDexes))
                     throw TypeError(".streaming.QuoteOptions.excludeDexes: array expected");
                 message.excludeDexes = [];
-                for (let i = 0; i < object.excludeDexes.length; ++i)
+                for (var i = 0; i < object.excludeDexes.length; ++i)
                     message.excludeDexes[i] = String(object.excludeDexes[i]);
             }
             if (object.dynamicSlippage != null)
@@ -2611,7 +2888,7 @@ export const streaming = $root.streaming = (() => {
         QuoteOptions.toObject = function toObject(message, options) {
             if (!options)
                 options = {};
-            let object = {};
+            var object = {};
             if (options.arrays || options.defaults) {
                 object.dexes = [];
                 object.excludeDexes = [];
@@ -2623,12 +2900,12 @@ export const streaming = $root.streaming = (() => {
             }
             if (message.dexes && message.dexes.length) {
                 object.dexes = [];
-                for (let j = 0; j < message.dexes.length; ++j)
+                for (var j = 0; j < message.dexes.length; ++j)
                     object.dexes[j] = message.dexes[j];
             }
             if (message.excludeDexes && message.excludeDexes.length) {
                 object.excludeDexes = [];
-                for (let j = 0; j < message.excludeDexes.length; ++j)
+                for (var j = 0; j < message.excludeDexes.length; ++j)
                     object.excludeDexes[j] = message.excludeDexes[j];
             }
             if (message.dynamicSlippage != null && message.hasOwnProperty("dynamicSlippage")) {
@@ -2711,7 +2988,7 @@ export const streaming = $root.streaming = (() => {
          */
         function Empty(properties) {
             if (properties)
-                for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                     if (properties[keys[i]] != null)
                         this[keys[i]] = properties[keys[i]];
         }
@@ -2770,9 +3047,9 @@ export const streaming = $root.streaming = (() => {
         Empty.decode = function decode(reader, length, error) {
             if (!(reader instanceof $Reader))
                 reader = $Reader.create(reader);
-            let end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.Empty();
+            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.Empty();
             while (reader.pos < end) {
-                let tag = reader.uint32();
+                var tag = reader.uint32();
                 if (tag === error)
                     break;
                 switch (tag >>> 3) {
@@ -2893,7 +3170,7 @@ export const streaming = $root.streaming = (() => {
          */
         function CoinsData(properties) {
             if (properties)
-                for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                     if (properties[keys[i]] != null)
                         this[keys[i]] = properties[keys[i]];
         }
@@ -2939,7 +3216,7 @@ export const streaming = $root.streaming = (() => {
         CoinsData.prototype.coinName = "";
 
         // OneOf field names bound to virtual getters and setters
-        let $oneOfFields;
+        var $oneOfFields;
 
         // Virtual OneOf for proto3 optional field
         Object.defineProperty(CoinsData.prototype, "_rank", {
@@ -3011,9 +3288,9 @@ export const streaming = $root.streaming = (() => {
         CoinsData.decode = function decode(reader, length, error) {
             if (!(reader instanceof $Reader))
                 reader = $Reader.create(reader);
-            let end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.CoinsData();
+            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.CoinsData();
             while (reader.pos < end) {
-                let tag = reader.uint32();
+                var tag = reader.uint32();
                 if (tag === error)
                     break;
                 switch (tag >>> 3) {
@@ -3072,7 +3349,7 @@ export const streaming = $root.streaming = (() => {
         CoinsData.verify = function verify(message) {
             if (typeof message !== "object" || message === null)
                 return "object expected";
-            let properties = {};
+            var properties = {};
             if (message.price != null && message.hasOwnProperty("price"))
                 if (!$util.isString(message.price))
                     return "price: string expected";
@@ -3104,7 +3381,7 @@ export const streaming = $root.streaming = (() => {
         CoinsData.fromObject = function fromObject(object) {
             if (object instanceof $root.streaming.CoinsData)
                 return object;
-            let message = new $root.streaming.CoinsData();
+            var message = new $root.streaming.CoinsData();
             if (object.price != null)
                 message.price = String(object.price);
             if (object.changePercent != null)
@@ -3130,7 +3407,7 @@ export const streaming = $root.streaming = (() => {
         CoinsData.toObject = function toObject(message, options) {
             if (!options)
                 options = {};
-            let object = {};
+            var object = {};
             if (options.defaults) {
                 object.price = "";
                 object.changePercent = "";
@@ -3203,7 +3480,7 @@ export const streaming = $root.streaming = (() => {
         function AddBundlesRequest(properties) {
             this.bundleIds = [];
             if (properties)
-                for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                     if (properties[keys[i]] != null)
                         this[keys[i]] = properties[keys[i]];
         }
@@ -3249,7 +3526,7 @@ export const streaming = $root.streaming = (() => {
             if (!writer)
                 writer = $Writer.create();
             if (message.bundleIds != null && message.bundleIds.length)
-                for (let i = 0; i < message.bundleIds.length; ++i)
+                for (var i = 0; i < message.bundleIds.length; ++i)
                     writer.uint32(/* id 1, wireType 2 =*/10).string(message.bundleIds[i]);
             if (message.userId != null && Object.hasOwnProperty.call(message, "userId"))
                 writer.uint32(/* id 2, wireType 2 =*/18).string(message.userId);
@@ -3283,9 +3560,9 @@ export const streaming = $root.streaming = (() => {
         AddBundlesRequest.decode = function decode(reader, length, error) {
             if (!(reader instanceof $Reader))
                 reader = $Reader.create(reader);
-            let end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.AddBundlesRequest();
+            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.AddBundlesRequest();
             while (reader.pos < end) {
-                let tag = reader.uint32();
+                var tag = reader.uint32();
                 if (tag === error)
                     break;
                 switch (tag >>> 3) {
@@ -3337,7 +3614,7 @@ export const streaming = $root.streaming = (() => {
             if (message.bundleIds != null && message.hasOwnProperty("bundleIds")) {
                 if (!Array.isArray(message.bundleIds))
                     return "bundleIds: array expected";
-                for (let i = 0; i < message.bundleIds.length; ++i)
+                for (var i = 0; i < message.bundleIds.length; ++i)
                     if (!$util.isString(message.bundleIds[i]))
                         return "bundleIds: string[] expected";
             }
@@ -3358,12 +3635,12 @@ export const streaming = $root.streaming = (() => {
         AddBundlesRequest.fromObject = function fromObject(object) {
             if (object instanceof $root.streaming.AddBundlesRequest)
                 return object;
-            let message = new $root.streaming.AddBundlesRequest();
+            var message = new $root.streaming.AddBundlesRequest();
             if (object.bundleIds) {
                 if (!Array.isArray(object.bundleIds))
                     throw TypeError(".streaming.AddBundlesRequest.bundleIds: array expected");
                 message.bundleIds = [];
-                for (let i = 0; i < object.bundleIds.length; ++i)
+                for (var i = 0; i < object.bundleIds.length; ++i)
                     message.bundleIds[i] = String(object.bundleIds[i]);
             }
             if (object.userId != null)
@@ -3383,14 +3660,14 @@ export const streaming = $root.streaming = (() => {
         AddBundlesRequest.toObject = function toObject(message, options) {
             if (!options)
                 options = {};
-            let object = {};
+            var object = {};
             if (options.arrays || options.defaults)
                 object.bundleIds = [];
             if (options.defaults)
                 object.userId = "";
             if (message.bundleIds && message.bundleIds.length) {
                 object.bundleIds = [];
-                for (let j = 0; j < message.bundleIds.length; ++j)
+                for (var j = 0; j < message.bundleIds.length; ++j)
                     object.bundleIds[j] = message.bundleIds[j];
             }
             if (message.userId != null && message.hasOwnProperty("userId"))
@@ -3450,7 +3727,7 @@ export const streaming = $root.streaming = (() => {
          */
         function UserBundleUpdate(properties) {
             if (properties)
-                for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                     if (properties[keys[i]] != null)
                         this[keys[i]] = properties[keys[i]];
         }
@@ -3496,7 +3773,7 @@ export const streaming = $root.streaming = (() => {
         UserBundleUpdate.prototype.slot = null;
 
         // OneOf field names bound to virtual getters and setters
-        let $oneOfFields;
+        var $oneOfFields;
 
         // Virtual OneOf for proto3 optional field
         Object.defineProperty(UserBundleUpdate.prototype, "_slot", {
@@ -3568,9 +3845,9 @@ export const streaming = $root.streaming = (() => {
         UserBundleUpdate.decode = function decode(reader, length, error) {
             if (!(reader instanceof $Reader))
                 reader = $Reader.create(reader);
-            let end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.UserBundleUpdate();
+            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.UserBundleUpdate();
             while (reader.pos < end) {
-                let tag = reader.uint32();
+                var tag = reader.uint32();
                 if (tag === error)
                     break;
                 switch (tag >>> 3) {
@@ -3629,7 +3906,7 @@ export const streaming = $root.streaming = (() => {
         UserBundleUpdate.verify = function verify(message) {
             if (typeof message !== "object" || message === null)
                 return "object expected";
-            let properties = {};
+            var properties = {};
             if (message.bundleId != null && message.hasOwnProperty("bundleId"))
                 if (!$util.isString(message.bundleId))
                     return "bundleId: string expected";
@@ -3671,7 +3948,7 @@ export const streaming = $root.streaming = (() => {
         UserBundleUpdate.fromObject = function fromObject(object) {
             if (object instanceof $root.streaming.UserBundleUpdate)
                 return object;
-            let message = new $root.streaming.UserBundleUpdate();
+            var message = new $root.streaming.UserBundleUpdate();
             if (object.bundleId != null)
                 message.bundleId = String(object.bundleId);
             if (object.oldStatus != null)
@@ -3745,13 +4022,13 @@ export const streaming = $root.streaming = (() => {
         UserBundleUpdate.toObject = function toObject(message, options) {
             if (!options)
                 options = {};
-            let object = {};
+            var object = {};
             if (options.defaults) {
                 object.bundleId = "";
                 object.oldStatus = "";
                 object.newStatus = options.enums === String ? "BUNDLE_STAGE_UNSPECIFIED" : 0;
                 if ($util.Long) {
-                    let long = new $util.Long(0, 0, true);
+                    var long = new $util.Long(0, 0, true);
                     object.timestamp = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
                 } else
                     object.timestamp = options.longs === String ? "0" : 0;
@@ -3820,7 +4097,7 @@ export const streaming = $root.streaming = (() => {
      * @property {number} BUNDLE_STAGE_FAILED=6 BUNDLE_STAGE_FAILED value
      */
     streaming.BundleStage = (function() {
-        const valuesById = {}, values = Object.create(valuesById);
+        var valuesById = {}, values = Object.create(valuesById);
         values[valuesById[0] = "BUNDLE_STAGE_UNSPECIFIED"] = 0;
         values[valuesById[1] = "BUNDLE_STAGE_SUBMITTED"] = 1;
         values[valuesById[2] = "BUNDLE_STAGE_IN_FLIGHT"] = 2;
@@ -3834,4 +4111,4 @@ export const streaming = $root.streaming = (() => {
     return streaming;
 })();
 
-export { $root as default };
+module.exports = $root;

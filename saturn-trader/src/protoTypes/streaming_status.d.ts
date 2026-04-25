@@ -50,6 +50,20 @@ export namespace streaming {
          * @returns Promise
          */
         public sendTransactions(request: streaming.ISignedTransactions): Promise<streaming.UserBundleUpdate>;
+
+        /**
+         * Calls SubscribeToBundles.
+         * @param request UserBundleRequest message or plain object
+         * @param callback Node-style callback called with the error, if any, and UserBundleUpdate
+         */
+        public subscribeToBundles(request: streaming.IUserBundleRequest, callback: streaming.BundleService.SubscribeToBundlesCallback): void;
+
+        /**
+         * Calls SubscribeToBundles.
+         * @param request UserBundleRequest message or plain object
+         * @returns Promise
+         */
+        public subscribeToBundles(request: streaming.IUserBundleRequest): Promise<streaming.UserBundleUpdate>;
     }
 
     namespace BundleService {
@@ -67,6 +81,116 @@ export namespace streaming {
          * @param [response] UserBundleUpdate
          */
         type SendTransactionsCallback = (error: (Error|null), response?: streaming.UserBundleUpdate) => void;
+
+        /**
+         * Callback as used by {@link streaming.BundleService#subscribeToBundles}.
+         * @param error Error, if any
+         * @param [response] UserBundleUpdate
+         */
+        type SubscribeToBundlesCallback = (error: (Error|null), response?: streaming.UserBundleUpdate) => void;
+    }
+
+    /** Properties of a UserBundleRequest. */
+    interface IUserBundleRequest {
+
+        /** UserBundleRequest userPk */
+        userPk?: (string|null);
+
+        /** UserBundleRequest bundleId */
+        bundleId?: (string|null);
+    }
+
+    /** Represents a UserBundleRequest. */
+    class UserBundleRequest implements IUserBundleRequest {
+
+        /**
+         * Constructs a new UserBundleRequest.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: streaming.IUserBundleRequest);
+
+        /** UserBundleRequest userPk. */
+        public userPk: string;
+
+        /** UserBundleRequest bundleId. */
+        public bundleId?: (string|null);
+
+        /**
+         * Creates a new UserBundleRequest instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns UserBundleRequest instance
+         */
+        public static create(properties?: streaming.IUserBundleRequest): streaming.UserBundleRequest;
+
+        /**
+         * Encodes the specified UserBundleRequest message. Does not implicitly {@link streaming.UserBundleRequest.verify|verify} messages.
+         * @param message UserBundleRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(message: streaming.IUserBundleRequest, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Encodes the specified UserBundleRequest message, length delimited. Does not implicitly {@link streaming.UserBundleRequest.verify|verify} messages.
+         * @param message UserBundleRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(message: streaming.IUserBundleRequest, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Decodes a UserBundleRequest message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns UserBundleRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): streaming.UserBundleRequest;
+
+        /**
+         * Decodes a UserBundleRequest message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns UserBundleRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): streaming.UserBundleRequest;
+
+        /**
+         * Verifies a UserBundleRequest message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): (string|null);
+
+        /**
+         * Creates a UserBundleRequest message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns UserBundleRequest
+         */
+        public static fromObject(object: { [k: string]: any }): streaming.UserBundleRequest;
+
+        /**
+         * Creates a plain object from a UserBundleRequest message. Also converts values to other types if specified.
+         * @param message UserBundleRequest
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(message: streaming.UserBundleRequest, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+        /**
+         * Converts this UserBundleRequest to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for UserBundleRequest
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
     }
 
     /** Properties of a SignedTransactions. */

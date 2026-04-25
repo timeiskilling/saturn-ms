@@ -7,7 +7,6 @@ import { EditorHeader } from "./bundledTransactions/EditorHeader";
 import { EmptyTemplateState } from "./bundledTransactions/EmptyTemplateState";
 import { EmptyTransactionsState } from "./bundledTransactions/EmptyTransactionsState";
 import { LoadingBundlesState } from "./bundledTransactions/LoadingBundlesState";
-import { SwitchWalletModal } from "./bundledTransactions/SwitchWalletModal";
 import {
   type Template,
   type TransactionInstruction,
@@ -32,14 +31,6 @@ export function BundledTransactions() {
   const { wallets: discoveredWallets } = useDiscoveredWallets();
   const { savedWallets } = useConnectedWallets();
   const [activeTemplateId, setActiveTemplateId] = useState<string | null>(null);
-
-  const [switchWalletModal, setSwitchWalletModal] = useState<{
-    isOpen: boolean;
-    pendingWalletPk: string;
-    pendingMint: string;
-    targetTxId: string;
-    targetField: keyof TransactionInstruction;
-  } | null>(null);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -190,23 +181,25 @@ export function BundledTransactions() {
       const activeTemplate = templates.find((t) => t.id === activeTemplateId);
       if (!activeTemplate) return;
 
-      const firstWalletPk = activeTemplate.transactions[0]?.userPk;
       const isWalletField = field === "userPk";
 
-      // If we're updating a wallet address and it conflicts with the established bundle wallet
-      if (
-        isWalletField &&
-        firstWalletPk &&
-        value !== firstWalletPk &&
-        value !== undefined
-      ) {
-        setSwitchWalletModal({
-          isOpen: true,
-          pendingWalletPk: value,
-          pendingMint: "", // Handled separately if token triggers it
-          targetTxId: txId,
-          targetField: field,
-        });
+      // If we're updating a wallet address, we apply it to ALL transactions in the bundle
+      // to ensure consistency (making it the 'primary' wallet for this bundle)
+      if (isWalletField && value !== undefined) {
+        setTemplates((prev) =>
+          prev.map((t) => {
+            if (t.id === activeTemplateId) {
+              return {
+                ...t,
+                transactions: t.transactions.map((tx) => ({
+                  ...tx,
+                  userPk: value,
+                })),
+              };
+            }
+            return t;
+          }),
+        );
         return;
       }
 
@@ -229,27 +222,6 @@ export function BundledTransactions() {
     },
     [activeTemplateId, templates],
   );
-
-  const handleUpdateBundleWallet = () => {
-    if (!activeTemplateId || !switchWalletModal) return;
-
-    setTemplates((prev) =>
-      prev.map((t) => {
-        if (t.id === activeTemplateId) {
-          return {
-            ...t,
-            transactions: t.transactions.map((tx) => ({
-              ...tx,
-              userPk: switchWalletModal.pendingWalletPk,
-            })),
-          };
-        }
-        return t;
-      }),
-    );
-
-    setSwitchWalletModal(null);
-  };
 
   const handleUpdateOptions = useCallback(
     (txId: string, field: keyof QuoteOptions, value: any) => {
@@ -467,13 +439,6 @@ export function BundledTransactions() {
           </>
         )}
       </div>
-
-      <SwitchWalletModal
-        isOpen={switchWalletModal?.isOpen ?? false}
-        pendingWalletPk={switchWalletModal?.pendingWalletPk ?? ""}
-        onClose={() => setSwitchWalletModal(null)}
-        onConfirm={handleUpdateBundleWallet}
-      />
     </div>
   );
 }

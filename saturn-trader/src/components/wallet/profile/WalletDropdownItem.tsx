@@ -37,6 +37,9 @@ export function WalletDropdownItem({
   const { connect } = useConnect();
   const { disconnect, isDisconnecting } = useDisconnect();
   const { primaryAccount, user } = useAllAccounts();
+  const [connectionError, setConnectionError] = React.useState<string | null>(
+    null,
+  );
 
   const isPrimaryActive = primaryAccount?.walletId === user?.walletId;
 
@@ -46,6 +49,14 @@ export function WalletDropdownItem({
   const status = verificationStatus[account.address];
   const isVerifying =
     status === "Verifying..." || status === "Checking session...";
+
+  // Clear error after some time
+  React.useEffect(() => {
+    if (connectionError) {
+      const timer = setTimeout(() => setConnectionError(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [connectionError]);
 
   return (
     <div
@@ -58,20 +69,28 @@ export function WalletDropdownItem({
       <div
         className="flex items-center justify-between cursor-pointer"
         onClick={async () => {
-          if (!isActive) {
+          // If not active, OR if it's active but unverified (broken state), allow connecting to re-initialize the provider
+          if (!isActive || (isActive && !isVerified)) {
             try {
+              setConnectionError(null);
               await connect({
                 provider: "injected",
                 walletId: account.walletId,
               });
+
+              // If it was already active but unverified, re-connecting fixes the provider state.
+              // Now we can trigger verification manually.
+              if (isActive && !isVerified) {
+                onVerify(account.address, account.walletId);
+              }
             } catch (e: any) {
-              console.error("Failed to switch wallet", e);
-              alert(
-                `Failed to connect to ${account.name}: ${
-                  e?.message ||
-                  "User rejected request or extension unavailable."
-                }`,
-              );
+              console.error("Failed to switch/reconnect wallet", e);
+              const msg = e?.message || "";
+              if (msg.includes("rejected") || msg.includes("connect")) {
+                setConnectionError("User canceled connecting");
+              } else {
+                setConnectionError("Failed to connect");
+              }
             }
           }
         }}
@@ -117,18 +136,50 @@ export function WalletDropdownItem({
               ) : null}
               {!isVerified && isActive && isPrimary && (
                 <LinkButton
-                  onVerify={() => onVerify(account.address, account.walletId)}
+                  onVerify={async () => {
+                    try {
+                      setConnectionError(null);
+                      await connect({
+                        provider: "injected",
+                        walletId: account.walletId,
+                      });
+                      onVerify(account.address, account.walletId);
+                    } catch (e: any) {
+                      console.error("Failed to reconnect before verify", e);
+                      const msg = e?.message || "";
+                      if (msg.includes("rejected") || msg.includes("connect")) {
+                        setConnectionError("User canceled connecting");
+                      } else {
+                        setConnectionError("Failed to connect");
+                      }
+                    }
+                  }}
                   isVerifying={isVerifying}
                 />
               )}
             </div>
-            <span
-              className={`text-[11px] font-medium ${
-                isActive ? "text-emerald-500/60" : "text-zinc-500"
-              }`}
-            >
-              {displayType}
-            </span>
+            <div className="flex flex-col gap-0.5">
+              <span
+                className={`text-[11px] font-medium ${
+                  isActive ? "text-emerald-500/60" : "text-zinc-500"
+                }`}
+              >
+                {displayType}
+              </span>
+              {connectionError && (
+                <span className="text-[10px] text-red-500 font-bold animate-in fade-in slide-in-from-top-1 duration-200">
+                  {connectionError}
+                </span>
+              )}
+              {status &&
+                status !== "Verified!" &&
+                status !== "Verifying..." &&
+                status !== "Checking session..." && (
+                  <span className="text-[10px] text-amber-500 font-bold animate-in fade-in slide-in-from-top-1 duration-200">
+                    {status}
+                  </span>
+                )}
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -171,7 +222,24 @@ export function WalletDropdownItem({
             <div className="flex items-center gap-2">
               {!isVerified ? (
                 <LinkButton
-                  onVerify={() => onVerify(account.address, account.walletId)}
+                  onVerify={async () => {
+                    try {
+                      setConnectionError(null);
+                      await connect({
+                        provider: "injected",
+                        walletId: account.walletId,
+                      });
+                      onVerify(account.address, account.walletId);
+                    } catch (e: any) {
+                      console.error("Failed to reconnect before verify", e);
+                      const msg = e?.message || "";
+                      if (msg.includes("rejected") || msg.includes("connect")) {
+                        setConnectionError("User canceled connecting");
+                      } else {
+                        setConnectionError("Failed to connect");
+                      }
+                    }
+                  }}
                   isVerifying={isVerifying}
                 />
               ) : (

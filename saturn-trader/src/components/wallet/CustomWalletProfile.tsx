@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useSolana, useDiscoveredWallets } from "@phantom/react-sdk";
+import {
+  useSolana,
+  useDiscoveredWallets,
+  useConnect,
+} from "@phantom/react-sdk";
 import { CustomConnectButton, CustomConnectModal } from "./CustomConnectButton";
 import { verifyWallet } from "../../api/verifyWallet";
 import { fetchBundles } from "../../api/saveBundle";
@@ -12,6 +16,7 @@ import { Monitor } from "lucide-react";
 export function CustomWalletProfile() {
   const { solana } = useSolana();
   const { wallets } = useDiscoveredWallets();
+  const { isConnecting } = useConnect();
   const [showModal, setShowModal] = useState(false);
   const [showDevicesModal, setShowDevicesModal] = useState(false);
   const [showConnectModal, setShowConnectModal] = useState(false);
@@ -130,6 +135,7 @@ export function CustomWalletProfile() {
     const checkAndVerify = async () => {
       if (
         isConnected &&
+        !isConnecting &&
         solana &&
         primaryAccount &&
         user?.walletId === primaryAccount.walletId &&
@@ -145,8 +151,10 @@ export function CustomWalletProfile() {
         if (!mounted) return;
 
         if (bundles === null) {
-          setWalletVerified(primaryAccount.walletId, false);
-          await handleVerify(primaryAccount.address, primaryAccount.walletId);
+          if (!isConnecting) {
+            setWalletVerified(primaryAccount.walletId, false);
+            await handleVerify(primaryAccount.address, primaryAccount.walletId);
+          }
         } else {
           setVerificationStatus((prev) => ({
             ...prev,
@@ -162,6 +170,7 @@ export function CustomWalletProfile() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     isConnected,
+    isConnecting,
     solana,
     primaryAccount?.address,
     primaryAccount?.walletId,

@@ -254,7 +254,7 @@ export function TokenSelect({
       {isOpen && (
         <div
           tabIndex={-1}
-          className="absolute z-50 top-full left-0 right-0 mt-2 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl shadow-black/50 overflow-hidden flex flex-col min-w-70"
+          className="absolute z-50 top-full left-0 mt-2 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl shadow-black/50 overflow-hidden flex flex-col w-[350px] sm:w-[400px]"
         >
           <div className="p-2 border-b border-zinc-800">
             <div className="relative">

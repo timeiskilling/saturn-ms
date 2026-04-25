@@ -203,23 +203,10 @@ export function useConnectedWallets() {
         return next;
       });
     } else if (!isConnected && prevWalletIdRef.current) {
-      const disconnectedId = prevWalletIdRef.current;
       prevWalletIdRef.current = null;
-
-      // Fully clear the Phantom connection state out of the browser storage
-      // so it prompts for connection again correctly next time.
-      localStorage.removeItem("phantom-wallet");
-      localStorage.removeItem("phantom-wallet-connected");
-      localStorage.removeItem("saturn_saved_wallets");
-
-      setSavedWallets((prev) => {
-        if (!prev.some((w) => w.walletId === disconnectedId)) {
-          return prev;
-        }
-        const next = prev.filter((w) => w.walletId !== disconnectedId);
-        setTimeout(() => updateStorage(next), 0);
-        return next;
-      });
+      // We no longer clear saturn_saved_wallets on disconnect.
+      // We want to keep them visible as 'Linked' or 'Saved' wallets.
+      // Also stopped clearing internal phantom keys here to prevent state flickering.
     }
   }, [user, accounts, isConnected]);
 

@@ -232,6 +232,9 @@ export function AdvancedSettings({
   const [localSlippage, setLocalSlippage] = useState(
     slippageBps ? slippageValue.toString() : "",
   );
+  const [localMaxAccounts, setLocalMaxAccounts] = useState(
+    options?.maxAccounts?.toString() ?? "64",
+  );
   const [mounted, setMounted] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
@@ -258,6 +261,7 @@ export function AdvancedSettings({
     onUpdateOptions("maxAccounts", 64);
     onSlippageChange(0);
     setLocalSlippage("");
+    setLocalMaxAccounts("64");
   };
 
   useEffect(() => {
@@ -272,6 +276,15 @@ export function AdvancedSettings({
       }
     }
   }, [slippageBps, options?.dynamicSlippage, localSlippage]);
+
+  useEffect(() => {
+    if (options?.maxAccounts !== undefined) {
+      const currentVal = parseInt(localMaxAccounts);
+      if (currentVal !== options.maxAccounts) {
+        setLocalMaxAccounts(options.maxAccounts.toString());
+      }
+    }
+  }, [options?.maxAccounts]);
 
   const handleSlippagePreset = (percent: number) => {
     onUpdateOptions("dynamicSlippage", false);
@@ -366,11 +379,12 @@ export function AdvancedSettings({
                 <Info className="w-3.5 h-3.5 text-zinc-600" />
               </div>
 
-              {slippageValue > HIGH_FEE_THRESHOLD_PERCENT && (
-                <span className="text-[10px] bg-orange-500/10 text-orange-500 px-2 py-0.5 rounded-full font-bold uppercase">
-                  High Fees Warning
-                </span>
-              )}
+              {!options?.dynamicSlippage &&
+                slippageValue > HIGH_FEE_THRESHOLD_PERCENT && (
+                  <span className="text-[10px] bg-orange-500/10 text-orange-500 px-2 py-0.5 rounded-full font-bold uppercase">
+                    High Fees Warning
+                  </span>
+                )}
             </div>
 
             <div className="flex items-stretch gap-2 bg-zinc-900/50 p-1.5 rounded-2xl border border-zinc-900">
@@ -492,18 +506,29 @@ export function AdvancedSettings({
               </div>
               <div className="relative group">
                 <input
-                  type="number"
-                  min="1"
-                  max="1526"
-                  value={options?.maxAccounts ?? 64}
+                  type="text"
+                  inputMode="numeric"
+                  value={localMaxAccounts}
                   onChange={(e) => {
-                    let val = parseInt(e.target.value);
-                    if (!isNaN(val)) {
-                      if (val > 15) val = 15;
+                    const rawVal = e.target.value.replace(/[^0-9]/g, "");
+                    setLocalMaxAccounts(rawVal);
+                    if (rawVal !== "") {
+                      let val = parseInt(rawVal);
                       onUpdateOptions("maxAccounts", val);
                     }
                   }}
-                  className="w-20 bg-zinc-900/50 text-white text-right font-bold outline-none rounded-xl py-2 px-3 border border-zinc-800 focus:border-zinc-600 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  onBlur={() => {
+                    if (localMaxAccounts === "") {
+                      setLocalMaxAccounts("64");
+                      onUpdateOptions("maxAccounts", 64);
+                    } else {
+                      let val = parseInt(localMaxAccounts);
+                      if (val < 0) val = 64;
+                      setLocalMaxAccounts(val.toString());
+                      onUpdateOptions("maxAccounts", val);
+                    }
+                  }}
+                  className="w-24 bg-zinc-900/50 text-white text-right font-bold outline-none rounded-xl py-2 px-3 border border-zinc-800 focus:border-zinc-600 transition-colors"
                 />
               </div>
             </div>
