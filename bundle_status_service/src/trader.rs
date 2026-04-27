@@ -8,7 +8,7 @@ use common::jito_client_api::main_api::JitoClient;
 use common::traits::TransactionBuilder;
 use config::Config;
 use core::str;
-use proto_models::grpc::TransactionDelta;
+use proto_models::grpc::{BundleDelta, SwapSimulationRequest, TransactionDelta};
 
 use jupiter_trader_data::models::jupiter_models::{
     JupiterSwapInstructionsRsponse, SwapRequestParams,
@@ -21,6 +21,7 @@ use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_commitment_config::CommitmentConfig;
 use solana_system_interface::instruction::transfer;
 
+use crate::constant;
 use crate::prelude::*;
 use crate::{constant::MIN_JITO_TIP_LAMPORTS, redis_con};
 
@@ -106,7 +107,7 @@ impl JupiterTrader {
         swap_response: JupiterSwapInstructionsRsponse,
         blockhash: Hash,
         pubkey: &Pubkey,
-    ) -> Result<(String, u64), SaturnTransactionsServiceError> {
+    ) -> Result<String, SaturnTransactionsServiceError> {
         self.transaction_builder
             .build_transaction(swap_response, (blockhash, *pubkey))
             .await
@@ -117,7 +118,7 @@ impl JupiterTrader {
         &self,
         pubkey: &str,
         params: SwapRequestParams<'_>,
-    ) -> Result<(String, u64, TransactionDelta), SaturnTransactionsServiceError> {
+    ) -> Result<String, SaturnTransactionsServiceError> {
         let user_pubkey = Pubkey::from_str(pubkey).map_err(|e| {
             SaturnTransactionsServiceError::BuildTransaction(Box::new(
                 BuildTransactionError::IvalidPubkey {
@@ -149,9 +150,7 @@ impl JupiterTrader {
             solana_sdk::hash::Hash::new_from_array(bytes)
         };
 
-        let delta = self.build_delta(&swap_instructions, 0, 0)?;
-
-        let (swap_transaction, swap_fee) = self
+        let swap_transaction = self
             .build_transaction_from_instructions(
                 swap_instructions,
                 blockhash_for_swap,
@@ -159,14 +158,14 @@ impl JupiterTrader {
             )
             .await?;
 
-        Ok((swap_transaction, swap_fee, delta))
+        Ok(swap_transaction)
     }
 
     pub async fn build_tip_transaction(
         &self,
         pubkey: &str,
         blockhash: Hash,
-    ) -> Result<(String, u64, u64), SaturnTransactionsServiceError> {
+    ) -> Result<String, SaturnTransactionsServiceError> {
         let user_pubkey = Pubkey::from_str(pubkey).map_err(|e| {
             SaturnTransactionsServiceError::BuildTransaction(Box::new(
                 BuildTransactionError::IvalidPubkey {
@@ -195,18 +194,18 @@ impl JupiterTrader {
         let mut tip_tx = Transaction::new_with_payer(&[tip_ix], Some(&user_pubkey));
         tip_tx.message.recent_blockhash = blockhash;
 
-        let tip_fee = self
-            .client
-            .get_fee_for_message(&crate::msg_wrapper::MsgWrapper(&tip_tx.message))
-            .await
-            .map_err(|err| {
-                SaturnTransactionsServiceError::Rpc(
-                    saturn_errors::error::RpcError::InvalidResponse {
-                        expected: "Expected tip fee".to_string(),
-                        got: err.to_string(),
-                    },
-                )
-            })?;
+        // let tip_fee = self
+        //     .client
+        //     .get_fee_for_message(&crate::msg_wrapper::MsgWrapper(&tip_tx.message))
+        //     .await
+        //     .map_err(|err| {
+        //         SaturnTransactionsServiceError::Rpc(
+        //             saturn_errors::error::RpcError::InvalidResponse {
+        //                 expected: "Expected tip fee".to_string(),
+        //                 got: err.to_string(),
+        //             },
+        //         )
+        //     })?;
 
         let encoded = bs58::encode(bincode::serialize(&tip_tx).map_err(|e| {
             SaturnTransactionsServiceError::BuildTransaction(Box::new(
@@ -218,7 +217,7 @@ impl JupiterTrader {
         })?)
         .into_string();
 
-        Ok((encoded, jito_tip_lamports, tip_fee))
+        Ok(encoded)
     }
 
     pub fn build_delta(
@@ -252,7 +251,7 @@ impl JupiterTrader {
             jito_tip_lamports,
 
             network_fee_lamports: network_tips,
-            platform_fee_bps: 20,
+            platform_fee_bps: constant::PLATFORM_FEE_BPS,
         };
 
         Ok(delta)
@@ -439,8 +438,53 @@ impl JupiterTrader {
             )
             .await?;
 
-        transactions.push(swap_transaction.0);
+        transactions.push(swap_transaction);
 
         Ok(transactions)
+    }
+    pub async fn simulate_bundle(
+        &self,
+        swaps: Vec<SwapSimulationRequest>,
+    ) -> Result<BundleDelta, SaturnTransactionsServiceError> {
+        let jito_tip_lamports = self
+            .tip_cache
+            .read()
+            .await
+            .unwrap_or(MIN_JITO_TIP_LAMPORTS as f64) as u64;
+
+        let mut all_deltas = Vec::new();
+        let mut total_network_fee_lamports: u64 = 0;
+
+        for swap in swaps {
+            let minimum_output = if swap.slippage_bps as u128 >= constant::BPS_TOTAL {
+                0
+            } else {
+                ((swap.expected_output as u128 * (constant::BPS_TOTAL - swap.slippage_bps as u128))
+                    / constant::BPS_TOTAL) as u64
+            };
+
+            let network_fee_lamports = constant::SOLANA_BASE_FEE_LAMPORTS;
+            total_network_fee_lamports += network_fee_lamports;
+
+            all_deltas.push(TransactionDelta {
+                id: swap.id,
+                input_mint: swap.input_mint,
+                input_amount: swap.input_amount,
+                output_mint: swap.output_mint,
+                expected_output: swap.expected_output,
+                minimum_output,
+                jito_tip_lamports: 0,
+                network_fee_lamports,
+                platform_fee_bps: constant::PLATFORM_FEE_BPS,
+            });
+        }
+
+        total_network_fee_lamports += constant::SOLANA_BASE_FEE_LAMPORTS;
+
+        Ok(BundleDelta {
+            swaps: all_deltas,
+            jito_tip_lamports,
+            total_network_fee_lamports,
+        })
     }
 }

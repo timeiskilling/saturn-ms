@@ -12,6 +12,7 @@ import "./index.css";
 import { App } from "./App";
 import { AppTest } from "./App_tester";
 import { PhantomTestApp } from "./phantomWalletLib/components/connect";
+import "@fontsource/jetbrains-mono";
 
 const elem = document.getElementById("root")!;
 const app = (

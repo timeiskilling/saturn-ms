@@ -10,8 +10,8 @@ use crate::constant;
 use crate::trader::JupiterTrader;
 use proto_models::grpc::bundle_service_server::{BundleService, BundleServiceServer};
 use proto_models::grpc::{
-    BuiltTransaction, BundleDelta, SignedTransactions, TransactionsBuld, TransactionsToSign,
-    UserBundleRequest,
+    BuiltTransaction, BundleDelta, SignedTransactions, SimulateBundleRequest, TransactionsBuld,
+    TransactionsToSign, UserBundleRequest,
 };
 use tokio_stream::{Stream, wrappers::BroadcastStream};
 use tonic::{Request, Response, Status};
@@ -39,6 +39,21 @@ impl BundleService for TransactionService {
                 + 'static,
         >,
     >;
+
+    async fn simulate_bundle(
+        &self,
+        request: Request<SimulateBundleRequest>,
+    ) -> Result<Response<BundleDelta>, Status> {
+        let req = request.into_inner();
+        let delta = self
+            .trader
+            .simulate_bundle(req.swaps)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(delta))
+    }
+
     #[instrument(skip_all, level = "info")]
     async fn create_transactions(
         &self,
@@ -55,7 +70,8 @@ impl BundleService for TransactionService {
 
         let blockhash = self.cashed_blockhash.get().await.blockhash;
 
-        let (tip_tx_str, jito_tip_lamports, tip_fee) = self
+        // Optimized: build_tip_transaction no longer makes an RPC call for fee
+        let tip_tx_str = self
             .trader
             .build_tip_transaction(&user_pk, blockhash)
             .await
@@ -83,6 +99,8 @@ impl BundleService for TransactionService {
                     )
                 })?;
                 let id = transaction.id.clone();
+
+                // Optimized: trader.create_transactions no longer makes RPC call for swap fee
                 let tx_res = trader
                     .create_transactions(
                         &transaction.user_pk,
@@ -97,57 +115,36 @@ impl BundleService for TransactionService {
                     .await
                     .map_err(|e| Status::internal(e.to_string()));
 
-                tx_res.map(|(swap_tx_str, swap_fee, mut delta)| {
-                    delta.id = id.clone();
-                    let built_tx = BuiltTransaction {
-                        id,
-                        transaction_base58: swap_tx_str,
-                    };
-                    (built_tx, swap_fee, delta)
+                tx_res.map(|swap_tx_str| BuiltTransaction {
+                    id,
+                    transaction_base58: swap_tx_str,
                 })
             }));
         }
         let results = join_all(tasks).await;
 
         let mut all_transactions = vec![];
-        let mut all_deltas = Vec::new();
-        let mut total_swap_fees: u64 = 0;
 
         for result in results {
             match result {
-                Ok(Ok((built_tx, swap_fee, delta))) => {
+                Ok(Ok(built_tx)) => {
                     all_transactions.push(built_tx);
-                    total_swap_fees += swap_fee;
-                    all_deltas.push(delta);
                 }
-
                 Ok(Err(e)) => {
-                    tracing::error!("A task panicked: {:?}", e);
-                    return Err(Status::internal(
-                        "A critical error occurred while processing transactions.",
-                    ));
+                    tracing::error!("A task failed: {:?}", e);
+                    return Err(Status::internal(e.to_string()));
                 }
-
                 Err(e) => {
                     tracing::error!("A task panicked: {:?}", e);
-                    return Err(Status::internal(
-                        "A critical error occurred while processing transactions.",
-                    ));
+                    return Err(Status::internal("Critical task panic"));
                 }
             }
         }
 
         all_transactions.push(tip_tx);
 
-        let total_network_fee = tip_fee + total_swap_fees;
-
         Ok(Response::new(TransactionsToSign {
             transactions: all_transactions,
-            delta: Some(BundleDelta {
-                swaps: all_deltas,
-                jito_tip_lamports,
-                total_network_fee_lamports: total_network_fee,
-            }),
         }))
     }
 

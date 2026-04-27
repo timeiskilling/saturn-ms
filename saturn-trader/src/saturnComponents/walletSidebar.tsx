@@ -3,6 +3,7 @@ import { usePhantom } from "@phantom/react-sdk";
 import { useSolanaBalance } from "../hooks/useSolanaBalance";
 import { useTokenAccounts } from "@/hooks/useTokenAccounts";
 import { RefreshCw, Coins } from "lucide-react";
+import { AnimatedTitle } from "@/components/ui/AnimatedTitle";
 
 // Mock tokens for UI testing purposes
 const MOCK_TOKENS = [
@@ -48,6 +49,7 @@ export function WalletSidebar() {
       }}
     >
       <div className="flex flex-col w-full gap-4">
+        <AnimatedTitle />
         {/*{isConnected && (
           <div className="mt-6 p-4 bg-zinc-900 rounded-lg border border-zinc-800">
             <h4 className="text-zinc-400 text-sm font-medium mb-1">

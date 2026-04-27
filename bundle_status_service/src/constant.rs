@@ -15,6 +15,13 @@ pub const JWT_REDIS_REVOKED_TOKENS_KEY: &str = "jwt.revoked.tokens";
 
 pub const GRPC_HEALTH_CHECK_INTERVAL: u64 = 5;
 
+// Solana network constants
+pub const SOLANA_BASE_FEE_LAMPORTS: u64 = 5_000;
+pub const BPS_TOTAL: u128 = 10_000;
+
+// Platform constants
+pub const PLATFORM_FEE_BPS: u32 = 50;
+
 // - discriminator (8 bytes)
 // - type_index (4 bytes)
 // - deactivation_slot (8 bytes)

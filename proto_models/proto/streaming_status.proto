@@ -6,17 +6,34 @@ service BundleService {
   // rpc GetStatusesStream (AddBundlesRequest) returns (stream UserBundleUpdate) {};
   // rpc CoinsInformation (Empty) returns (stream CoinsData) {};
   // rpc UserPubK (UserPk) returns (Response);
+
+  // 1. Simulates the bundle and returns the calculated delta (fees, slippage, minimum output)
+  rpc SimulateBundle(SimulateBundleRequest) returns (BundleDelta) {}
+
+  // 2. Constructs the actual transactions for signing (no longer returns delta)
   rpc CreateTransactions(TransactionsBuld) returns (TransactionsToSign) {}
+
+  // 3. Sends signed transactions to the network
   rpc SendTransactions(SignedTransactions) returns (stream UserBundleUpdate) {}
+
+  // 4. Subscribes to bundle status updates
   rpc SubscribeToBundles(UserBundleRequest) returns (stream UserBundleUpdate) {}
 }
-// pub struct WebTakeQoute {
-//     pub input_mint: String,
-//     pub output_mint: String,
-//     pub amount: u64,
-//     pub slippage_bps: u16,
-//     pub option: Option<QuoteOptions>,
-// }
+
+message SimulateBundleRequest {
+  // List of swaps the user intends to make in this bundle
+  repeated SwapSimulationRequest swaps = 1;
+}
+
+message SwapSimulationRequest {
+  string id = 1;
+  string input_mint = 2;
+  uint64 input_amount = 3;
+  string output_mint = 4;
+  uint64 expected_output = 5;
+  // Slippage in basis points (e.g., 50 for 0.5%)
+  uint32 slippage_bps = 6;
+}
 
 message UserBundleRequest {
   string user_pk = 1;
@@ -35,17 +52,14 @@ message BuiltTransaction {
 
 message TransactionsToSign {
   repeated BuiltTransaction transactions = 1;
-  BundleDelta delta = 2;
+  // BundleDelta has been removed from here.
+  // It is now obtained via the SimulateBundle endpoint.
 }
 
 message BundleDelta {
   repeated TransactionDelta swaps = 1;
   uint64 jito_tip_lamports = 2;
   uint64 total_network_fee_lamports = 3;
-}
-
-message TransactionsBuld {
-  repeated TrasnactionInstruction transactions = 1;
 }
 
 message TransactionDelta {
@@ -58,6 +72,10 @@ message TransactionDelta {
   uint64 network_fee_lamports = 7;
   uint32 platform_fee_bps = 8;
   string id = 9;
+}
+
+message TransactionsBuld {
+  repeated TrasnactionInstruction transactions = 1;
 }
 
 message TrasnactionInstruction {

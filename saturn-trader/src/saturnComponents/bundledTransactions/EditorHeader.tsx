@@ -55,13 +55,13 @@ export function EditorHeader({
       <div className="flex flex-col flex-1 min-w-40">
         <input
           value={activeTemplate.name}
-          maxLength={43}
-          onChange={(e) =>
+          maxLength={25}
+          onChange={(e) => {
             updateActiveTemplate({
               ...activeTemplate,
               name: e.target.value,
-            })
-          }
+            });
+          }}
           className="text-2xl font-bold w-full bg-transparent border-none outline-none text-white focus:ring-0 p-0 hover:bg-zinc-900/50 rounded transition-colors truncate"
           placeholder="Template Name..."
         />
