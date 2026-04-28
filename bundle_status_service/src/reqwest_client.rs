@@ -263,8 +263,7 @@ impl HttpManager {
             .get(binance_url)
             .send()
             .await
-            .map_err(|e| tracing::error!("Failed to fetch Binance exchangeInfo: {}", e))
-            .unwrap()
+            .map_err(|e| anyhow::anyhow!("Failed to fetch Binance exchangeInfo: {}", e))?
             .json()
             .await
             .map_err(|e| {
@@ -287,8 +286,7 @@ impl HttpManager {
             .query(&[("query", query)])
             .send()
             .await
-            .map_err(|e| tracing::error!("Failed to fetch Jupiter tokens: {}", e))
-            .unwrap()
+            .map_err(|e| anyhow::anyhow!("Failed to fetch Jupiter tokens: {}", e))?
             .json()
             .await
             .map_err(|e| {
@@ -318,8 +316,7 @@ impl HttpManager {
                 .query(&[("query", query.join(","))])
                 .send()
                 .await
-                .map_err(|e| tracing::error!("Failed to fetch image data: {}", e))
-                .unwrap()
+                .map_err(|e| anyhow::anyhow!("Failed to fetch image data: {}", e))?
                 .json()
                 .await
                 .map_err(|e| {

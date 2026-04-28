@@ -1,7 +1,6 @@
 use crate::prelude::*;
 use common::traits::{InstructionParser, TransactionBuilder};
 use jupiter_trader_data::models::jupiter_models::JupiterSwapInstructionsRsponse;
-use redis::aio::MultiplexedConnection;
 use saturn_errors::error::{ATlError, BuildTransactionError, SaturnTransactionsServiceError};
 use saturn_errors::models::Instruction as JupiterInstruction;
 use solana_client::nonblocking::rpc_client::RpcClient;
@@ -14,19 +13,19 @@ use std::str::FromStr;
 
 pub struct SolanaTransactionsBuilder<P> {
     pub rpc_client: Arc<RpcClient>,
-    pub alt_redis: MultiplexedConnection,
+    // pub alt_redis: MultiplexedConnection,
     pub parser: P,
 }
 
 impl<P> SolanaTransactionsBuilder<P> {
     pub fn new(
         rpc_client: Arc<RpcClient>,
-        alt_redis: redis::aio::MultiplexedConnection,
+        // alt_redis: redis::aio::MultiplexedConnection,
         parser: P,
     ) -> Self {
         Self {
             rpc_client,
-            alt_redis,
+            // alt_redis,
             parser,
         }
     }

@@ -1,3 +1,4 @@
+#![recursion_limit = "256"]
 use std::sync::Arc;
 
 use bundle_status_service::prelude::RetryConfig;

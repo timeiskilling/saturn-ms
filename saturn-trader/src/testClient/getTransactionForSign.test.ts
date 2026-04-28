@@ -50,13 +50,7 @@ test("getTransactionForSign", async () => {
       expect(typeof firstTx.transactionBase58).toBe("string");
     }
 
-    // Check that delta information was calculated and returned
-    expect(response.delta).toBeDefined();
-    expect(response.delta?.swaps?.length).toBeGreaterThan(0);
-    expect(Number(response.delta?.totalNetworkFeeLamports)).toBeTypeOf(
-      "number",
-    );
-    expect(Number(response.delta?.totalNetworkFeeLamports)).toBeGreaterThan(0);
+    // Note: delta information is now obtained via the simulateBundle endpoint
   } catch (error) {
     // If the server isn't running or returns an error, the test should fail gracefully
     console.error("gRPC Error:", error);

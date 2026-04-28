@@ -51,6 +51,39 @@ $root.streaming = (function() {
         };
 
         /**
+         * Callback as used by {@link streaming.BundleService#simulateBundle}.
+         * @memberof streaming.BundleService
+         * @typedef SimulateBundleCallback
+         * @type {function}
+         * @param {Error|null} error Error, if any
+         * @param {streaming.BundleDelta} [response] BundleDelta
+         */
+
+        /**
+         * Calls SimulateBundle.
+         * @function simulateBundle
+         * @memberof streaming.BundleService
+         * @instance
+         * @param {streaming.ISimulateBundleRequest} request SimulateBundleRequest message or plain object
+         * @param {streaming.BundleService.SimulateBundleCallback} callback Node-style callback called with the error, if any, and BundleDelta
+         * @returns {undefined}
+         * @variation 1
+         */
+        Object.defineProperty(BundleService.prototype.simulateBundle = function simulateBundle(request, callback) {
+            return this.rpcCall(simulateBundle, $root.streaming.SimulateBundleRequest, $root.streaming.BundleDelta, request, callback);
+        }, "name", { value: "SimulateBundle" });
+
+        /**
+         * Calls SimulateBundle.
+         * @function simulateBundle
+         * @memberof streaming.BundleService
+         * @instance
+         * @param {streaming.ISimulateBundleRequest} request SimulateBundleRequest message or plain object
+         * @returns {Promise<streaming.BundleDelta>} Promise
+         * @variation 2
+         */
+
+        /**
          * Callback as used by {@link streaming.BundleService#createTransactions}.
          * @memberof streaming.BundleService
          * @typedef CreateTransactionsCallback
@@ -150,6 +183,581 @@ $root.streaming = (function() {
          */
 
         return BundleService;
+    })();
+
+    streaming.SimulateBundleRequest = (function() {
+
+        /**
+         * Properties of a SimulateBundleRequest.
+         * @memberof streaming
+         * @interface ISimulateBundleRequest
+         * @property {Array.<streaming.ISwapSimulationRequest>|null} [swaps] SimulateBundleRequest swaps
+         */
+
+        /**
+         * Constructs a new SimulateBundleRequest.
+         * @memberof streaming
+         * @classdesc Represents a SimulateBundleRequest.
+         * @implements ISimulateBundleRequest
+         * @constructor
+         * @param {streaming.ISimulateBundleRequest=} [properties] Properties to set
+         */
+        function SimulateBundleRequest(properties) {
+            this.swaps = [];
+            if (properties)
+                for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null)
+                        this[keys[i]] = properties[keys[i]];
+        }
+
+        /**
+         * SimulateBundleRequest swaps.
+         * @member {Array.<streaming.ISwapSimulationRequest>} swaps
+         * @memberof streaming.SimulateBundleRequest
+         * @instance
+         */
+        SimulateBundleRequest.prototype.swaps = $util.emptyArray;
+
+        /**
+         * Creates a new SimulateBundleRequest instance using the specified properties.
+         * @function create
+         * @memberof streaming.SimulateBundleRequest
+         * @static
+         * @param {streaming.ISimulateBundleRequest=} [properties] Properties to set
+         * @returns {streaming.SimulateBundleRequest} SimulateBundleRequest instance
+         */
+        SimulateBundleRequest.create = function create(properties) {
+            return new SimulateBundleRequest(properties);
+        };
+
+        /**
+         * Encodes the specified SimulateBundleRequest message. Does not implicitly {@link streaming.SimulateBundleRequest.verify|verify} messages.
+         * @function encode
+         * @memberof streaming.SimulateBundleRequest
+         * @static
+         * @param {streaming.ISimulateBundleRequest} message SimulateBundleRequest message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        SimulateBundleRequest.encode = function encode(message, writer) {
+            if (!writer)
+                writer = $Writer.create();
+            if (message.swaps != null && message.swaps.length)
+                for (var i = 0; i < message.swaps.length; ++i)
+                    $root.streaming.SwapSimulationRequest.encode(message.swaps[i], writer.uint32(/* id 1, wireType 2 =*/10).fork()).ldelim();
+            return writer;
+        };
+
+        /**
+         * Encodes the specified SimulateBundleRequest message, length delimited. Does not implicitly {@link streaming.SimulateBundleRequest.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof streaming.SimulateBundleRequest
+         * @static
+         * @param {streaming.ISimulateBundleRequest} message SimulateBundleRequest message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        SimulateBundleRequest.encodeDelimited = function encodeDelimited(message, writer) {
+            return this.encode(message, writer).ldelim();
+        };
+
+        /**
+         * Decodes a SimulateBundleRequest message from the specified reader or buffer.
+         * @function decode
+         * @memberof streaming.SimulateBundleRequest
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {streaming.SimulateBundleRequest} SimulateBundleRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        SimulateBundleRequest.decode = function decode(reader, length, error) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.SimulateBundleRequest();
+            while (reader.pos < end) {
+                var tag = reader.uint32();
+                if (tag === error)
+                    break;
+                switch (tag >>> 3) {
+                case 1: {
+                        if (!(message.swaps && message.swaps.length))
+                            message.swaps = [];
+                        message.swaps.push($root.streaming.SwapSimulationRequest.decode(reader, reader.uint32()));
+                        break;
+                    }
+                default:
+                    reader.skipType(tag & 7);
+                    break;
+                }
+            }
+            return message;
+        };
+
+        /**
+         * Decodes a SimulateBundleRequest message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof streaming.SimulateBundleRequest
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {streaming.SimulateBundleRequest} SimulateBundleRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        SimulateBundleRequest.decodeDelimited = function decodeDelimited(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies a SimulateBundleRequest message.
+         * @function verify
+         * @memberof streaming.SimulateBundleRequest
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        SimulateBundleRequest.verify = function verify(message) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            if (message.swaps != null && message.hasOwnProperty("swaps")) {
+                if (!Array.isArray(message.swaps))
+                    return "swaps: array expected";
+                for (var i = 0; i < message.swaps.length; ++i) {
+                    var error = $root.streaming.SwapSimulationRequest.verify(message.swaps[i]);
+                    if (error)
+                        return "swaps." + error;
+                }
+            }
+            return null;
+        };
+
+        /**
+         * Creates a SimulateBundleRequest message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof streaming.SimulateBundleRequest
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {streaming.SimulateBundleRequest} SimulateBundleRequest
+         */
+        SimulateBundleRequest.fromObject = function fromObject(object) {
+            if (object instanceof $root.streaming.SimulateBundleRequest)
+                return object;
+            var message = new $root.streaming.SimulateBundleRequest();
+            if (object.swaps) {
+                if (!Array.isArray(object.swaps))
+                    throw TypeError(".streaming.SimulateBundleRequest.swaps: array expected");
+                message.swaps = [];
+                for (var i = 0; i < object.swaps.length; ++i) {
+                    if (typeof object.swaps[i] !== "object")
+                        throw TypeError(".streaming.SimulateBundleRequest.swaps: object expected");
+                    message.swaps[i] = $root.streaming.SwapSimulationRequest.fromObject(object.swaps[i]);
+                }
+            }
+            return message;
+        };
+
+        /**
+         * Creates a plain object from a SimulateBundleRequest message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof streaming.SimulateBundleRequest
+         * @static
+         * @param {streaming.SimulateBundleRequest} message SimulateBundleRequest
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        SimulateBundleRequest.toObject = function toObject(message, options) {
+            if (!options)
+                options = {};
+            var object = {};
+            if (options.arrays || options.defaults)
+                object.swaps = [];
+            if (message.swaps && message.swaps.length) {
+                object.swaps = [];
+                for (var j = 0; j < message.swaps.length; ++j)
+                    object.swaps[j] = $root.streaming.SwapSimulationRequest.toObject(message.swaps[j], options);
+            }
+            return object;
+        };
+
+        /**
+         * Converts this SimulateBundleRequest to JSON.
+         * @function toJSON
+         * @memberof streaming.SimulateBundleRequest
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        SimulateBundleRequest.prototype.toJSON = function toJSON() {
+            return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        /**
+         * Gets the default type url for SimulateBundleRequest
+         * @function getTypeUrl
+         * @memberof streaming.SimulateBundleRequest
+         * @static
+         * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns {string} The default type url
+         */
+        SimulateBundleRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+            if (typeUrlPrefix === undefined) {
+                typeUrlPrefix = "type.googleapis.com";
+            }
+            return typeUrlPrefix + "/streaming.SimulateBundleRequest";
+        };
+
+        return SimulateBundleRequest;
+    })();
+
+    streaming.SwapSimulationRequest = (function() {
+
+        /**
+         * Properties of a SwapSimulationRequest.
+         * @memberof streaming
+         * @interface ISwapSimulationRequest
+         * @property {string|null} [id] SwapSimulationRequest id
+         * @property {string|null} [inputMint] SwapSimulationRequest inputMint
+         * @property {number|Long|null} [inputAmount] SwapSimulationRequest inputAmount
+         * @property {string|null} [outputMint] SwapSimulationRequest outputMint
+         * @property {number|Long|null} [expectedOutput] SwapSimulationRequest expectedOutput
+         * @property {number|null} [slippageBps] SwapSimulationRequest slippageBps
+         */
+
+        /**
+         * Constructs a new SwapSimulationRequest.
+         * @memberof streaming
+         * @classdesc Represents a SwapSimulationRequest.
+         * @implements ISwapSimulationRequest
+         * @constructor
+         * @param {streaming.ISwapSimulationRequest=} [properties] Properties to set
+         */
+        function SwapSimulationRequest(properties) {
+            if (properties)
+                for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null)
+                        this[keys[i]] = properties[keys[i]];
+        }
+
+        /**
+         * SwapSimulationRequest id.
+         * @member {string} id
+         * @memberof streaming.SwapSimulationRequest
+         * @instance
+         */
+        SwapSimulationRequest.prototype.id = "";
+
+        /**
+         * SwapSimulationRequest inputMint.
+         * @member {string} inputMint
+         * @memberof streaming.SwapSimulationRequest
+         * @instance
+         */
+        SwapSimulationRequest.prototype.inputMint = "";
+
+        /**
+         * SwapSimulationRequest inputAmount.
+         * @member {number|Long} inputAmount
+         * @memberof streaming.SwapSimulationRequest
+         * @instance
+         */
+        SwapSimulationRequest.prototype.inputAmount = $util.Long ? $util.Long.fromBits(0,0,true) : 0;
+
+        /**
+         * SwapSimulationRequest outputMint.
+         * @member {string} outputMint
+         * @memberof streaming.SwapSimulationRequest
+         * @instance
+         */
+        SwapSimulationRequest.prototype.outputMint = "";
+
+        /**
+         * SwapSimulationRequest expectedOutput.
+         * @member {number|Long} expectedOutput
+         * @memberof streaming.SwapSimulationRequest
+         * @instance
+         */
+        SwapSimulationRequest.prototype.expectedOutput = $util.Long ? $util.Long.fromBits(0,0,true) : 0;
+
+        /**
+         * SwapSimulationRequest slippageBps.
+         * @member {number} slippageBps
+         * @memberof streaming.SwapSimulationRequest
+         * @instance
+         */
+        SwapSimulationRequest.prototype.slippageBps = 0;
+
+        /**
+         * Creates a new SwapSimulationRequest instance using the specified properties.
+         * @function create
+         * @memberof streaming.SwapSimulationRequest
+         * @static
+         * @param {streaming.ISwapSimulationRequest=} [properties] Properties to set
+         * @returns {streaming.SwapSimulationRequest} SwapSimulationRequest instance
+         */
+        SwapSimulationRequest.create = function create(properties) {
+            return new SwapSimulationRequest(properties);
+        };
+
+        /**
+         * Encodes the specified SwapSimulationRequest message. Does not implicitly {@link streaming.SwapSimulationRequest.verify|verify} messages.
+         * @function encode
+         * @memberof streaming.SwapSimulationRequest
+         * @static
+         * @param {streaming.ISwapSimulationRequest} message SwapSimulationRequest message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        SwapSimulationRequest.encode = function encode(message, writer) {
+            if (!writer)
+                writer = $Writer.create();
+            if (message.id != null && Object.hasOwnProperty.call(message, "id"))
+                writer.uint32(/* id 1, wireType 2 =*/10).string(message.id);
+            if (message.inputMint != null && Object.hasOwnProperty.call(message, "inputMint"))
+                writer.uint32(/* id 2, wireType 2 =*/18).string(message.inputMint);
+            if (message.inputAmount != null && Object.hasOwnProperty.call(message, "inputAmount"))
+                writer.uint32(/* id 3, wireType 0 =*/24).uint64(message.inputAmount);
+            if (message.outputMint != null && Object.hasOwnProperty.call(message, "outputMint"))
+                writer.uint32(/* id 4, wireType 2 =*/34).string(message.outputMint);
+            if (message.expectedOutput != null && Object.hasOwnProperty.call(message, "expectedOutput"))
+                writer.uint32(/* id 5, wireType 0 =*/40).uint64(message.expectedOutput);
+            if (message.slippageBps != null && Object.hasOwnProperty.call(message, "slippageBps"))
+                writer.uint32(/* id 6, wireType 0 =*/48).uint32(message.slippageBps);
+            return writer;
+        };
+
+        /**
+         * Encodes the specified SwapSimulationRequest message, length delimited. Does not implicitly {@link streaming.SwapSimulationRequest.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof streaming.SwapSimulationRequest
+         * @static
+         * @param {streaming.ISwapSimulationRequest} message SwapSimulationRequest message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        SwapSimulationRequest.encodeDelimited = function encodeDelimited(message, writer) {
+            return this.encode(message, writer).ldelim();
+        };
+
+        /**
+         * Decodes a SwapSimulationRequest message from the specified reader or buffer.
+         * @function decode
+         * @memberof streaming.SwapSimulationRequest
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {streaming.SwapSimulationRequest} SwapSimulationRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        SwapSimulationRequest.decode = function decode(reader, length, error) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.SwapSimulationRequest();
+            while (reader.pos < end) {
+                var tag = reader.uint32();
+                if (tag === error)
+                    break;
+                switch (tag >>> 3) {
+                case 1: {
+                        message.id = reader.string();
+                        break;
+                    }
+                case 2: {
+                        message.inputMint = reader.string();
+                        break;
+                    }
+                case 3: {
+                        message.inputAmount = reader.uint64();
+                        break;
+                    }
+                case 4: {
+                        message.outputMint = reader.string();
+                        break;
+                    }
+                case 5: {
+                        message.expectedOutput = reader.uint64();
+                        break;
+                    }
+                case 6: {
+                        message.slippageBps = reader.uint32();
+                        break;
+                    }
+                default:
+                    reader.skipType(tag & 7);
+                    break;
+                }
+            }
+            return message;
+        };
+
+        /**
+         * Decodes a SwapSimulationRequest message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof streaming.SwapSimulationRequest
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {streaming.SwapSimulationRequest} SwapSimulationRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        SwapSimulationRequest.decodeDelimited = function decodeDelimited(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies a SwapSimulationRequest message.
+         * @function verify
+         * @memberof streaming.SwapSimulationRequest
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        SwapSimulationRequest.verify = function verify(message) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            if (message.id != null && message.hasOwnProperty("id"))
+                if (!$util.isString(message.id))
+                    return "id: string expected";
+            if (message.inputMint != null && message.hasOwnProperty("inputMint"))
+                if (!$util.isString(message.inputMint))
+                    return "inputMint: string expected";
+            if (message.inputAmount != null && message.hasOwnProperty("inputAmount"))
+                if (!$util.isInteger(message.inputAmount) && !(message.inputAmount && $util.isInteger(message.inputAmount.low) && $util.isInteger(message.inputAmount.high)))
+                    return "inputAmount: integer|Long expected";
+            if (message.outputMint != null && message.hasOwnProperty("outputMint"))
+                if (!$util.isString(message.outputMint))
+                    return "outputMint: string expected";
+            if (message.expectedOutput != null && message.hasOwnProperty("expectedOutput"))
+                if (!$util.isInteger(message.expectedOutput) && !(message.expectedOutput && $util.isInteger(message.expectedOutput.low) && $util.isInteger(message.expectedOutput.high)))
+                    return "expectedOutput: integer|Long expected";
+            if (message.slippageBps != null && message.hasOwnProperty("slippageBps"))
+                if (!$util.isInteger(message.slippageBps))
+                    return "slippageBps: integer expected";
+            return null;
+        };
+
+        /**
+         * Creates a SwapSimulationRequest message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof streaming.SwapSimulationRequest
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {streaming.SwapSimulationRequest} SwapSimulationRequest
+         */
+        SwapSimulationRequest.fromObject = function fromObject(object) {
+            if (object instanceof $root.streaming.SwapSimulationRequest)
+                return object;
+            var message = new $root.streaming.SwapSimulationRequest();
+            if (object.id != null)
+                message.id = String(object.id);
+            if (object.inputMint != null)
+                message.inputMint = String(object.inputMint);
+            if (object.inputAmount != null)
+                if ($util.Long)
+                    (message.inputAmount = $util.Long.fromValue(object.inputAmount)).unsigned = true;
+                else if (typeof object.inputAmount === "string")
+                    message.inputAmount = parseInt(object.inputAmount, 10);
+                else if (typeof object.inputAmount === "number")
+                    message.inputAmount = object.inputAmount;
+                else if (typeof object.inputAmount === "object")
+                    message.inputAmount = new $util.LongBits(object.inputAmount.low >>> 0, object.inputAmount.high >>> 0).toNumber(true);
+            if (object.outputMint != null)
+                message.outputMint = String(object.outputMint);
+            if (object.expectedOutput != null)
+                if ($util.Long)
+                    (message.expectedOutput = $util.Long.fromValue(object.expectedOutput)).unsigned = true;
+                else if (typeof object.expectedOutput === "string")
+                    message.expectedOutput = parseInt(object.expectedOutput, 10);
+                else if (typeof object.expectedOutput === "number")
+                    message.expectedOutput = object.expectedOutput;
+                else if (typeof object.expectedOutput === "object")
+                    message.expectedOutput = new $util.LongBits(object.expectedOutput.low >>> 0, object.expectedOutput.high >>> 0).toNumber(true);
+            if (object.slippageBps != null)
+                message.slippageBps = object.slippageBps >>> 0;
+            return message;
+        };
+
+        /**
+         * Creates a plain object from a SwapSimulationRequest message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof streaming.SwapSimulationRequest
+         * @static
+         * @param {streaming.SwapSimulationRequest} message SwapSimulationRequest
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        SwapSimulationRequest.toObject = function toObject(message, options) {
+            if (!options)
+                options = {};
+            var object = {};
+            if (options.defaults) {
+                object.id = "";
+                object.inputMint = "";
+                if ($util.Long) {
+                    var long = new $util.Long(0, 0, true);
+                    object.inputAmount = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
+                } else
+                    object.inputAmount = options.longs === String ? "0" : 0;
+                object.outputMint = "";
+                if ($util.Long) {
+                    var long = new $util.Long(0, 0, true);
+                    object.expectedOutput = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
+                } else
+                    object.expectedOutput = options.longs === String ? "0" : 0;
+                object.slippageBps = 0;
+            }
+            if (message.id != null && message.hasOwnProperty("id"))
+                object.id = message.id;
+            if (message.inputMint != null && message.hasOwnProperty("inputMint"))
+                object.inputMint = message.inputMint;
+            if (message.inputAmount != null && message.hasOwnProperty("inputAmount"))
+                if (typeof message.inputAmount === "number")
+                    object.inputAmount = options.longs === String ? String(message.inputAmount) : message.inputAmount;
+                else
+                    object.inputAmount = options.longs === String ? $util.Long.prototype.toString.call(message.inputAmount) : options.longs === Number ? new $util.LongBits(message.inputAmount.low >>> 0, message.inputAmount.high >>> 0).toNumber(true) : message.inputAmount;
+            if (message.outputMint != null && message.hasOwnProperty("outputMint"))
+                object.outputMint = message.outputMint;
+            if (message.expectedOutput != null && message.hasOwnProperty("expectedOutput"))
+                if (typeof message.expectedOutput === "number")
+                    object.expectedOutput = options.longs === String ? String(message.expectedOutput) : message.expectedOutput;
+                else
+                    object.expectedOutput = options.longs === String ? $util.Long.prototype.toString.call(message.expectedOutput) : options.longs === Number ? new $util.LongBits(message.expectedOutput.low >>> 0, message.expectedOutput.high >>> 0).toNumber(true) : message.expectedOutput;
+            if (message.slippageBps != null && message.hasOwnProperty("slippageBps"))
+                object.slippageBps = message.slippageBps;
+            return object;
+        };
+
+        /**
+         * Converts this SwapSimulationRequest to JSON.
+         * @function toJSON
+         * @memberof streaming.SwapSimulationRequest
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        SwapSimulationRequest.prototype.toJSON = function toJSON() {
+            return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        /**
+         * Gets the default type url for SwapSimulationRequest
+         * @function getTypeUrl
+         * @memberof streaming.SwapSimulationRequest
+         * @static
+         * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns {string} The default type url
+         */
+        SwapSimulationRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+            if (typeUrlPrefix === undefined) {
+                typeUrlPrefix = "type.googleapis.com";
+            }
+            return typeUrlPrefix + "/streaming.SwapSimulationRequest";
+        };
+
+        return SwapSimulationRequest;
     })();
 
     streaming.UserBundleRequest = (function() {
@@ -875,7 +1483,6 @@ $root.streaming = (function() {
          * @memberof streaming
          * @interface ITransactionsToSign
          * @property {Array.<streaming.IBuiltTransaction>|null} [transactions] TransactionsToSign transactions
-         * @property {streaming.IBundleDelta|null} [delta] TransactionsToSign delta
          */
 
         /**
@@ -901,14 +1508,6 @@ $root.streaming = (function() {
          * @instance
          */
         TransactionsToSign.prototype.transactions = $util.emptyArray;
-
-        /**
-         * TransactionsToSign delta.
-         * @member {streaming.IBundleDelta|null|undefined} delta
-         * @memberof streaming.TransactionsToSign
-         * @instance
-         */
-        TransactionsToSign.prototype.delta = null;
 
         /**
          * Creates a new TransactionsToSign instance using the specified properties.
@@ -937,8 +1536,6 @@ $root.streaming = (function() {
             if (message.transactions != null && message.transactions.length)
                 for (var i = 0; i < message.transactions.length; ++i)
                     $root.streaming.BuiltTransaction.encode(message.transactions[i], writer.uint32(/* id 1, wireType 2 =*/10).fork()).ldelim();
-            if (message.delta != null && Object.hasOwnProperty.call(message, "delta"))
-                $root.streaming.BundleDelta.encode(message.delta, writer.uint32(/* id 2, wireType 2 =*/18).fork()).ldelim();
             return writer;
         };
 
@@ -979,10 +1576,6 @@ $root.streaming = (function() {
                         if (!(message.transactions && message.transactions.length))
                             message.transactions = [];
                         message.transactions.push($root.streaming.BuiltTransaction.decode(reader, reader.uint32()));
-                        break;
-                    }
-                case 2: {
-                        message.delta = $root.streaming.BundleDelta.decode(reader, reader.uint32());
                         break;
                     }
                 default:
@@ -1029,11 +1622,6 @@ $root.streaming = (function() {
                         return "transactions." + error;
                 }
             }
-            if (message.delta != null && message.hasOwnProperty("delta")) {
-                var error = $root.streaming.BundleDelta.verify(message.delta);
-                if (error)
-                    return "delta." + error;
-            }
             return null;
         };
 
@@ -1059,11 +1647,6 @@ $root.streaming = (function() {
                     message.transactions[i] = $root.streaming.BuiltTransaction.fromObject(object.transactions[i]);
                 }
             }
-            if (object.delta != null) {
-                if (typeof object.delta !== "object")
-                    throw TypeError(".streaming.TransactionsToSign.delta: object expected");
-                message.delta = $root.streaming.BundleDelta.fromObject(object.delta);
-            }
             return message;
         };
 
@@ -1082,15 +1665,11 @@ $root.streaming = (function() {
             var object = {};
             if (options.arrays || options.defaults)
                 object.transactions = [];
-            if (options.defaults)
-                object.delta = null;
             if (message.transactions && message.transactions.length) {
                 object.transactions = [];
                 for (var j = 0; j < message.transactions.length; ++j)
                     object.transactions[j] = $root.streaming.BuiltTransaction.toObject(message.transactions[j], options);
             }
-            if (message.delta != null && message.hasOwnProperty("delta"))
-                object.delta = $root.streaming.BundleDelta.toObject(message.delta, options);
             return object;
         };
 
@@ -1423,232 +2002,6 @@ $root.streaming = (function() {
         };
 
         return BundleDelta;
-    })();
-
-    streaming.TransactionsBuld = (function() {
-
-        /**
-         * Properties of a TransactionsBuld.
-         * @memberof streaming
-         * @interface ITransactionsBuld
-         * @property {Array.<streaming.ITrasnactionInstruction>|null} [transactions] TransactionsBuld transactions
-         */
-
-        /**
-         * Constructs a new TransactionsBuld.
-         * @memberof streaming
-         * @classdesc Represents a TransactionsBuld.
-         * @implements ITransactionsBuld
-         * @constructor
-         * @param {streaming.ITransactionsBuld=} [properties] Properties to set
-         */
-        function TransactionsBuld(properties) {
-            this.transactions = [];
-            if (properties)
-                for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
-                    if (properties[keys[i]] != null)
-                        this[keys[i]] = properties[keys[i]];
-        }
-
-        /**
-         * TransactionsBuld transactions.
-         * @member {Array.<streaming.ITrasnactionInstruction>} transactions
-         * @memberof streaming.TransactionsBuld
-         * @instance
-         */
-        TransactionsBuld.prototype.transactions = $util.emptyArray;
-
-        /**
-         * Creates a new TransactionsBuld instance using the specified properties.
-         * @function create
-         * @memberof streaming.TransactionsBuld
-         * @static
-         * @param {streaming.ITransactionsBuld=} [properties] Properties to set
-         * @returns {streaming.TransactionsBuld} TransactionsBuld instance
-         */
-        TransactionsBuld.create = function create(properties) {
-            return new TransactionsBuld(properties);
-        };
-
-        /**
-         * Encodes the specified TransactionsBuld message. Does not implicitly {@link streaming.TransactionsBuld.verify|verify} messages.
-         * @function encode
-         * @memberof streaming.TransactionsBuld
-         * @static
-         * @param {streaming.ITransactionsBuld} message TransactionsBuld message or plain object to encode
-         * @param {$protobuf.Writer} [writer] Writer to encode to
-         * @returns {$protobuf.Writer} Writer
-         */
-        TransactionsBuld.encode = function encode(message, writer) {
-            if (!writer)
-                writer = $Writer.create();
-            if (message.transactions != null && message.transactions.length)
-                for (var i = 0; i < message.transactions.length; ++i)
-                    $root.streaming.TrasnactionInstruction.encode(message.transactions[i], writer.uint32(/* id 1, wireType 2 =*/10).fork()).ldelim();
-            return writer;
-        };
-
-        /**
-         * Encodes the specified TransactionsBuld message, length delimited. Does not implicitly {@link streaming.TransactionsBuld.verify|verify} messages.
-         * @function encodeDelimited
-         * @memberof streaming.TransactionsBuld
-         * @static
-         * @param {streaming.ITransactionsBuld} message TransactionsBuld message or plain object to encode
-         * @param {$protobuf.Writer} [writer] Writer to encode to
-         * @returns {$protobuf.Writer} Writer
-         */
-        TransactionsBuld.encodeDelimited = function encodeDelimited(message, writer) {
-            return this.encode(message, writer).ldelim();
-        };
-
-        /**
-         * Decodes a TransactionsBuld message from the specified reader or buffer.
-         * @function decode
-         * @memberof streaming.TransactionsBuld
-         * @static
-         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-         * @param {number} [length] Message length if known beforehand
-         * @returns {streaming.TransactionsBuld} TransactionsBuld
-         * @throws {Error} If the payload is not a reader or valid buffer
-         * @throws {$protobuf.util.ProtocolError} If required fields are missing
-         */
-        TransactionsBuld.decode = function decode(reader, length, error) {
-            if (!(reader instanceof $Reader))
-                reader = $Reader.create(reader);
-            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.TransactionsBuld();
-            while (reader.pos < end) {
-                var tag = reader.uint32();
-                if (tag === error)
-                    break;
-                switch (tag >>> 3) {
-                case 1: {
-                        if (!(message.transactions && message.transactions.length))
-                            message.transactions = [];
-                        message.transactions.push($root.streaming.TrasnactionInstruction.decode(reader, reader.uint32()));
-                        break;
-                    }
-                default:
-                    reader.skipType(tag & 7);
-                    break;
-                }
-            }
-            return message;
-        };
-
-        /**
-         * Decodes a TransactionsBuld message from the specified reader or buffer, length delimited.
-         * @function decodeDelimited
-         * @memberof streaming.TransactionsBuld
-         * @static
-         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-         * @returns {streaming.TransactionsBuld} TransactionsBuld
-         * @throws {Error} If the payload is not a reader or valid buffer
-         * @throws {$protobuf.util.ProtocolError} If required fields are missing
-         */
-        TransactionsBuld.decodeDelimited = function decodeDelimited(reader) {
-            if (!(reader instanceof $Reader))
-                reader = new $Reader(reader);
-            return this.decode(reader, reader.uint32());
-        };
-
-        /**
-         * Verifies a TransactionsBuld message.
-         * @function verify
-         * @memberof streaming.TransactionsBuld
-         * @static
-         * @param {Object.<string,*>} message Plain object to verify
-         * @returns {string|null} `null` if valid, otherwise the reason why it is not
-         */
-        TransactionsBuld.verify = function verify(message) {
-            if (typeof message !== "object" || message === null)
-                return "object expected";
-            if (message.transactions != null && message.hasOwnProperty("transactions")) {
-                if (!Array.isArray(message.transactions))
-                    return "transactions: array expected";
-                for (var i = 0; i < message.transactions.length; ++i) {
-                    var error = $root.streaming.TrasnactionInstruction.verify(message.transactions[i]);
-                    if (error)
-                        return "transactions." + error;
-                }
-            }
-            return null;
-        };
-
-        /**
-         * Creates a TransactionsBuld message from a plain object. Also converts values to their respective internal types.
-         * @function fromObject
-         * @memberof streaming.TransactionsBuld
-         * @static
-         * @param {Object.<string,*>} object Plain object
-         * @returns {streaming.TransactionsBuld} TransactionsBuld
-         */
-        TransactionsBuld.fromObject = function fromObject(object) {
-            if (object instanceof $root.streaming.TransactionsBuld)
-                return object;
-            var message = new $root.streaming.TransactionsBuld();
-            if (object.transactions) {
-                if (!Array.isArray(object.transactions))
-                    throw TypeError(".streaming.TransactionsBuld.transactions: array expected");
-                message.transactions = [];
-                for (var i = 0; i < object.transactions.length; ++i) {
-                    if (typeof object.transactions[i] !== "object")
-                        throw TypeError(".streaming.TransactionsBuld.transactions: object expected");
-                    message.transactions[i] = $root.streaming.TrasnactionInstruction.fromObject(object.transactions[i]);
-                }
-            }
-            return message;
-        };
-
-        /**
-         * Creates a plain object from a TransactionsBuld message. Also converts values to other types if specified.
-         * @function toObject
-         * @memberof streaming.TransactionsBuld
-         * @static
-         * @param {streaming.TransactionsBuld} message TransactionsBuld
-         * @param {$protobuf.IConversionOptions} [options] Conversion options
-         * @returns {Object.<string,*>} Plain object
-         */
-        TransactionsBuld.toObject = function toObject(message, options) {
-            if (!options)
-                options = {};
-            var object = {};
-            if (options.arrays || options.defaults)
-                object.transactions = [];
-            if (message.transactions && message.transactions.length) {
-                object.transactions = [];
-                for (var j = 0; j < message.transactions.length; ++j)
-                    object.transactions[j] = $root.streaming.TrasnactionInstruction.toObject(message.transactions[j], options);
-            }
-            return object;
-        };
-
-        /**
-         * Converts this TransactionsBuld to JSON.
-         * @function toJSON
-         * @memberof streaming.TransactionsBuld
-         * @instance
-         * @returns {Object.<string,*>} JSON object
-         */
-        TransactionsBuld.prototype.toJSON = function toJSON() {
-            return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
-        };
-
-        /**
-         * Gets the default type url for TransactionsBuld
-         * @function getTypeUrl
-         * @memberof streaming.TransactionsBuld
-         * @static
-         * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
-         * @returns {string} The default type url
-         */
-        TransactionsBuld.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
-            if (typeUrlPrefix === undefined) {
-                typeUrlPrefix = "type.googleapis.com";
-            }
-            return typeUrlPrefix + "/streaming.TransactionsBuld";
-        };
-
-        return TransactionsBuld;
     })();
 
     streaming.TransactionDelta = (function() {
@@ -2109,6 +2462,232 @@ $root.streaming = (function() {
         };
 
         return TransactionDelta;
+    })();
+
+    streaming.TransactionsBuld = (function() {
+
+        /**
+         * Properties of a TransactionsBuld.
+         * @memberof streaming
+         * @interface ITransactionsBuld
+         * @property {Array.<streaming.ITrasnactionInstruction>|null} [transactions] TransactionsBuld transactions
+         */
+
+        /**
+         * Constructs a new TransactionsBuld.
+         * @memberof streaming
+         * @classdesc Represents a TransactionsBuld.
+         * @implements ITransactionsBuld
+         * @constructor
+         * @param {streaming.ITransactionsBuld=} [properties] Properties to set
+         */
+        function TransactionsBuld(properties) {
+            this.transactions = [];
+            if (properties)
+                for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null)
+                        this[keys[i]] = properties[keys[i]];
+        }
+
+        /**
+         * TransactionsBuld transactions.
+         * @member {Array.<streaming.ITrasnactionInstruction>} transactions
+         * @memberof streaming.TransactionsBuld
+         * @instance
+         */
+        TransactionsBuld.prototype.transactions = $util.emptyArray;
+
+        /**
+         * Creates a new TransactionsBuld instance using the specified properties.
+         * @function create
+         * @memberof streaming.TransactionsBuld
+         * @static
+         * @param {streaming.ITransactionsBuld=} [properties] Properties to set
+         * @returns {streaming.TransactionsBuld} TransactionsBuld instance
+         */
+        TransactionsBuld.create = function create(properties) {
+            return new TransactionsBuld(properties);
+        };
+
+        /**
+         * Encodes the specified TransactionsBuld message. Does not implicitly {@link streaming.TransactionsBuld.verify|verify} messages.
+         * @function encode
+         * @memberof streaming.TransactionsBuld
+         * @static
+         * @param {streaming.ITransactionsBuld} message TransactionsBuld message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        TransactionsBuld.encode = function encode(message, writer) {
+            if (!writer)
+                writer = $Writer.create();
+            if (message.transactions != null && message.transactions.length)
+                for (var i = 0; i < message.transactions.length; ++i)
+                    $root.streaming.TrasnactionInstruction.encode(message.transactions[i], writer.uint32(/* id 1, wireType 2 =*/10).fork()).ldelim();
+            return writer;
+        };
+
+        /**
+         * Encodes the specified TransactionsBuld message, length delimited. Does not implicitly {@link streaming.TransactionsBuld.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof streaming.TransactionsBuld
+         * @static
+         * @param {streaming.ITransactionsBuld} message TransactionsBuld message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        TransactionsBuld.encodeDelimited = function encodeDelimited(message, writer) {
+            return this.encode(message, writer).ldelim();
+        };
+
+        /**
+         * Decodes a TransactionsBuld message from the specified reader or buffer.
+         * @function decode
+         * @memberof streaming.TransactionsBuld
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {streaming.TransactionsBuld} TransactionsBuld
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        TransactionsBuld.decode = function decode(reader, length, error) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.TransactionsBuld();
+            while (reader.pos < end) {
+                var tag = reader.uint32();
+                if (tag === error)
+                    break;
+                switch (tag >>> 3) {
+                case 1: {
+                        if (!(message.transactions && message.transactions.length))
+                            message.transactions = [];
+                        message.transactions.push($root.streaming.TrasnactionInstruction.decode(reader, reader.uint32()));
+                        break;
+                    }
+                default:
+                    reader.skipType(tag & 7);
+                    break;
+                }
+            }
+            return message;
+        };
+
+        /**
+         * Decodes a TransactionsBuld message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof streaming.TransactionsBuld
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {streaming.TransactionsBuld} TransactionsBuld
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        TransactionsBuld.decodeDelimited = function decodeDelimited(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies a TransactionsBuld message.
+         * @function verify
+         * @memberof streaming.TransactionsBuld
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        TransactionsBuld.verify = function verify(message) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            if (message.transactions != null && message.hasOwnProperty("transactions")) {
+                if (!Array.isArray(message.transactions))
+                    return "transactions: array expected";
+                for (var i = 0; i < message.transactions.length; ++i) {
+                    var error = $root.streaming.TrasnactionInstruction.verify(message.transactions[i]);
+                    if (error)
+                        return "transactions." + error;
+                }
+            }
+            return null;
+        };
+
+        /**
+         * Creates a TransactionsBuld message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof streaming.TransactionsBuld
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {streaming.TransactionsBuld} TransactionsBuld
+         */
+        TransactionsBuld.fromObject = function fromObject(object) {
+            if (object instanceof $root.streaming.TransactionsBuld)
+                return object;
+            var message = new $root.streaming.TransactionsBuld();
+            if (object.transactions) {
+                if (!Array.isArray(object.transactions))
+                    throw TypeError(".streaming.TransactionsBuld.transactions: array expected");
+                message.transactions = [];
+                for (var i = 0; i < object.transactions.length; ++i) {
+                    if (typeof object.transactions[i] !== "object")
+                        throw TypeError(".streaming.TransactionsBuld.transactions: object expected");
+                    message.transactions[i] = $root.streaming.TrasnactionInstruction.fromObject(object.transactions[i]);
+                }
+            }
+            return message;
+        };
+
+        /**
+         * Creates a plain object from a TransactionsBuld message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof streaming.TransactionsBuld
+         * @static
+         * @param {streaming.TransactionsBuld} message TransactionsBuld
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        TransactionsBuld.toObject = function toObject(message, options) {
+            if (!options)
+                options = {};
+            var object = {};
+            if (options.arrays || options.defaults)
+                object.transactions = [];
+            if (message.transactions && message.transactions.length) {
+                object.transactions = [];
+                for (var j = 0; j < message.transactions.length; ++j)
+                    object.transactions[j] = $root.streaming.TrasnactionInstruction.toObject(message.transactions[j], options);
+            }
+            return object;
+        };
+
+        /**
+         * Converts this TransactionsBuld to JSON.
+         * @function toJSON
+         * @memberof streaming.TransactionsBuld
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        TransactionsBuld.prototype.toJSON = function toJSON() {
+            return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        /**
+         * Gets the default type url for TransactionsBuld
+         * @function getTypeUrl
+         * @memberof streaming.TransactionsBuld
+         * @static
+         * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns {string} The default type url
+         */
+        TransactionsBuld.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+            if (typeUrlPrefix === undefined) {
+                typeUrlPrefix = "type.googleapis.com";
+            }
+            return typeUrlPrefix + "/streaming.TransactionsBuld";
+        };
+
+        return TransactionsBuld;
     })();
 
     streaming.TrasnactionInstruction = (function() {

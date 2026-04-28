@@ -306,7 +306,7 @@ pub struct PriorityLevelWithMaxLamports {
 pub struct RoutePlan {
     #[serde(rename = "swapInfo")]
     pub swap_info: SwapInfo,
-    pub percent: u8,
+    pub percent: f64,
     pub bps: Option<u64>,
     #[serde(rename = "usdValue")]
     pub usd_value: Option<String>,
@@ -316,7 +316,7 @@ pub struct RoutePlan {
 pub struct RoutePlanUltra {
     #[serde(rename = "swapInfo")]
     pub swap_info: SwapInfo,
-    pub percent: u8,
+    pub percent: f64,
     pub bps: u64,
 }
 

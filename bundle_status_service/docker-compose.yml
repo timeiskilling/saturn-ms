@@ -108,7 +108,6 @@ services:
     env_file:
       - ../.env
     environment:
-      # Add environment variables here to override the .env file if necessary to point to this specific cluster
       - REDIS_SENTINEL_URLS=redis://10.0.1.1:26379,redis://10.0.1.2:26379,redis://10.0.1.3:26379
       - REDIS_MASTER_SET=mymaster
     depends_on:
@@ -116,3 +115,21 @@ services:
       - redis-sentinel-2
       - redis-sentinel-3
     restart: unless-stopped
+    command: ["./bundle_status_service"]
+
+  jito-fee-service:
+    build:
+      context: ..
+      dockerfile: bundle_status_service/Dockerfile
+    container_name: jito-fee-service
+    networks:
+      bundle_status_net:
+        ipv4_address: 10.0.1.31
+    env_file:
+      - ../.env
+    environment:
+      - REDIS_URL=redis://redis-master:6379
+    depends_on:
+      - redis-master
+    restart: unless-stopped
+    command: ["./jito_fee_service"]

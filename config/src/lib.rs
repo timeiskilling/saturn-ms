@@ -44,9 +44,8 @@ pub struct Config {
     pub notification_sentinel_urls: Vec<String>,
     pub notification_sentinel_master_name: String,
 
-    pub alt_redis_host: String,
-    pub alt_redis_port: u16,
-
+    // pub alt_redis_host: String,
+    // pub alt_redis_port: u16,
     pub price_redis_host: String,
     pub price_redis_port: u16,
 
@@ -102,9 +101,9 @@ impl Config {
         )
     }
 
-    pub fn alt_redis_url(&self) -> String {
-        format!("redis://{}:{}", self.alt_redis_host, self.alt_redis_port)
-    }
+    // pub fn alt_redis_url(&self) -> String {
+    //     format!("redis://{}:{}", self.alt_redis_host, self.alt_redis_port)
+    // }
 
     pub fn price_redis_url(&self) -> String {
         format!(
@@ -162,9 +161,8 @@ pub fn load() -> Config {
         // jwt_enable_revoked_tokens: env_parse("JWT_ENABLE_REVOKED_TOKENS"),
         jito_tip_redis_host: env_get("JITO_TIP_REDIS_HOST"),
         jito_tip_redis_port: env_parse("JITO_TIP_REDIS_PORT"),
-        alt_redis_host: env_get("ATL_REDIS_HOST"),
-        alt_redis_port: env_parse("ATL_REDIS_PORT"),
-
+        // alt_redis_host: env_get("ATL_REDIS_HOST"),
+        // alt_redis_port: env_parse("ATL_REDIS_PORT"),
         jupiter_api_key: env_get("JUPITER_API_KEY"),
         helius_api_key: env_get("HELIUS_API_KEY"),
 

@@ -1,7 +1,8 @@
 import React, { useRef, useState } from "react";
-import { Trash2, Settings } from "lucide-react";
+import { Trash2, Settings, ChevronDown, ChevronUp } from "lucide-react";
 import { BasicCard } from "../card";
 import { SwapButton } from "../../components/ui/swap-button";
+import { simulateBundle } from "@/api/bundle";
 import {
   type TransactionInstruction,
   type QuoteOptions,
@@ -13,6 +14,7 @@ import { useTokenPrice } from "@/hooks/useTokenPrice";
 import { TokenInputBlock } from "./transactionItem/TokenInputBlock";
 import { AdvancedSettings } from "./transactionItem/AdvancedSettings";
 import { AdvancedSettings as AdvancedSettingsV2 } from "./transactionItem/SettingsV2";
+import { TransactionSimulationDetails } from "./transactionItem/TransactionSimulationDetails";
 
 interface TransactionItemProps {
   tx: TransactionInstruction;
@@ -262,7 +264,18 @@ export const TransactionItem = React.memo(function TransactionItem({
                 }
               />
             </div>
-          </div>
+          </div>{" "}
+          <TransactionSimulationDetails
+            txId={tx.id}
+            amount={tx.amount || "0"}
+            calculatedOutputAmount={calculatedOutputAmount}
+            slippageBps={tx.slippageBps || 50}
+            inputMint={tx.inputMint}
+            outputMint={tx.outputMint}
+            maxDecimals={maxDecimals}
+            outputMaxDecimals={outputMaxDecimals}
+            outputTokenSymbol={outputTokenSymbol || ""}
+          />
         </BasicCard>
       </div>
     </div>

@@ -1,3 +1,5 @@
+#![recursion_limit = "256"]
+
 pub mod blockhash_data;
 pub mod bundle_client;
 pub mod constant;

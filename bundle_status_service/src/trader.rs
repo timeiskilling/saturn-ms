@@ -63,7 +63,7 @@ impl JupiterTrader {
         let config = config::load();
         let transaction_builder = SolanaTransactionsBuilder::new(
             client.clone(),
-            redis_con::connection::atl_redis_conn(&config).await,
+            // redis_con::connection::atl_redis_conn(&config).await,
             JupiterSolanaParser,
         );
 

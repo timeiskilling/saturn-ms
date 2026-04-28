@@ -39,6 +39,7 @@ impl UserStreamNotificationSystem {
     pub fn new(sentinel_urls: Vec<String>, master_name: String) -> Self {
         let cfg = deadpool_redis::sentinel::Config {
             urls: Some(sentinel_urls),
+            connections: None,
             server_type: deadpool_redis::sentinel::SentinelServerType::Master,
             master_name,
             ..Default::default()

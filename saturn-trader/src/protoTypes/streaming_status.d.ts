@@ -24,6 +24,20 @@ export namespace streaming {
         public static create(rpcImpl: $protobuf.RPCImpl, requestDelimited?: boolean, responseDelimited?: boolean): BundleService;
 
         /**
+         * Calls SimulateBundle.
+         * @param request SimulateBundleRequest message or plain object
+         * @param callback Node-style callback called with the error, if any, and BundleDelta
+         */
+        public simulateBundle(request: streaming.ISimulateBundleRequest, callback: streaming.BundleService.SimulateBundleCallback): void;
+
+        /**
+         * Calls SimulateBundle.
+         * @param request SimulateBundleRequest message or plain object
+         * @returns Promise
+         */
+        public simulateBundle(request: streaming.ISimulateBundleRequest): Promise<streaming.BundleDelta>;
+
+        /**
          * Calls CreateTransactions.
          * @param request TransactionsBuld message or plain object
          * @param callback Node-style callback called with the error, if any, and TransactionsToSign
@@ -69,6 +83,13 @@ export namespace streaming {
     namespace BundleService {
 
         /**
+         * Callback as used by {@link streaming.BundleService#simulateBundle}.
+         * @param error Error, if any
+         * @param [response] BundleDelta
+         */
+        type SimulateBundleCallback = (error: (Error|null), response?: streaming.BundleDelta) => void;
+
+        /**
          * Callback as used by {@link streaming.BundleService#createTransactions}.
          * @param error Error, if any
          * @param [response] TransactionsToSign
@@ -88,6 +109,230 @@ export namespace streaming {
          * @param [response] UserBundleUpdate
          */
         type SubscribeToBundlesCallback = (error: (Error|null), response?: streaming.UserBundleUpdate) => void;
+    }
+
+    /** Properties of a SimulateBundleRequest. */
+    interface ISimulateBundleRequest {
+
+        /** SimulateBundleRequest swaps */
+        swaps?: (streaming.ISwapSimulationRequest[]|null);
+    }
+
+    /** Represents a SimulateBundleRequest. */
+    class SimulateBundleRequest implements ISimulateBundleRequest {
+
+        /**
+         * Constructs a new SimulateBundleRequest.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: streaming.ISimulateBundleRequest);
+
+        /** SimulateBundleRequest swaps. */
+        public swaps: streaming.ISwapSimulationRequest[];
+
+        /**
+         * Creates a new SimulateBundleRequest instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns SimulateBundleRequest instance
+         */
+        public static create(properties?: streaming.ISimulateBundleRequest): streaming.SimulateBundleRequest;
+
+        /**
+         * Encodes the specified SimulateBundleRequest message. Does not implicitly {@link streaming.SimulateBundleRequest.verify|verify} messages.
+         * @param message SimulateBundleRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(message: streaming.ISimulateBundleRequest, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Encodes the specified SimulateBundleRequest message, length delimited. Does not implicitly {@link streaming.SimulateBundleRequest.verify|verify} messages.
+         * @param message SimulateBundleRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(message: streaming.ISimulateBundleRequest, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Decodes a SimulateBundleRequest message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns SimulateBundleRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): streaming.SimulateBundleRequest;
+
+        /**
+         * Decodes a SimulateBundleRequest message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns SimulateBundleRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): streaming.SimulateBundleRequest;
+
+        /**
+         * Verifies a SimulateBundleRequest message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): (string|null);
+
+        /**
+         * Creates a SimulateBundleRequest message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns SimulateBundleRequest
+         */
+        public static fromObject(object: { [k: string]: any }): streaming.SimulateBundleRequest;
+
+        /**
+         * Creates a plain object from a SimulateBundleRequest message. Also converts values to other types if specified.
+         * @param message SimulateBundleRequest
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(message: streaming.SimulateBundleRequest, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+        /**
+         * Converts this SimulateBundleRequest to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for SimulateBundleRequest
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** Properties of a SwapSimulationRequest. */
+    interface ISwapSimulationRequest {
+
+        /** SwapSimulationRequest id */
+        id?: (string|null);
+
+        /** SwapSimulationRequest inputMint */
+        inputMint?: (string|null);
+
+        /** SwapSimulationRequest inputAmount */
+        inputAmount?: (number|Long|null);
+
+        /** SwapSimulationRequest outputMint */
+        outputMint?: (string|null);
+
+        /** SwapSimulationRequest expectedOutput */
+        expectedOutput?: (number|Long|null);
+
+        /** SwapSimulationRequest slippageBps */
+        slippageBps?: (number|null);
+    }
+
+    /** Represents a SwapSimulationRequest. */
+    class SwapSimulationRequest implements ISwapSimulationRequest {
+
+        /**
+         * Constructs a new SwapSimulationRequest.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: streaming.ISwapSimulationRequest);
+
+        /** SwapSimulationRequest id. */
+        public id: string;
+
+        /** SwapSimulationRequest inputMint. */
+        public inputMint: string;
+
+        /** SwapSimulationRequest inputAmount. */
+        public inputAmount: (number|Long);
+
+        /** SwapSimulationRequest outputMint. */
+        public outputMint: string;
+
+        /** SwapSimulationRequest expectedOutput. */
+        public expectedOutput: (number|Long);
+
+        /** SwapSimulationRequest slippageBps. */
+        public slippageBps: number;
+
+        /**
+         * Creates a new SwapSimulationRequest instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns SwapSimulationRequest instance
+         */
+        public static create(properties?: streaming.ISwapSimulationRequest): streaming.SwapSimulationRequest;
+
+        /**
+         * Encodes the specified SwapSimulationRequest message. Does not implicitly {@link streaming.SwapSimulationRequest.verify|verify} messages.
+         * @param message SwapSimulationRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(message: streaming.ISwapSimulationRequest, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Encodes the specified SwapSimulationRequest message, length delimited. Does not implicitly {@link streaming.SwapSimulationRequest.verify|verify} messages.
+         * @param message SwapSimulationRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(message: streaming.ISwapSimulationRequest, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Decodes a SwapSimulationRequest message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns SwapSimulationRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): streaming.SwapSimulationRequest;
+
+        /**
+         * Decodes a SwapSimulationRequest message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns SwapSimulationRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): streaming.SwapSimulationRequest;
+
+        /**
+         * Verifies a SwapSimulationRequest message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): (string|null);
+
+        /**
+         * Creates a SwapSimulationRequest message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns SwapSimulationRequest
+         */
+        public static fromObject(object: { [k: string]: any }): streaming.SwapSimulationRequest;
+
+        /**
+         * Creates a plain object from a SwapSimulationRequest message. Also converts values to other types if specified.
+         * @param message SwapSimulationRequest
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(message: streaming.SwapSimulationRequest, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+        /**
+         * Converts this SwapSimulationRequest to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for SwapSimulationRequest
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
     }
 
     /** Properties of a UserBundleRequest. */
@@ -404,9 +649,6 @@ export namespace streaming {
 
         /** TransactionsToSign transactions */
         transactions?: (streaming.IBuiltTransaction[]|null);
-
-        /** TransactionsToSign delta */
-        delta?: (streaming.IBundleDelta|null);
     }
 
     /** Represents a TransactionsToSign. */
@@ -420,9 +662,6 @@ export namespace streaming {
 
         /** TransactionsToSign transactions. */
         public transactions: streaming.IBuiltTransaction[];
-
-        /** TransactionsToSign delta. */
-        public delta?: (streaming.IBundleDelta|null);
 
         /**
          * Creates a new TransactionsToSign instance using the specified properties.
@@ -611,103 +850,6 @@ export namespace streaming {
         public static getTypeUrl(typeUrlPrefix?: string): string;
     }
 
-    /** Properties of a TransactionsBuld. */
-    interface ITransactionsBuld {
-
-        /** TransactionsBuld transactions */
-        transactions?: (streaming.ITrasnactionInstruction[]|null);
-    }
-
-    /** Represents a TransactionsBuld. */
-    class TransactionsBuld implements ITransactionsBuld {
-
-        /**
-         * Constructs a new TransactionsBuld.
-         * @param [properties] Properties to set
-         */
-        constructor(properties?: streaming.ITransactionsBuld);
-
-        /** TransactionsBuld transactions. */
-        public transactions: streaming.ITrasnactionInstruction[];
-
-        /**
-         * Creates a new TransactionsBuld instance using the specified properties.
-         * @param [properties] Properties to set
-         * @returns TransactionsBuld instance
-         */
-        public static create(properties?: streaming.ITransactionsBuld): streaming.TransactionsBuld;
-
-        /**
-         * Encodes the specified TransactionsBuld message. Does not implicitly {@link streaming.TransactionsBuld.verify|verify} messages.
-         * @param message TransactionsBuld message or plain object to encode
-         * @param [writer] Writer to encode to
-         * @returns Writer
-         */
-        public static encode(message: streaming.ITransactionsBuld, writer?: $protobuf.Writer): $protobuf.Writer;
-
-        /**
-         * Encodes the specified TransactionsBuld message, length delimited. Does not implicitly {@link streaming.TransactionsBuld.verify|verify} messages.
-         * @param message TransactionsBuld message or plain object to encode
-         * @param [writer] Writer to encode to
-         * @returns Writer
-         */
-        public static encodeDelimited(message: streaming.ITransactionsBuld, writer?: $protobuf.Writer): $protobuf.Writer;
-
-        /**
-         * Decodes a TransactionsBuld message from the specified reader or buffer.
-         * @param reader Reader or buffer to decode from
-         * @param [length] Message length if known beforehand
-         * @returns TransactionsBuld
-         * @throws {Error} If the payload is not a reader or valid buffer
-         * @throws {$protobuf.util.ProtocolError} If required fields are missing
-         */
-        public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): streaming.TransactionsBuld;
-
-        /**
-         * Decodes a TransactionsBuld message from the specified reader or buffer, length delimited.
-         * @param reader Reader or buffer to decode from
-         * @returns TransactionsBuld
-         * @throws {Error} If the payload is not a reader or valid buffer
-         * @throws {$protobuf.util.ProtocolError} If required fields are missing
-         */
-        public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): streaming.TransactionsBuld;
-
-        /**
-         * Verifies a TransactionsBuld message.
-         * @param message Plain object to verify
-         * @returns `null` if valid, otherwise the reason why it is not
-         */
-        public static verify(message: { [k: string]: any }): (string|null);
-
-        /**
-         * Creates a TransactionsBuld message from a plain object. Also converts values to their respective internal types.
-         * @param object Plain object
-         * @returns TransactionsBuld
-         */
-        public static fromObject(object: { [k: string]: any }): streaming.TransactionsBuld;
-
-        /**
-         * Creates a plain object from a TransactionsBuld message. Also converts values to other types if specified.
-         * @param message TransactionsBuld
-         * @param [options] Conversion options
-         * @returns Plain object
-         */
-        public static toObject(message: streaming.TransactionsBuld, options?: $protobuf.IConversionOptions): { [k: string]: any };
-
-        /**
-         * Converts this TransactionsBuld to JSON.
-         * @returns JSON object
-         */
-        public toJSON(): { [k: string]: any };
-
-        /**
-         * Gets the default type url for TransactionsBuld
-         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
-         * @returns The default type url
-         */
-        public static getTypeUrl(typeUrlPrefix?: string): string;
-    }
-
     /** Properties of a TransactionDelta. */
     interface ITransactionDelta {
 
@@ -847,6 +989,103 @@ export namespace streaming {
 
         /**
          * Gets the default type url for TransactionDelta
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** Properties of a TransactionsBuld. */
+    interface ITransactionsBuld {
+
+        /** TransactionsBuld transactions */
+        transactions?: (streaming.ITrasnactionInstruction[]|null);
+    }
+
+    /** Represents a TransactionsBuld. */
+    class TransactionsBuld implements ITransactionsBuld {
+
+        /**
+         * Constructs a new TransactionsBuld.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: streaming.ITransactionsBuld);
+
+        /** TransactionsBuld transactions. */
+        public transactions: streaming.ITrasnactionInstruction[];
+
+        /**
+         * Creates a new TransactionsBuld instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns TransactionsBuld instance
+         */
+        public static create(properties?: streaming.ITransactionsBuld): streaming.TransactionsBuld;
+
+        /**
+         * Encodes the specified TransactionsBuld message. Does not implicitly {@link streaming.TransactionsBuld.verify|verify} messages.
+         * @param message TransactionsBuld message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(message: streaming.ITransactionsBuld, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Encodes the specified TransactionsBuld message, length delimited. Does not implicitly {@link streaming.TransactionsBuld.verify|verify} messages.
+         * @param message TransactionsBuld message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(message: streaming.ITransactionsBuld, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Decodes a TransactionsBuld message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns TransactionsBuld
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): streaming.TransactionsBuld;
+
+        /**
+         * Decodes a TransactionsBuld message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns TransactionsBuld
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): streaming.TransactionsBuld;
+
+        /**
+         * Verifies a TransactionsBuld message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): (string|null);
+
+        /**
+         * Creates a TransactionsBuld message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns TransactionsBuld
+         */
+        public static fromObject(object: { [k: string]: any }): streaming.TransactionsBuld;
+
+        /**
+         * Creates a plain object from a TransactionsBuld message. Also converts values to other types if specified.
+         * @param message TransactionsBuld
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(message: streaming.TransactionsBuld, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+        /**
+         * Converts this TransactionsBuld to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for TransactionsBuld
          * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
          * @returns The default type url
          */

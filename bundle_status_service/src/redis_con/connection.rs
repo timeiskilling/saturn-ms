@@ -67,22 +67,22 @@ pub async fn notification_redis_conn(config: &Config) -> MultiplexedConnection {
     }
 }
 
-pub async fn atl_redis_conn(config: &Config) -> MultiplexedConnection {
-    tracing::info!("Connecting to atl redis: {}", config.alt_redis_url());
-    match redis::Client::open(config.alt_redis_url()) {
-        Ok(redis) => match redis.get_multiplexed_async_connection().await {
-            Ok(conn) => {
-                tracing::info!("connect to redis");
-                conn
-            }
-            Err(e) => {
-                tracing::error!("Cloud not connect to redis jito {}", e);
-                std::process::exit(1);
-            }
-        },
-        Err(e) => {
-            tracing::error!("Cloud not open redis jito {}", e);
-            std::process::exit(1);
-        }
-    }
-}
+// pub async fn atl_redis_conn(config: &Config) -> MultiplexedConnection {
+//     tracing::info!("Connecting to atl redis: {}", config.alt_redis_url());
+//     match redis::Client::open(config.alt_redis_url()) {
+//         Ok(redis) => match redis.get_multiplexed_async_connection().await {
+//             Ok(conn) => {
+//                 tracing::info!("connect to redis");
+//                 conn
+//             }
+//             Err(e) => {
+//                 tracing::error!("Cloud not connect to redis jito {}", e);
+//                 std::process::exit(1);
+//             }
+//         },
+//         Err(e) => {
+//             tracing::error!("Cloud not open redis jito {}", e);
+//             std::process::exit(1);
+//         }
+//     }
+// }

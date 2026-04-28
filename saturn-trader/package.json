@@ -7,7 +7,8 @@
     "dev": "bun --hot src/index.ts",
     "start": "NODE_ENV=production bun src/index.ts",
     "build": "bun run build.ts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:sim": "vitest run src/testClient/simulateBundle.test.ts"
   },
   "overrides": {
     "brace-expansion": "5.0.5",

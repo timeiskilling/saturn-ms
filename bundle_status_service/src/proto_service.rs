@@ -70,7 +70,6 @@ impl BundleService for TransactionService {
 
         let blockhash = self.cashed_blockhash.get().await.blockhash;
 
-        // Optimized: build_tip_transaction no longer makes an RPC call for fee
         let tip_tx_str = self
             .trader
             .build_tip_transaction(&user_pk, blockhash)
@@ -100,7 +99,6 @@ impl BundleService for TransactionService {
                 })?;
                 let id = transaction.id.clone();
 
-                // Optimized: trader.create_transactions no longer makes RPC call for swap fee
                 let tx_res = trader
                     .create_transactions(
                         &transaction.user_pk,
