@@ -55,6 +55,7 @@ impl SaturnBundleTracker {
             urls: Some(sentinel_urls),
             server_type: deadpool_redis::sentinel::SentinelServerType::Master,
             master_name,
+            connections: None,
             ..Default::default()
         };
 

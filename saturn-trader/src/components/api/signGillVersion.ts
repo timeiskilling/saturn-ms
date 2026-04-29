@@ -1,7 +1,6 @@
 import { useSolana } from "@phantom/react-sdk";
 import { Buffer } from "buffer";
-import bs58 from "bs58";
-import { VersionedTransaction } from "@solana/web3.js";
+import { getBase58Encoder, getTransactionDecoder } from "gill";
 import type { streaming } from "@/protoTypes/streaming_status";
 
 export function useSignTransaction() {
@@ -16,9 +15,10 @@ export function useSignTransaction() {
       if (!tx.transactionBase58) {
         throw new Error("null unexpected transaction");
       }
-      const txBytes = bs58.decode(tx.transactionBase58);
+      const base58Decoder = getBase58Encoder();
+      const txBytes = base58Decoder.encode(tx.transactionBase58);
 
-      const transaction = VersionedTransaction.deserialize(txBytes);
+      const transaction = getTransactionDecoder().decode(txBytes);
       return transaction;
     });
 

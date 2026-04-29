@@ -123,9 +123,11 @@ export class GrpcClient {
   // }
 }
 
+export const BASE_URL = "http://127.0.0.1:3000";
+
 // Create a default instance pointing to your backend
 export const defaultGrpcClient = new GrpcClient({
-  baseUrl: "http://127.0.0.1:3000",
+  baseUrl: BASE_URL,
   // headers: { "Authorization": "Bearer ..." } // Optional
 });
 

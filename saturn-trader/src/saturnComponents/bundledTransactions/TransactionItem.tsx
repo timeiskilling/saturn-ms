@@ -1,8 +1,7 @@
 import React, { useRef, useState } from "react";
-import { Trash2, Settings, ChevronDown, ChevronUp } from "lucide-react";
+import { Trash2, Settings } from "lucide-react";
 import { BasicCard } from "../card";
 import { SwapButton } from "../../components/ui/swap-button";
-import { simulateBundle } from "@/api/bundle";
 import {
   type TransactionInstruction,
   type QuoteOptions,
@@ -12,7 +11,6 @@ import { useAllWalletsBalances } from "@/hooks/useAllWalletsBalances";
 import { useTokenList } from "@/hooks/useTokenList";
 import { useTokenPrice } from "@/hooks/useTokenPrice";
 import { TokenInputBlock } from "./transactionItem/TokenInputBlock";
-import { AdvancedSettings } from "./transactionItem/AdvancedSettings";
 import { AdvancedSettings as AdvancedSettingsV2 } from "./transactionItem/SettingsV2";
 import { TransactionSimulationDetails } from "./transactionItem/TransactionSimulationDetails";
 

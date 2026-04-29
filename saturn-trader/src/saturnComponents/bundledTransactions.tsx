@@ -15,9 +15,16 @@ import {
   // INITIAL_TEMPLATES,
 } from "./bundledTransactions/types";
 import { useSignTransaction } from "../components/api/singTransaction";
-import { executeBundle } from "../api/bundle";
+import { executeBundle, sendBundleStream } from "../api/bundle";
 import { usePhantom, useDiscoveredWallets } from "@phantom/react-sdk";
 import { AddressType } from "@phantom/browser-sdk";
+import { streaming } from "@/protoTypes/streaming_status";
+
+export type TemplateStatus = {
+  stage?: streaming.BundleStage | null;
+  isLoading: boolean;
+  error?: string;
+};
 import { useConnectedWallets } from "../hooks/useConnectedWallets";
 import { saveBundle, fetchBundles } from "../api/saveBundle";
 
@@ -26,6 +33,9 @@ export function BundledTransactions() {
   const lastSavedTemplatesRef = useRef<Template[]>([]);
   const [isFetchingBundles, setIsFetchingBundles] = useState(true);
   const [isSavingBundles, setIsSavingBundles] = useState(false);
+  const [templateStatuses, setTemplateStatuses] = useState<
+    Record<string, TemplateStatus>
+  >({});
   const { handleSignOnly } = useSignTransaction();
   const { addresses } = usePhantom();
   const { wallets: discoveredWallets } = useDiscoveredWallets();
@@ -307,6 +317,25 @@ export function BundledTransactions() {
   };
 
   const handleExecuteTemplate = async (template: Template) => {
+    if (template.transactions.length === 0) {
+      alert("0 transactions in bundle");
+      return;
+    }
+
+    if (templateStatuses[template.id]?.isLoading) {
+      console.log(`Execution already in progress for template: ${template.id}`);
+      return;
+    }
+
+    setTemplateStatuses((prev) => ({
+      ...prev,
+      [template.id]: {
+        isLoading: true,
+        stage: null,
+        error: undefined,
+      },
+    }));
+
     try {
       console.log(`Starting execution for template: ${template.name}`);
 
@@ -338,8 +367,72 @@ export function BundledTransactions() {
       if (bundleResponse) {
         const signedTransactions = await handleSignOnly(bundleResponse);
         console.log("Successfully signed bundle:", signedTransactions);
+
+        setTemplateStatuses((prev) => ({
+          ...prev,
+          [template.id]: {
+            isLoading: true,
+            stage: streaming.BundleStage.BUNDLE_STAGE_SUBMITTED,
+          },
+        }));
+
+        await sendBundleStream(
+          {
+            transactions: signedTransactions,
+            userPk: userPk,
+          },
+          (update) => {
+            console.log("Bundle update:", update);
+            setTemplateStatuses((prev) => ({
+              ...prev,
+              [template.id]: {
+                isLoading:
+                  update.newStatus !==
+                    streaming.BundleStage.BUNDLE_STAGE_FINALIZED &&
+                  update.newStatus !==
+                    streaming.BundleStage.BUNDLE_STAGE_FAILED,
+                stage: update.newStatus,
+              },
+            }));
+          },
+          (error) => {
+            console.error("Stream error:", error);
+            setTemplateStatuses((prev) => ({
+              ...prev,
+              [template.id]: {
+                isLoading: false,
+                stage: streaming.BundleStage.BUNDLE_STAGE_FAILED,
+                error: error.message,
+              },
+            }));
+          },
+          () => {
+            console.log("Stream complete for", template.id);
+            setTemplateStatuses((prev) => {
+              const current = prev[template.id];
+              if (current?.isLoading) {
+                return {
+                  ...prev,
+                  [template.id]: {
+                    ...current,
+                    isLoading: false,
+                  },
+                };
+              }
+              return prev;
+            });
+          },
+        );
       }
     } catch (error: any) {
+      setTemplateStatuses((prev) => ({
+        ...prev,
+        [template.id]: {
+          isLoading: false,
+          error: error?.message || "Execution failed",
+        },
+      }));
+
       if (
         error?.message?.includes("User rejected") ||
         error?.message?.includes("User canceled")
@@ -365,6 +458,7 @@ export function BundledTransactions() {
         handleAddTemplate={handleAddTemplate}
         handleDeleteTemplate={handleDeleteTemplate}
         handleExecuteTemplate={handleExecuteTemplate}
+        templateStatuses={templateStatuses as any}
       />
 
       {/* Main Content - Template Editor */}

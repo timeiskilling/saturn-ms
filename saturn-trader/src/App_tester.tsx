@@ -4,6 +4,7 @@ import { TradingViewWidget } from "./saturnComponents/tradingView";
 import { WalletSidebar } from "./saturnComponents/walletSidebar";
 import { BottomPanel } from "./saturnComponents/bottomPanel";
 import { BundledTransactions } from "./saturnComponents/bundledTransactions";
+import { Toaster, toast } from "sonner";
 
 import { PhantomProvider, darkTheme, usePhantom } from "@phantom/react-sdk";
 import { AddressType } from "@phantom/browser-sdk";
@@ -97,6 +98,22 @@ export function AppTest() {
       appName="Saturn Trader"
       appIcon="./public/saturn_d.jpg"
     >
+      <Toaster
+        position="bottom-center"
+        visibleToasts={3}
+        theme="dark"
+        toastOptions={{
+          classNames: {
+            toast: "border shadow-lg text-zinc-100",
+            success: "bg-green-950/30 border-green-500/50",
+            error: "bg-red-950/30 border-red-500/50",
+            default: "bg-zinc-900 border-zinc-800",
+            title: "text-sm font-medium",
+            description: "text-xs text-zinc-400",
+            icon: "w-5 h-5",
+          },
+        }}
+      />
       <AppContent />
     </PhantomProvider>
   );

@@ -2,7 +2,7 @@
 // use tokio::time::{Duration, Instant, sleep};
 // use tracing::{error, info};
 // use tracing_subscriber::fmt::format::FmtSpan;
-
+pub mod mock_service;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // tracing_subscriber::fmt()
