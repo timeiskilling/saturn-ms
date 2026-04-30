@@ -61,7 +61,9 @@ export const TransactionItem = React.memo(function TransactionItem({
     tx.amount &&
     parseFloat(tx.amount) > 0 &&
     inputPriceData?.price &&
-    outputPriceData?.price
+    outputPriceData?.price &&
+    inputPriceData.price > 0 &&
+    outputPriceData.price > 0
   ) {
     const inUsd = parseFloat(tx.amount) * inputPriceData.price;
     const outAmount = inUsd / outputPriceData.price;
@@ -229,7 +231,11 @@ export const TransactionItem = React.memo(function TransactionItem({
                 maxDecimals={maxDecimals}
                 balance={inputTokenBalance}
                 actualBalance={actualInputTokenBalance}
-                usdRate={inputPriceData?.price ?? null}
+                usdRate={
+                  inputPriceData?.price && inputPriceData.price > 0
+                    ? inputPriceData.price
+                    : null
+                }
                 transactions={transactions}
                 index={index}
                 walletAddress={activeWalletAddress}
@@ -253,7 +259,11 @@ export const TransactionItem = React.memo(function TransactionItem({
                 isInput={false}
                 maxDecimals={outputMaxDecimals}
                 balance={null}
-                usdRate={outputPriceData?.price ?? null}
+                usdRate={
+                  outputPriceData?.price && outputPriceData.price > 0
+                    ? outputPriceData.price
+                    : null
+                }
                 transactions={transactions}
                 index={index}
                 walletAddress={activeWalletAddress}

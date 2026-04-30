@@ -22,9 +22,12 @@ pub fn spawn_redis_price_worker(
                     )
                     .await;
 
-                let _: Result<(), _> = redis_worker_conn
-                    .publish(&redis_key, data.current_price)
-                    .await;
+                let json_msg = format!(
+                    r#"{{"s":"{}","c":"{}","p":"{}","P":"{}"}}"#,
+                    data.symbol, data.current_price, data.price_change, data.price_change_percent
+                );
+
+                let _: Result<(), _> = redis_worker_conn.publish(&redis_key, json_msg).await;
 
                 if let Err(e) = result {
                     let custom_err = PriceServiceError::Redis(PriceRedisError::HsetFailed {

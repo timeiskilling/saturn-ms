@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { streaming } from "@/protoTypes/streaming_status";
 import type { TemplateStatus } from "@/saturnComponents/bundledTransactions";
@@ -26,9 +26,22 @@ export function useTemplateStatus(
   useEffect(() => {
     if (isSuccessRaw && !isSuccessExpired) {
       if (!hasShownSuccess.current) {
-        toast.success(`Template "${templateName}" executed successfully!`, {
-          id: `success-${templateName}`, 
-        });
+        toast.success(
+          React.createElement(
+            "span",
+            null,
+            "Template ",
+            React.createElement(
+              "span",
+              { className: "font-bold text-zinc-100" },
+              templateName,
+            ),
+            " executed successfully!",
+          ),
+          {
+            id: `success-${templateName}`,
+          },
+        );
         hasShownSuccess.current = true;
       }
 
@@ -44,9 +57,21 @@ export function useTemplateStatus(
       const errorMark = status?.error || "rejected";
 
       if (notifiedError.current !== errorMark) {
-        toast.error(`You rejected template: "${templateName}"`, {
-          id: `error-${templateName}`, 
-        });
+        toast.error(
+          React.createElement(
+            "span",
+            null,
+            "You rejected template: ",
+            React.createElement(
+              "span",
+              { className: "font-bold text-zinc-100" },
+              templateName,
+            ),
+          ),
+          {
+            id: `error-${templateName}`,
+          },
+        );
         notifiedError.current = errorMark;
       }
     }
@@ -130,6 +155,7 @@ export function useTemplateStatus(
 
   return {
     isSuccess,
+    isSuccessRaw,
     isFailed,
     isExecuting,
     isSuccessExpired,

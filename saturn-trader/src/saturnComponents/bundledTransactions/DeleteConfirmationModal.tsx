@@ -7,7 +7,7 @@ interface DeleteConfirmationModalProps {
   onClose: () => void;
   onConfirm: () => void;
   title?: string;
-  message?: string;
+  message?: React.ReactNode;
 }
 
 export function DeleteConfirmationModal({
@@ -59,13 +59,13 @@ export function DeleteConfirmationModal({
         isAnimating ? "opacity-100" : "opacity-0"
       }`}
     >
-
       <div
         className={`relative w-full max-w-sm bg-zinc-950 border border-zinc-800/80 rounded-xl shadow-[0_0_40px_-15px_rgba(239,68,68,0.2)] overflow-hidden transition-all duration-300 ease-out ${
-          isAnimating ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-95 translate-y-4"
+          isAnimating
+            ? "opacity-100 scale-100 translate-y-0"
+            : "opacity-0 scale-95 translate-y-4"
         }`}
       >
-
         <div className="absolute top-0 left-0 right-0 h-0.5 bg-linear-to-r from-red-600/40 via-red-500 to-red-600/40" />
 
         <div className="p-6">
@@ -79,9 +79,7 @@ export function DeleteConfirmationModal({
               <h3 className="text-base font-semibold text-zinc-100 tracking-tight mb-1.5">
                 {title}
               </h3>
-              <p className="text-sm text-zinc-400 leading-relaxed">
-                {message}
-              </p>
+              <p className="text-sm text-zinc-400 leading-relaxed">{message}</p>
             </div>
           </div>
 
@@ -110,6 +108,6 @@ export function DeleteConfirmationModal({
         </div>
       </div>
     </div>,
-    document.body
+    document.body,
   );
 }

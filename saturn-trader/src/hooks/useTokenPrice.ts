@@ -37,6 +37,15 @@ function getSharedWebSocket(): WebSocket {
         let P: string | number = "0";
 
         if (typeof data === "string") {
+          const jsonStart = data.indexOf("{");
+          if (jsonStart !== -1) {
+            try {
+              data = JSON.parse(data.substring(jsonStart));
+            } catch {}
+          }
+        }
+
+        if (typeof data === "string") {
           const parts = data.split(/[:|,-]+/);
           if (parts.length >= 2) {
             s = (parts[parts.length - 2] || "")
@@ -51,9 +60,25 @@ function getSharedWebSocket(): WebSocket {
                 .replace(/binance:/i, "")
                 .toUpperCase()
             : null;
-          c = data.c !== undefined ? data.c : data.message;
-          p = data.p || "0";
-          P = data.P || "0";
+
+          let msg = data.c !== undefined ? data.c : data.message;
+
+          if (typeof msg === "string" && msg.trim().startsWith("{")) {
+            try {
+              const inner = JSON.parse(msg);
+              msg = inner.c !== undefined ? inner.c : msg;
+              p = inner.p !== undefined ? inner.p : data.p || "0";
+              P = inner.P !== undefined ? inner.P : data.P || "0";
+              s = inner.s ? String(inner.s).toUpperCase() : s;
+            } catch {
+              p = data.p || "0";
+              P = data.P || "0";
+            }
+          } else {
+            p = data.p || "0";
+            P = data.P || "0";
+          }
+          c = msg;
         }
 
         if (s && c !== undefined && c !== null) {

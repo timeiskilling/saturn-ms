@@ -27,6 +27,7 @@ export type TemplateStatus = {
 };
 import { useConnectedWallets } from "../hooks/useConnectedWallets";
 import { saveBundle, fetchBundles } from "../api/saveBundle";
+import { useAllWalletsBalances } from "../hooks/useAllWalletsBalances";
 
 export function BundledTransactions() {
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -40,7 +41,11 @@ export function BundledTransactions() {
   const { addresses } = usePhantom();
   const { wallets: discoveredWallets } = useDiscoveredWallets();
   const { savedWallets } = useConnectedWallets();
+  const { balances } = useAllWalletsBalances();
   const [activeTemplateId, setActiveTemplateId] = useState<string | null>(null);
+  const [selectedTemplateIds, setSelectedTemplateIds] = useState<Set<string>>(
+    new Set(),
+  );
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -316,6 +321,172 @@ export function BundledTransactions() {
     }
   };
 
+  const handleToggleTemplateSelection = (templateId: string) => {
+    setSelectedTemplateIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(templateId)) {
+        newSet.delete(templateId);
+      } else {
+        newSet.add(templateId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleDeleteSelected = () => {
+    if (selectedTemplateIds.size === 0) return;
+    const newTemplates = templates.filter(
+      (t) => !selectedTemplateIds.has(t.id),
+    );
+    setTemplates(newTemplates);
+    setSelectedTemplateIds(new Set());
+    if (activeTemplateId && selectedTemplateIds.has(activeTemplateId)) {
+      setActiveTemplateId(newTemplates[0]?.id ?? null);
+    }
+  };
+
+  const handleExecuteSelected = async () => {
+    const templatesToExecute = templates.filter((t) =>
+      selectedTemplateIds.has(t.id),
+    );
+    if (templatesToExecute.length === 0) return;
+
+    const validTemplates = templatesToExecute.filter(
+      (t) => t.transactions.length > 0 && !templateStatuses[t.id]?.isLoading,
+    );
+
+    if (validTemplates.length === 0) {
+      alert("No valid templates to execute.");
+      return;
+    }
+
+    setTemplateStatuses((prev) => {
+      const updates = { ...prev };
+      validTemplates.forEach((t) => {
+        updates[t.id] = { isLoading: true, stage: null, error: undefined };
+      });
+      return updates;
+    });
+
+    try {
+      const userPk = addresses.find(
+        (addr) => addr.addressType === AddressType.solana,
+      )?.address;
+      if (!userPk) {
+        throw new Error("No Solana wallet connected");
+      }
+
+      const allTransactions = validTemplates.flatMap((template) =>
+        template.transactions.map((tx) => ({
+          id: tx.id,
+          inputMint: tx.inputMint,
+          outputMint: tx.outputMint,
+          amount: Number(tx.amount) || 0,
+          slippageBps: tx.slippageBps,
+          userPk: tx.userPk || userPk,
+          options: tx.options || {
+            dexes: [],
+            excludeDexes: [],
+            dynamicSlippage: false,
+          },
+        })),
+      );
+
+      const request = { transactions: allTransactions };
+      const bundleResponse = await executeBundle(request);
+
+      if (bundleResponse) {
+        const signedTransactions = await handleSignOnly(bundleResponse);
+        console.log("Successfully signed combined bundle:", signedTransactions);
+
+        setTemplateStatuses((prev) => {
+          const updates = { ...prev };
+          validTemplates.forEach((t) => {
+            updates[t.id] = {
+              isLoading: true,
+              stage: streaming.BundleStage.BUNDLE_STAGE_SUBMITTED,
+            };
+          });
+          return updates;
+        });
+
+        await sendBundleStream(
+          {
+            transactions: signedTransactions,
+            userPk: userPk,
+          },
+          (update) => {
+            setTemplateStatuses((prev) => {
+              const updates = { ...prev };
+              validTemplates.forEach((t) => {
+                updates[t.id] = {
+                  isLoading:
+                    update.newStatus !==
+                      streaming.BundleStage.BUNDLE_STAGE_FINALIZED &&
+                    update.newStatus !==
+                      streaming.BundleStage.BUNDLE_STAGE_FAILED,
+                  stage: update.newStatus,
+                };
+              });
+              return updates;
+            });
+          },
+          (error) => {
+            console.error("Stream error:", error);
+            setTemplateStatuses((prev) => {
+              const updates = { ...prev };
+              validTemplates.forEach((t) => {
+                updates[t.id] = {
+                  isLoading: false,
+                  stage: streaming.BundleStage.BUNDLE_STAGE_FAILED,
+                  error: error.message,
+                };
+              });
+              return updates;
+            });
+          },
+          () => {
+            console.log("Stream complete for selected");
+            setTemplateStatuses((prev) => {
+              const updates = { ...prev };
+              validTemplates.forEach((t) => {
+                const current = updates[t.id];
+                if (current?.isLoading) {
+                  updates[t.id] = {
+                    ...current,
+                    isLoading: false,
+                  };
+                }
+              });
+              return updates;
+            });
+            setSelectedTemplateIds(new Set());
+          },
+        );
+      }
+    } catch (error: any) {
+      setTemplateStatuses((prev) => {
+        const updates = { ...prev };
+        validTemplates.forEach((t) => {
+          updates[t.id] = {
+            isLoading: false,
+            error: error?.message || "Execution failed",
+          };
+        });
+        return updates;
+      });
+
+      if (
+        error?.message?.includes("User rejected") ||
+        error?.message?.includes("User canceled")
+      ) {
+        alert("Transaction signing was rejected by the user.");
+      } else {
+        console.error("Execution failed:", error);
+      }
+    }
+  };
+
   const handleExecuteTemplate = async (template: Template) => {
     if (template.transactions.length === 0) {
       alert("0 transactions in bundle");
@@ -458,7 +629,13 @@ export function BundledTransactions() {
         handleAddTemplate={handleAddTemplate}
         handleDeleteTemplate={handleDeleteTemplate}
         handleExecuteTemplate={handleExecuteTemplate}
-        templateStatuses={templateStatuses as any}
+        templateStatuses={templateStatuses}
+        balances={balances}
+        globalActiveAddress={globalActiveAddress}
+        selectedTemplateIds={selectedTemplateIds}
+        onToggleSelection={handleToggleTemplateSelection}
+        onDeleteSelected={handleDeleteSelected}
+        onExecuteSelected={handleExecuteSelected}
       />
 
       {/* Main Content - Template Editor */}

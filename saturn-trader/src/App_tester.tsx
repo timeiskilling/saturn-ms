@@ -69,7 +69,7 @@ function AppContent() {
                 <div className="flex-1 min-h-0 w-full h-full pr-3">
                   <TradingViewWidget />
                 </div>
-                <BottomPanel />
+                {/*<BottomPanel />*/}
               </div>
             </div>
 

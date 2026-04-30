@@ -3,8 +3,7 @@ import { ArrowRight, Play, Trash2 } from "lucide-react";
 import { type Template } from "./types";
 import { type TemplateStatus } from "./TemplateSidebar";
 import { useTemplateStatus } from "@/hooks/useTemplateStatus";
-
-const SUCCESS_DISMISS_MS = 5_000;
+import { validateTemplateExecution } from "./validation";
 
 const FILL_STYLES = `
   .wf {
@@ -48,6 +47,8 @@ interface TemplateSidebarItemProps {
   onDelete: () => void;
   onExecute: () => void;
   getTokenSymbol: (mint: string) => string;
+  balances?: Record<string, any>;
+  globalActiveAddress?: string;
 }
 
 export function TemplateSidebarItem({
@@ -58,9 +59,12 @@ export function TemplateSidebarItem({
   onDelete,
   onExecute,
   getTokenSymbol,
+  balances,
+  globalActiveAddress,
 }: TemplateSidebarItemProps) {
   const {
     isSuccess,
+    isSuccessRaw,
     isFailed,
     isExecuting,
     isSuccessExpired,
@@ -68,11 +72,17 @@ export function TemplateSidebarItem({
     fillPct,
   } = useTemplateStatus(template.name, status);
 
-  const hasZeroAmount = template.transactions.some(
-    (tx) => tx.amount === "0" || tx.amount === "",
+  const {
+    isTemplateEmpty,
+    hasZeroAmount,
+    isInsufficientBalance,
+    isExecuteDisabled,
+  } = validateTemplateExecution(
+    template,
+    balances,
+    globalActiveAddress,
+    isExecuting,
   );
-  const isTemplateEmpty = template.transactions.length === 0;
-  const isExecuteDisabled = isExecuting || isTemplateEmpty || hasZeroAmount;
 
   let bgClass = isActive
     ? "bg-zinc-900 border-blue-500/50"
@@ -86,7 +96,7 @@ export function TemplateSidebarItem({
     bgClass = isActive
       ? "bg-red-950/30 border-red-500/50"
       : "bg-red-950/20 border-red-900/50 hover:border-red-800 hover:bg-red-950/30";
-  } else if (isExecuting || (status && !isSuccess && !isFailed)) {
+  } else if (isExecuting || (status && !isSuccessRaw && !isFailed)) {
     bgClass = "bg-blue-950/20 border-blue-500/50";
   }
 
@@ -157,7 +167,9 @@ export function TemplateSidebarItem({
                     ? "0 transactions in bundle"
                     : hasZeroAmount
                       ? "Some transactions have 0 amount"
-                      : "Execute Bundle"
+                      : isInsufficientBalance
+                        ? "Insufficient balance"
+                        : "Execute Bundle"
                 }
               >
                 <Play className="w-4 h-4 fill-current" />
