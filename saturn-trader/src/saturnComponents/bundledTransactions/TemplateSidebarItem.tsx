@@ -122,12 +122,12 @@ export function TemplateSidebarItem({
 
         {/* Content */}
         <div className="relative z-10">
-          <div className="flex justify-between items-center mb-1">
-            <h3 className="text-sm font-semibold text-zinc-100 truncate pr-2 flex items-center gap-2">
-              {template.name}
+          <div className="flex justify-between items-center mb-1 gap-2">
+            <h3 className="text-sm font-semibold text-zinc-100 min-w-0 flex items-center gap-1.5 flex-1">
+              <span className="truncate">{template.name}</span>
               {stageText && (
                 <span
-                  className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                  className={`shrink-0 text-[9px] md:text-[10px] px-1 md:px-1.5 py-0.5 rounded font-medium ${
                     isSuccess
                       ? "bg-green-500/20 text-green-400"
                       : isFailed
@@ -139,16 +139,16 @@ export function TemplateSidebarItem({
                 </span>
               )}
             </h3>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-0.5 md:gap-1 shrink-0">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   onDelete();
                 }}
-                className="p-1.5 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-md transition-colors shrink-0"
+                className="p-1 md:p-1.5 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-md transition-colors shrink-0"
                 title="Delete Template"
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
               </button>
               <button
                 onClick={(e) => {
@@ -157,10 +157,10 @@ export function TemplateSidebarItem({
                   onExecute();
                 }}
                 disabled={isExecuteDisabled}
-                className={`p-1.5 rounded-md transition-colors shrink-0 flex items-center justify-center ${
+                className={`p-1 md:p-1.5 rounded-md transition-colors shrink-0 flex items-center justify-center ${
                   isExecuteDisabled
-                    ? "text-zinc-600 cursor-not-allowed opacity-50" // Сірий колір для disabled
-                    : "text-zinc-400 hover:text-blue-400 hover:bg-blue-500/10 cursor-pointer" // Активні стилі
+                    ? "text-zinc-600 cursor-not-allowed opacity-50"
+                    : "text-zinc-400 hover:text-blue-400 hover:bg-blue-500/10 cursor-pointer"
                 }`}
                 title={
                   isTemplateEmpty
@@ -172,7 +172,7 @@ export function TemplateSidebarItem({
                         : "Execute Bundle"
                 }
               >
-                <Play className="w-4 h-4 fill-current" />
+                <Play className="w-3.5 h-3.5 md:w-4 md:h-4 fill-current" />
               </button>
             </div>
           </div>

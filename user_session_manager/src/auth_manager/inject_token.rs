@@ -22,7 +22,7 @@ pub async fn inject_token(
     let cookie = Cookie::build(("saturn_session", token))
         .path("/")
         .http_only(true)
-        .secure(false) // for testing
+        .secure(!cfg!(debug_assertions))
         .same_site(axum_extra::extract::cookie::SameSite::Strict)
         .max_age(Duration::days(7))
         .build();

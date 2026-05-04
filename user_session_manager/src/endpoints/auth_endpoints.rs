@@ -62,7 +62,9 @@ pub async fn verify_signature(
             let is_primary =
                 crate::postgres::query::check_if_is_primary_wallet(&mut db, &public_key).await?;
 
-            if is_primary && user.wallet_address != public_key {
+            let hashed_public_key = crate::hash::hash_wallet_address(&public_key);
+
+            if is_primary && user.wallet_address != hashed_public_key {
                 tracing::warn!(
                     "Rejected linking wallet {}. Already registered as a primary account.",
                     public_key

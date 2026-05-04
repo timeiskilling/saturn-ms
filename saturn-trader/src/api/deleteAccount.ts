@@ -5,6 +5,7 @@ import type { NonceResponse } from "./verifyWallet";
 export type DeleteAccountRequest = {
   request_id: string;
   signature: string;
+  public_key: string;
 };
 
 export async function deleteAccount(
@@ -33,6 +34,7 @@ export async function deleteAccount(
     const verifyPayload: DeleteAccountRequest = {
       request_id: nonceData.request_id,
       signature: signatureBase58,
+      public_key: publicKey,
     };
 
     const verifyResponse = await fetch("http://localhost:3001/auth/account", {

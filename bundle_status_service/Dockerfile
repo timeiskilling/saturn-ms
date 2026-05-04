@@ -11,8 +11,7 @@ WORKDIR /app
 
 COPY . .
 
-RUN cargo build --release --bin bundle_status_service && \
-    cargo build --release --bin jito_fee_service
+RUN cargo build --release --bin bundle_status_service
 
 FROM ubuntu:24.04
 
@@ -24,9 +23,8 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 COPY --from=builder /app/target/release/bundle_status_service ./bundle_status_service
-COPY --from=builder /app/target/release/jito_fee_service ./jito_fee_service
 
-RUN chmod +x ./bundle_status_service ./jito_fee_service
+RUN chmod +x ./bundle_status_service
 
 EXPOSE 3000
 

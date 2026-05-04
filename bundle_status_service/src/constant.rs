@@ -1,3 +1,6 @@
+use solana_sdk::pubkey;
+use solana_sdk::pubkey::Pubkey;
+
 pub const NUMBER_TRANSACTIONS: usize = 5;
 pub const MIN_JITO_TIP_LAMPORTS: u64 = 1_000;
 
@@ -6,7 +9,17 @@ pub const SOL_MINT: &str = "So11111111111111111111111111111111111111112";
 
 pub const BUNDLE_TRACKER: &str = "bundle_tracker";
 pub const JITO_ACTIVE_STATUS: &str = "active_bundles";
-pub const JITO_TIP_STR: &str = "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5";
+pub const JITO_TIP_ADDRESSES: [Pubkey; 8] = [
+    pubkey!("3AVi9Tg9Uo68tJfuvoKvqKNWKkC5wPdSSdeBnizKZ6jT"),
+    pubkey!("HFqU5x63VTqvQss8hp11i4wVV8bD44PvwucfZ2bU7gRe"),
+    pubkey!("Cw8CFyM9FkoMi7K7Crf6HNQqf4uEMzpKw6QNghXLvLkY"),
+    pubkey!("DfXygSm4jCyNCybVYYK6DwvWqjKee8pbDmJGcLWNDXjh"),
+    pubkey!("ADuUkR4vqLUMWXxW9gh6D6L8pMSawimctcNZ5pGwDcEt"),
+    pubkey!("DttWaMuVvTiduZRnguLF7jNxTgiMBZ1hyAumKUiL2KRL"),
+    pubkey!("96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"),
+    pubkey!("ADaUMid9yfUytqMBgopwjb2DTLSokTSzL1zt6iGPaS49"),
+];
+pub const JITO_DONT_FRONT: Pubkey = pubkey!("jitodontfront111111111111111111111111111111");
 pub const ALT_REDIS_KEY: &str = "usage_atl";
 pub const TTL_FOR_ATL: u64 = 7200;
 pub const JWT_REDIS_REVOKE_GLOBAL_BEFORE_KEY: &str = "jwt.revoke.global.before";

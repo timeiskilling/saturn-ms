@@ -5,6 +5,8 @@ use saturn_errors::error::{BuildTransactionError, SaturnTransactionsServiceError
 use saturn_errors::models::Instruction;
 use solana_sdk::instruction::{AccountMeta as SolanaAccountMeta, Instruction as SolanaInstruction};
 
+use crate::constant::JITO_DONT_FRONT;
+
 pub struct JupiterSolanaParser;
 
 impl InstructionParser<&JupiterSwapInstructionsRsponse, Vec<SolanaInstruction>>
@@ -21,7 +23,7 @@ impl InstructionParser<&JupiterSwapInstructionsRsponse, Vec<SolanaInstruction>>
         let mut instructions = Vec::with_capacity(len);
 
         instructions.extend(self.parse_instructions(input.compute_budget_instructions.as_slice())?);
-        instructions.extend(self.parse_instructions(input.compute_budget_instructions.as_slice())?);
+        instructions.extend(self.parse_instructions(input.setup_instructions.as_slice())?);
         if let Some(token_ledger) = &input.token_ledger_instruction {
             instructions.extend(self.parse_instructions(std::slice::from_ref(token_ledger))?);
         }
@@ -34,6 +36,15 @@ impl InstructionParser<&JupiterSwapInstructionsRsponse, Vec<SolanaInstruction>>
         }
 
         instructions.extend(self.parse_instructions(input.other_instructions.as_slice())?);
+
+        if let Some(first_instruction) = instructions.first_mut() {
+            let jito_account_meta = SolanaAccountMeta {
+                pubkey: JITO_DONT_FRONT,
+                is_signer: false,
+                is_writable: false,
+            };
+            first_instruction.accounts.push(jito_account_meta);
+        }
 
         Ok(instructions)
     }

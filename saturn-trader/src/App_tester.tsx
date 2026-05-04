@@ -4,6 +4,7 @@ import { TradingViewWidget } from "./saturnComponents/tradingView";
 import { WalletSidebar } from "./saturnComponents/walletSidebar";
 import { BottomPanel } from "./saturnComponents/bottomPanel";
 import { BundledTransactions } from "./saturnComponents/bundledTransactions";
+import { RoadmapView } from "./saturnComponents/RoadmapView";
 import { Toaster, toast } from "sonner";
 
 import { PhantomProvider, darkTheme, usePhantom } from "@phantom/react-sdk";
@@ -11,25 +12,32 @@ import { AddressType } from "@phantom/browser-sdk";
 import { CustomWalletProfile } from "./components/wallet/CustomWalletProfile";
 
 function AppContent() {
-  const [activeTab, setActiveTab] = useState<"trading" | "bundles">("trading");
+  const [activeTab, setActiveTab] = useState<"trading" | "bundles" | "roadmap">(
+    "trading",
+  );
 
   return (
-    <div className="select-none flex flex-col h-screen w-full overflow-x-auto overflow-y-hidden bg-zinc-950">
-      <div className="flex flex-col w-full h-full min-w-5xl">
-        <div className="shrink-0 flex items-center justify-between border-b border-zinc-800 bg-zinc-950 pr-4">
+    <div className="select-none flex flex-col h-screen w-full overflow-hidden bg-zinc-950">
+      <div className="flex flex-col w-full h-full pb-16 lg:pb-0">
+        <div className="shrink-0 flex items-center justify-between border-b border-zinc-800 bg-zinc-950 pr-2 lg:pr-4 overflow-x-auto scrollbar-hide">
           <BasicCard
             title="Saturn Trader"
-            className="flex rounded-none border-none bg-transparent w-auto shadow-none"
+            className="flex rounded-none border-none bg-transparent w-auto shadow-none shrink-0"
+            classNames={{
+              header: "p-2.5 lg:p-4",
+              title: "text-sm lg:text-xl font-bold whitespace-nowrap",
+            }}
           />
 
-          <div className="flex items-center justify-end gap-4 ml-auto py-2">
-            <div className="flex items-center gap-3">
-              <div className="w-auto">
+          <div className="flex items-center justify-end gap-1.5 lg:gap-4 ml-auto py-2 shrink-0 pl-1.5">
+            <div className="flex items-center gap-1.5 lg:gap-3">
+              <div className="w-auto shrink-0 scale-[0.85] lg:scale-100 origin-right">
                 <CustomWalletProfile />
               </div>
             </div>
 
-            <div className="flex gap-1 bg-zinc-900 p-1 rounded-lg border border-zinc-800">
+            {/* Desktop Navigation */}
+            <div className="hidden lg:flex gap-1 bg-zinc-900 p-1 rounded-lg border border-zinc-800">
               <button
                 onClick={() => setActiveTab("trading")}
                 className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
@@ -50,6 +58,16 @@ function AppContent() {
               >
                 Bundles
               </button>
+              <button
+                onClick={() => setActiveTab("roadmap")}
+                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  activeTab === "roadmap"
+                    ? "bg-zinc-800 text-white shadow-sm"
+                    : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+                }`}
+              >
+                Roadmap
+              </button>
             </div>
           </div>
         </div>
@@ -57,19 +75,22 @@ function AppContent() {
         <div className="flex flex-1 overflow-hidden relative w-full">
           <div
             className={`flex w-full h-full transition-transform duration-300 ease-in-out ${
-              activeTab === "trading" ? "translate-x-0" : "-translate-x-full"
+              activeTab === "trading"
+                ? "translate-x-0"
+                : activeTab === "bundles"
+                  ? "-translate-x-full"
+                  : "-translate-x-[200%]"
             }`}
           >
             {/* Terminal Page */}
-            <div className="flex w-full h-full shrink-0">
-              <div className="h-full shrink-0 z-10">
+            <div className="flex flex-col lg:flex-row w-full h-full shrink-0 overflow-hidden">
+              <div className="w-full lg:w-96 h-[35%] lg:h-full shrink-0 z-10 overflow-y-auto border-b lg:border-b-0 lg:border-r border-zinc-800 bg-zinc-950">
                 <WalletSidebar />
               </div>
-              <div className="flex flex-1 flex-col overflow-hidden w-full bg-zinc-950">
-                <div className="flex-1 min-h-0 w-full h-full pr-3">
+              <div className="flex-1 flex flex-col overflow-hidden w-full h-[65%] lg:h-full bg-zinc-950">
+                <div className="flex-1 min-h-0 w-full h-full p-1.5 lg:p-3">
                   <TradingViewWidget />
                 </div>
-                {/*<BottomPanel />*/}
               </div>
             </div>
 
@@ -79,8 +100,97 @@ function AppContent() {
                 <BundledTransactions />
               </div>
             </div>
+
+            {/* Roadmap Page */}
+            <div className="flex w-full h-full shrink-0">
+              <div className="flex flex-1 flex-col overflow-hidden w-full bg-zinc-950">
+                <RoadmapView />
+              </div>
+            </div>
           </div>
         </div>
+      </div>
+
+      {/* Mobile Bottom Navigation */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 h-[calc(64px+env(safe-area-inset-bottom))] bg-zinc-950/80 backdrop-blur-md border-t border-zinc-800 z-50 flex items-center justify-around px-2 pb-[env(safe-area-inset-bottom)]">
+        <button
+          onClick={() => setActiveTab("trading")}
+          className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-all ${
+            activeTab === "trading"
+              ? "text-blue-500 scale-110"
+              : "text-zinc-500 hover:text-zinc-300"
+          }`}
+        >
+          <svg
+            className="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+            ></path>
+          </svg>
+          <span className="text-[10px] font-bold uppercase tracking-wider">
+            Terminal
+          </span>
+        </button>
+        <button
+          onClick={() => setActiveTab("bundles")}
+          className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-all ${
+            activeTab === "bundles"
+              ? "text-blue-500 scale-110"
+              : "text-zinc-500 hover:text-zinc-300"
+          }`}
+        >
+          <svg
+            className="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+            ></path>
+          </svg>
+          <span className="text-[10px] font-bold uppercase tracking-wider">
+            Bundles
+          </span>
+        </button>
+        <button
+          onClick={() => setActiveTab("roadmap")}
+          className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-all ${
+            activeTab === "roadmap"
+              ? "text-blue-500 scale-110"
+              : "text-zinc-500 hover:text-zinc-300"
+          }`}
+        >
+          <svg
+            className="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
+            ></path>
+          </svg>
+          <span className="text-[10px] font-bold uppercase tracking-wider">
+            Roadmap
+          </span>
+        </button>
       </div>
     </div>
   );

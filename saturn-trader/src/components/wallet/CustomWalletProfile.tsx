@@ -196,7 +196,7 @@ export function CustomWalletProfile() {
         onClick={handleOpenDevices}
         className="flex items-center gap-2 py-1.5 px-3 bg-zinc-900 border border-zinc-800 rounded-full shadow-sm hover:bg-zinc-800 hover:border-zinc-700 transition-colors"
       >
-        <span className="text-[15px] text-zinc-100 font-medium tracking-wide">
+        <span className="hidden md:inline text-[15px] text-zinc-100 font-medium tracking-wide">
           Devices
         </span>
         <Monitor className="w-4 h-4 text-zinc-300" />

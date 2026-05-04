@@ -56,6 +56,8 @@ pub async fn create_session(
     redis_client: &mut Connection,
     user_agent: &str,
 ) -> Result<String, UserServiceError> {
+    let hashed_pub_key = crate::hash::hash_wallet_address(pub_key);
+
     let token = {
         let mut rng = rand::rng();
         let mut token_bytes = [0u8; 32];
@@ -67,7 +69,7 @@ pub async fn create_session(
 
     let session_data = serde_json::json!({
         "public_id": public_session_id,
-        "wallet": pub_key,
+        "wallet": hashed_pub_key,
         "device_name": user_agent,
         "created_at": chrono::Utc::now().to_rfc3339()
     })
@@ -88,7 +90,10 @@ pub async fn create_session(
         .map_err(|e| saturn_errors::error::UserServiceError::RedisError(e.to_string()))?;
 
     redis_client
-        .sadd::<_, _, ()>(format!("user_devices:{}", pub_key), &public_session_id)
+        .sadd::<_, _, ()>(
+            format!("user_devices:{}", hashed_pub_key),
+            &public_session_id,
+        )
         .await
         .map_err(|e| saturn_errors::error::UserServiceError::RedisError(e.to_string()))?;
 

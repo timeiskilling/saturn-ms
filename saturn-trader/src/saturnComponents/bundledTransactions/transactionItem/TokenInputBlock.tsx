@@ -138,10 +138,10 @@ export function TokenInputBlock({
   };
 
   return (
-    <div className="relative bg-[#1A1A1A] rounded-2xl p-4 border border-zinc-800/50 flex flex-col gap-4 group transition-colors hover:bg-[#1E1E1E]">
+    <div className="relative bg-[#1A1A1A] rounded-2xl p-3 md:p-4 border border-zinc-800/50 flex flex-col gap-2 md:gap-4 group transition-colors hover:bg-[#1E1E1E]">
       {/* Top section: Mint selection */}
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-zinc-800 flex shrink-0 items-center justify-center border border-zinc-700/50 shadow-sm overflow-hidden">
+      <div className="flex items-center gap-2 md:gap-3">
+        <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-zinc-800 flex shrink-0 items-center justify-center border border-zinc-700/50 shadow-sm overflow-hidden">
           {tokenIcon ? (
             <img
               src={tokenIcon}
@@ -153,14 +153,16 @@ export function TokenInputBlock({
           )}
         </div>
 
-        <div className="flex flex-col flex-1 min-w-0 pr-20">
-          <span className="text-sm font-semibold text-zinc-100">{label}</span>
+        <div className="flex flex-col flex-1 min-w-0 pr-12 md:pr-20">
+          <span className="text-xs md:text-sm font-semibold text-zinc-100">
+            {label}
+          </span>
           <div className="w-full mt-0.5">{tokenSelectElement}</div>
         </div>
       </div>
 
       {/* Bottom section: Amount input */}
-      <div className="flex items-center justify-between mt-2">
+      <div className="flex items-center justify-between mt-1 md:mt-2">
         <input
           type="text"
           inputMode="decimal"
@@ -173,7 +175,7 @@ export function TokenInputBlock({
             const val = formatDecimalInput(e.target.value, maxDecimals);
             onAmountChange(val);
           }}
-          className={`bg-transparent text-3xl font-medium outline-none w-full mr-4 placeholder:text-zinc-700 transition-all duration-300 ${
+          className={`bg-transparent text-xl md:text-3xl font-medium outline-none w-full mr-4 placeholder:text-zinc-700 transition-all duration-300 ${
             isInsufficientBalance || isWalletDisconnected
               ? "text-red-400"
               : "text-zinc-100"

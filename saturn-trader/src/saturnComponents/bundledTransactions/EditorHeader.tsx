@@ -51,8 +51,8 @@ export function EditorHeader({
   }, [isSavingBundles]);
 
   return (
-    <div className="w-full px-8 py-5 border-b border-zinc-800 flex flex-wrap items-center justify-between gap-4 bg-zinc-950/50 backdrop-blur-sm shrink-0">
-      <div className="flex flex-col flex-1 min-w-40">
+    <div className="w-full px-4 py-2.5 sm:px-6 sm:py-4 md:px-8 md:py-5 border-b border-zinc-800 flex flex-wrap items-center justify-between gap-2.5 sm:gap-4 bg-zinc-950/50 backdrop-blur-sm shrink-0">
+      <div className="flex flex-col flex-1 min-w-[140px]">
         <input
           value={activeTemplate.name}
           maxLength={25}
@@ -62,16 +62,16 @@ export function EditorHeader({
               name: e.target.value,
             });
           }}
-          className="text-2xl font-bold w-full bg-transparent border-none outline-none text-white focus:ring-0 p-0 hover:bg-zinc-900/50 rounded transition-colors truncate"
+          className="text-base sm:text-lg md:text-2xl font-bold w-full bg-transparent border-none outline-none text-white focus:ring-0 p-0 hover:bg-zinc-900/50 rounded transition-colors truncate"
           placeholder="Template Name..."
         />
       </div>
 
-      <div className="flex flex-wrap items-center justify-end gap-3">
-        <div className="flex items-center gap-3">
-          <div className="w-24 text-right">
+      <div className="flex items-center justify-end gap-2 md:gap-3 ml-auto">
+        <div className="flex items-center gap-2 md:gap-3">
+          <div className="hidden min-[400px]:block md:w-24 text-right">
             <span
-              className={`text-xs text-zinc-500 font-medium transition-opacity duration-300 ${
+              className={`text-[10px] md:text-xs text-zinc-500 font-medium transition-opacity duration-300 ${
                 lastSaved && !isSavingBundles ? "opacity-100" : "opacity-0"
               }`}
             >
@@ -84,7 +84,7 @@ export function EditorHeader({
             onClick={handleSaveBundles}
             disabled={isSavingBundles}
             className={`
-              inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-[13px]
+              inline-flex items-center gap-1.5 px-2 md:px-3 py-1.5 rounded-md border text-xs md:text-[13px]
               font-medium transition-all duration-200 outline-none active:scale-[0.97]
               ${
                 isSavingBundles
@@ -96,11 +96,11 @@ export function EditorHeader({
             `}
           >
             {isSavingBundles ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <Loader2 className="w-3 md:w-3.5 h-3 md:h-3.5 animate-spin" />
             ) : justSaved ? (
-              <Check className="w-3.5 h-3.5 text-black" />
+              <Check className="w-3 md:w-3.5 h-3 md:h-3.5 text-black" />
             ) : (
-              <Save className="w-3.5 h-3.5" />
+              <Save className="w-3 md:w-3.5 h-3 md:h-3.5" />
             )}
 
             <span>
@@ -108,7 +108,7 @@ export function EditorHeader({
             </span>
 
             {!isSavingBundles && !justSaved && (
-              <span className="ml-0.5 text-[10px] font-mono px-1 py-0.5 rounded bg-white/[0.08] border border-white/15 text-white/40 leading-none">
+              <span className="hidden md:inline-block ml-0.5 text-[10px] font-mono px-1 py-0.5 rounded bg-white/[0.08] border border-white/15 text-white/40 leading-none">
                 ⌘S
               </span>
             )}
@@ -117,10 +117,10 @@ export function EditorHeader({
 
         {bundleWalletAddress && (
           <div
-            className="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg shadow-sm"
+            className="flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg shadow-sm"
             title="This wallet will be used to sign all steps in this bundle."
           >
-            <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mr-1">
+            <span className="hidden xs:inline-block text-[10px] md:text-xs font-semibold text-zinc-500 uppercase tracking-wider mr-0.5 md:mr-1">
               Signer
             </span>
             {activeBundleWallet?.icon ||
@@ -139,14 +139,16 @@ export function EditorHeader({
                   )?.icon
                 }
                 alt={activeBundleWallet?.name || "Wallet"}
-                className="w-4 h-4 rounded-sm object-cover bg-white"
+                className="w-3.5 md:w-4 h-3.5 md:h-4 rounded-sm object-cover bg-white"
               />
             ) : (
-              <Wallet className="w-4 h-4 text-zinc-400" />
+              <Wallet className="w-3.5 md:w-4 h-3.5 md:h-4 text-zinc-400" />
             )}
-            <span className="text-sm font-medium text-zinc-300">
-              {activeBundleWallet?.name || "Wallet"}
-              <span className="text-zinc-500 ml-1">
+            <span className="text-xs md:text-sm font-medium text-zinc-300">
+              <span className="hidden min-[480px]:inline">
+                {activeBundleWallet?.name || "Wallet"}
+              </span>
+              <span className="text-zinc-500 min-[480px]:ml-1">
                 ({bundleWalletAddress.slice(0, 4)}...
                 {bundleWalletAddress.slice(-4)})
               </span>

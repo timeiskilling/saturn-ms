@@ -8,11 +8,11 @@ use crate::router::create_router;
 pub mod app_state;
 pub mod auth_manager;
 pub mod endpoints;
+pub mod hash;
 pub mod middleware;
 pub mod postgres;
 pub mod redis;
 pub mod router;
-pub mod state_manager;
 
 #[tokio::main]
 async fn main() -> Result<(), UserServiceError> {
@@ -33,7 +33,12 @@ async fn main() -> Result<(), UserServiceError> {
     let addr = config.user_manager_socket_addr();
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     tracing::info!("Starting server on {}", addr);
-    axum::serve(listener, router.into_make_service_with_connect_info::<std::net::SocketAddr>()).await.unwrap();
+    axum::serve(
+        listener,
+        router.into_make_service_with_connect_info::<std::net::SocketAddr>(),
+    )
+    .await
+    .unwrap();
 
     Ok(())
 }

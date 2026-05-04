@@ -32,11 +32,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let jito_url = std::env::var("JITO_API_URL")
         .unwrap_or_else(|_| "https://frankfurt.mainnet.block-engine.jito.wtf/api/v1".to_string());
 
+    let uuid: Option<String> = std::env::var("JITO_UUID").ok();
     let jito_manager = Arc::new(JitoHttpManager::new(
         jito_url,
         50,
         RetryConfig::default(),
-        None,
+        uuid,
     ));
 
     let worker_id = uuid::Uuid::new_v4().to_string();

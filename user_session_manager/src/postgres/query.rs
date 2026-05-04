@@ -101,7 +101,9 @@ pub async fn insert_wallets(
         user.wallet_address
     );
 
-    if user.wallet_address == public_key {
+    let hashed_public_key = crate::hash::hash_wallet_address(&public_key);
+
+    if user.wallet_address == hashed_public_key {
         return Ok(LinkedWalletResponse {
             status: "linked".to_string(),
             primary_wallet: user.wallet_address,
@@ -116,7 +118,7 @@ pub async fn insert_wallets(
             ON CONFLICT (address) DO NOTHING
             "#,
         user.wallet_address,
-        public_key,
+        hashed_public_key,
         wallet_id,
         name,
         address_type
@@ -136,13 +138,14 @@ pub async fn check_if_is_primary_wallet(
     db: &mut DatabaseConnection,
     public_key: &str,
 ) -> Result<bool, ApiError> {
+    let hashed_public_key = crate::hash::hash_wallet_address(public_key);
     let result = sqlx::query_scalar!(
         r#"
         SELECT EXISTS(
             SELECT 1 FROM user_bundles WHERE wallet_address = $1
         )
         "#,
-        public_key
+        hashed_public_key
     )
     .fetch_one(&mut *db.0)
     .await
@@ -155,6 +158,7 @@ pub async fn check_if_is_linked_wallet(
     db: &mut DatabaseConnection,
     public_key: &str,
 ) -> Result<Option<String>, ApiError> {
+    let hashed_public_key = crate::hash::hash_wallet_address(public_key);
     let result = sqlx::query_scalar!(
         r#"
         SELECT primary_wallet
@@ -162,7 +166,7 @@ pub async fn check_if_is_linked_wallet(
         WHERE address = $1
         LIMIT 1
         "#,
-        public_key
+        hashed_public_key
     )
     .fetch_optional(&mut *db.0)
     .await
@@ -298,13 +302,14 @@ pub async fn unlink_wallet(
     mut db: DatabaseConnection,
     target_wallet: String,
 ) -> Result<UnlinkWalletResponse, ApiError> {
+    let hashed_target = crate::hash::hash_wallet_address(&target_wallet);
     let result = sqlx::query!(
         r#"
         DELETE FROM linked_wallets
         WHERE address = $1
         RETURNING primary_wallet
         "#,
-        target_wallet
+        hashed_target
     )
     .fetch_optional(&mut *db.0)
     .await

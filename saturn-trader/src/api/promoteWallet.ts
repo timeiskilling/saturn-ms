@@ -6,6 +6,7 @@ export type PromoteWalletRequest = {
   request_id: string;
   target_wallet: string;
   signature: string;
+  public_key: string;
   wallet_id: string;
   name: string;
   address_type: string;
@@ -13,6 +14,7 @@ export type PromoteWalletRequest = {
 
 export async function promoteWallet(
   solana: ISolanaChain,
+  primaryPublicKey: string,
   targetWalletPublicKey: string,
   walletId: string,
   name: string,
@@ -43,6 +45,7 @@ export async function promoteWallet(
       request_id: nonceData.request_id,
       target_wallet: targetWalletPublicKey,
       signature: signatureBase58,
+      public_key: primaryPublicKey,
       wallet_id: walletId,
       name: name,
       address_type: addressType,

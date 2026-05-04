@@ -12,7 +12,6 @@ import {
 import { type Template } from "./types";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 import { useTokenList } from "@/hooks/useTokenList";
-import { useNestedScrollbar } from "@/hooks/useNestedScrollbar";
 import { streaming } from "@/protoTypes/streaming_status";
 import { TemplateSidebarItem } from "./TemplateSidebarItem";
 import { validateTemplateExecution } from "./validation";
@@ -71,8 +70,6 @@ export function TemplateSidebar({
   const getTokenSymbol = (mint: string) =>
     allTokens.find((t) => t.mint === mint)?.symbol || "Custom";
 
-  const scrollRef = useNestedScrollbar(true);
-
   // Derived selection state
   const selectionState: SelectionState =
     selectedTemplateIds.size === 0
@@ -121,12 +118,12 @@ export function TemplateSidebar({
   });
 
   return (
-    <div className="relative w-72 shrink-0 border-r border-zinc-800 bg-zinc-950 flex flex-col h-full">
+    <div className="relative w-full flex flex-col h-full bg-zinc-950">
       {/* ── Header ── */}
-      <div className="p-4 border-b border-zinc-800 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-2">
-          <Layers className="w-5 h-5 text-blue-500" />
-          <h2 className="font-bold text-zinc-100 text-sm tracking-wide">
+      <div className="p-3 md:p-4 border-b border-zinc-800 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-1.5 md:gap-2">
+          <Layers className="w-4 h-4 md:w-5 md:h-5 text-blue-500" />
+          <h2 className="font-bold text-zinc-100 text-[10px] min-[375px]:text-xs md:text-sm tracking-wide truncate">
             Bundle Templates
           </h2>
         </div>
@@ -145,7 +142,7 @@ export function TemplateSidebar({
               }
             `}
           >
-            <SelectAllIcon className="w-4 h-4" />
+            <SelectAllIcon className="w-3.5 h-3.5 md:w-4 md:h-4" />
           </button>
 
           {/* New template */}
@@ -154,7 +151,7 @@ export function TemplateSidebar({
             className="p-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-md transition-colors"
             title="Create New Template"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-3.5 h-3.5 md:w-4 md:h-4" />
           </button>
         </div>
       </div>
@@ -201,8 +198,8 @@ export function TemplateSidebar({
       />
 
       {/* ── Template list ── */}
-      <div ref={scrollRef} className="flex-1 overflow-hidden h-full">
-        <div className="p-3 space-y-1.5">
+      <div className="flex-1 overflow-y-auto h-full scrollbar-hide overscroll-contain">
+        <div className="p-3 space-y-1.5 pb-28">
           {templates.map((template) => {
             const isSelected = selectedTemplateIds.has(template.id);
             return (
@@ -254,9 +251,6 @@ export function TemplateSidebar({
             );
           })}
         </div>
-
-        {/* bottom padding so last item isn't hidden under action bar */}
-        {selectedTemplateIds.size > 0 && <div className="h-16" />}
       </div>
 
       {/* ── Floating selection action bar ── */}
@@ -265,50 +259,52 @@ export function TemplateSidebar({
           className="
             absolute bottom-0 left-0 right-0
             flex items-center justify-between
-            px-3 py-2.5
-            bg-zinc-900/95 backdrop-blur-sm
-            border-t border-zinc-800
-            shadow-[0_-4px_24px_rgba(0,0,0,0.4)]
+            px-2.5 py-3 md:px-3
+            bg-zinc-900 border-t border-zinc-800
+            shadow-[0_-8px_32px_rgba(0,0,0,0.5)]
+            z-50
             animate-in slide-in-from-bottom-2 duration-200
           "
         >
           {/* Count + deselect */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-blue-400 tabular-nums">
+          <div className="flex items-center gap-1.5 md:gap-2">
+            <span className="text-[10px] md:text-xs font-semibold text-blue-400 tabular-nums">
               {selectedTemplateIds.size}
-              <span className="text-zinc-500 font-normal ml-1">selected</span>
+              <span className="text-zinc-500 font-normal ml-1 hidden min-[360px]:inline">
+                selected
+              </span>
             </span>
             <button
               onClick={handleDeselectAll}
               className="p-1 text-zinc-500 hover:text-zinc-300 rounded transition-colors"
               title="Deselect all"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-3 h-3 md:w-3.5 md:h-3.5" />
             </button>
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 md:gap-2">
             <button
               onClick={() => setIsDeleteSelectedModalOpen(true)}
               className="
-                flex items-center gap-1.5 px-2.5 py-1.5
-                text-xs font-medium text-red-400
+                flex items-center gap-1 md:gap-1.5 px-2 md:px-2.5 py-1.5
+                text-[10px] md:text-xs font-medium text-red-400
                 bg-red-500/10 hover:bg-red-500/20
                 rounded-md border border-red-500/20 hover:border-red-500/40
                 transition-all duration-150
               "
               title="Delete selected"
             >
-              <Trash2 className="w-3.5 h-3.5" />
-              Delete
+              <Trash2 className="w-3 h-3 md:w-3.5 md:h-3.5" />
+              <span className="hidden min-[360px]:inline">Delete</span>
             </button>
             <button
               onClick={onExecuteSelected}
               disabled={isRunAllDisabled}
               className={`
-                flex items-center gap-1.5 px-2.5 py-1.5
-                text-xs font-medium rounded-md border
+                flex items-center gap-1 md:gap-1.5 px-2 md:px-2.5 py-1.5
+                text-[10px] md:text-xs font-medium rounded-md border
                 transition-all duration-150
                 ${
                   isRunAllDisabled
@@ -318,12 +314,13 @@ export function TemplateSidebar({
               `}
               title={
                 isRunAllDisabled
-                  ? "Some selected templates have issues (e.g., empty, 0 amount, insufficient balance)"
+                  ? "Some selected templates have issues"
                   : "Execute selected"
               }
             >
-              <Play className="w-3.5 h-3.5 fill-current" />
-              Run all
+              <Play className="w-3 h-3 md:w-3.5 md:h-3.5 fill-current" />
+              <span className="hidden min-[360px]:inline">Run all</span>
+              <span className="min-[360px]:hidden">Run</span>
             </button>
           </div>
         </div>

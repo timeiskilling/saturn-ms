@@ -167,18 +167,18 @@ export const TransactionItem = React.memo(function TransactionItem({
   return (
     <div className="relative flex group">
       {/* Step Number Line */}
-      <div className="flex flex-col items-center mr-4 w-8 shrink-0 relative">
-        <div className="w-8 h-8 mt-2 rounded-full bg-[#141414] border border-zinc-800 flex items-center justify-center text-xs font-bold text-zinc-500 shadow-sm z-10 relative group-hover:border-zinc-700 group-hover:text-zinc-300 transition-colors">
+      <div className="flex flex-col items-center mr-2 md:mr-4 w-6 md:w-8 shrink-0 relative">
+        <div className="w-6 h-6 md:w-8 md:h-8 mt-2 rounded-full bg-[#141414] border border-zinc-800 flex items-center justify-center text-[10px] md:text-xs font-bold text-zinc-500 shadow-sm z-10 relative group-hover:border-zinc-700 group-hover:text-zinc-300 transition-colors">
           {index + 1}
         </div>
         {!isLast && (
-          <div className="absolute top-10 -bottom-6 w-0.5 bg-zinc-800/80 group-hover:bg-zinc-700/80 transition-colors" />
+          <div className="absolute top-8 md:top-10 -bottom-6 w-0.5 bg-zinc-800/80 group-hover:bg-zinc-700/80 transition-colors" />
         )}
       </div>
 
       {/* Transaction Card */}
       <div className="flex-1 flex flex-col relative">
-        <div className="flex justify-end items-center mb-2 px-1">
+        <div className="flex justify-end items-center mb-1.5 md:mb-2 px-1">
           <div className="flex items-center gap-3">
             <button
               ref={buttonRef}
@@ -217,9 +217,9 @@ export const TransactionItem = React.memo(function TransactionItem({
           />
         )}
 
-        <BasicCard className="bg-[#141414] border-zinc-800 shadow-lg p-3">
+        <BasicCard className="bg-[#141414] border-zinc-800 shadow-lg p-2 md:p-3">
           {/* Horizontal layout for From / To */}
-          <div className="flex flex-col md:flex-row items-stretch gap-2 md:gap-4 relative">
+          <div className="flex flex-col lg:flex-row items-stretch gap-2 lg:gap-4 relative">
             <div className="flex-1">
               <TokenInputBlock
                 label="From"

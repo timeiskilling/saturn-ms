@@ -1,5 +1,5 @@
 use crate::bundle_client::UserStreamNotificationSystem;
-use crate::constant::JITO_TIP_STR;
+use crate::constant::JITO_TIP_ADDRESSES;
 use crate::reqwest_client::JupiterProvider;
 use crate::transactions_builder::solana::instruction_parser::JupiterSolanaParser;
 use crate::transactions_builder::solana::transaction_builder::SolanaTransactionsBuilder;
@@ -8,11 +8,11 @@ use common::jito_client_api::main_api::JitoClient;
 use common::traits::TransactionBuilder;
 use config::Config;
 use core::str;
-use proto_models::grpc::{BundleDelta, SwapSimulationRequest, TransactionDelta};
-
 use jupiter_trader_data::models::jupiter_models::{
     JupiterSwapInstructionsRsponse, SwapRequestParams,
 };
+use proto_models::grpc::{BundleDelta, SwapSimulationRequest, TransactionDelta};
+use rand::prelude::IndexedRandom;
 use redis::AsyncCommands;
 use saturn_errors::error::{
     BuildTransactionError, JitoEndpointErr, SaturnTransactionsServiceError, ValidationError,
@@ -181,15 +181,12 @@ impl JupiterTrader {
             .await
             .unwrap_or(MIN_JITO_TIP_LAMPORTS as f64) as u64;
 
-        let jito_tip_acc = Pubkey::from_str(JITO_TIP_STR).map_err(|e| {
-            SaturnTransactionsServiceError::BuildTransaction(Box::new(
-                BuildTransactionError::IvalidPubkey {
-                    pubkey: JITO_TIP_STR.as_bytes().to_vec(),
-                    issue: e.to_string(),
-                },
-            ))
-        })?;
-        let tip_ix = transfer(&user_pubkey, &jito_tip_acc, jito_tip_lamports);
+        let random_jito_tip_acc = {
+            let mut rng = rand::rng();
+            JITO_TIP_ADDRESSES.choose(&mut rng).unwrap()
+        };
+
+        let tip_ix = transfer(&user_pubkey, random_jito_tip_acc, jito_tip_lamports);
 
         let mut tip_tx = Transaction::new_with_payer(&[tip_ix], Some(&user_pubkey));
         tip_tx.message.recent_blockhash = blockhash;

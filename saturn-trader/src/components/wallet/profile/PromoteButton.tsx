@@ -23,7 +23,7 @@ export function PromoteButton({
   const handlePromote = async (e: React.MouseEvent) => {
     e.stopPropagation();
 
-    if (!solana) {
+    if (!solana || !solana.publicKey) {
       console.error("Solana provider not ready.");
       return;
     }
@@ -32,6 +32,7 @@ export function PromoteButton({
     try {
       const success = await promoteWallet(
         solana,
+        solana.publicKey,
         targetAddress,
         oldPrimaryWalletId,
         oldPrimaryName,

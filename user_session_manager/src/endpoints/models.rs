@@ -32,6 +32,7 @@ pub struct VerifySignature {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PromoteSignature {
     pub signature: String,
+    pub public_key: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -45,8 +46,11 @@ pub struct NonceResponse {
 pub struct SolVerifyRequest {
     #[serde(flatten)]
     pub verify_data: VerifySignature,
+    #[serde(default)]
     pub wallet_id: String,
+    #[serde(default)]
     pub address_type: String,
+    #[serde(default)]
     pub name: String,
 }
 
@@ -59,6 +63,7 @@ pub struct TargetPayload {
 pub struct DeleteAccountRequest {
     pub request_id: String,
     pub signature: String,
+    pub public_key: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -75,10 +80,13 @@ pub struct PromoteWalletRequest {
 impl PromoteSignature {
     pub fn try_into_domain(
         self,
-        public_key: &str,
+        hashed_public_key: &str,
         expected_message: Vec<u8>,
     ) -> Result<SolSignature<Unverified>, UserServiceError> {
-        decode_sol_signature(public_key, &self.signature, expected_message)
+        if crate::hash::hash_wallet_address(&self.public_key) != hashed_public_key {
+            return Err(UserServiceError::InvalidSignature);
+        }
+        decode_sol_signature(&self.public_key, &self.signature, expected_message)
     }
 }
 
@@ -94,9 +102,12 @@ impl VerifySignature {
 impl DeleteAccountRequest {
     pub fn try_into_domain(
         self,
-        public_key: &str,
+        hashed_public_key: &str,
         expected_message: Vec<u8>,
     ) -> Result<SolSignature<Unverified>, UserServiceError> {
-        decode_sol_signature(public_key, &self.signature, expected_message)
+        if crate::hash::hash_wallet_address(&self.public_key) != hashed_public_key {
+            return Err(UserServiceError::InvalidSignature);
+        }
+        decode_sol_signature(&self.public_key, &self.signature, expected_message)
     }
 }
