@@ -1,3 +1,5 @@
+import { appConfig } from "@/config/appConfig";
+
 export type TargetPayload = {
   target_wallet: string;
 };
@@ -10,14 +12,17 @@ export async function disconnectWallet(
       target_wallet: targetWalletPublicKey,
     };
 
-    const response = await fetch("http://localhost:3001/wallet/disconnect", {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
+    const response = await fetch(
+      `${appConfig.sessionBaseUrl}/wallet/disconnect`,
+      {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
       },
-      body: JSON.stringify(payload),
-    });
+    );
 
     if (!response.ok) {
       throw new Error(`Failed to disconnect wallet: ${response.statusText}`);

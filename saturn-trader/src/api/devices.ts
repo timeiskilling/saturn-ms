@@ -1,3 +1,5 @@
+import { appConfig } from "@/config/appConfig";
+
 export interface ConnectedDevice {
   public_id: string;
   // Additional fields returned by the backend can be added here
@@ -9,7 +11,7 @@ export interface ConnectedDevice {
  */
 export async function getDevices(): Promise<ConnectedDevice[] | null> {
   try {
-    const response = await fetch("http://localhost:3001/device", {
+    const response = await fetch(`${appConfig.sessionBaseUrl}/device`, {
       method: "GET",
       credentials: "include",
     });
@@ -35,10 +37,13 @@ export async function getDevices(): Promise<ConnectedDevice[] | null> {
  */
 export async function disconnectDevice(publicId: string): Promise<boolean> {
   try {
-    const response = await fetch(`http://localhost:3001/device/${publicId}`, {
-      method: "DELETE",
-      credentials: "include",
-    });
+    const response = await fetch(
+      `${appConfig.sessionBaseUrl}/device/${publicId}`,
+      {
+        method: "DELETE",
+        credentials: "include",
+      },
+    );
 
     if (!response.ok) {
       throw new Error(`Failed to disconnect device: ${response.statusText}`);

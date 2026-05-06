@@ -49,32 +49,9 @@ pub fn create_router(app_state: Arc<AppState>) -> Router {
         .layer(GovernorLayer::new(governor_conf))
         .layer(
             CorsLayer::new()
-                .allow_origin([
-                    "http://localhost:3030"
-                        .parse::<axum::http::HeaderValue>()
-                        .unwrap(),
-                    "http://localhost:5173"
-                        .parse::<axum::http::HeaderValue>()
-                        .unwrap(),
-                    "http://127.0.0.1:3030"
-                        .parse::<axum::http::HeaderValue>()
-                        .unwrap(),
-                    "http://127.0.0.1:5173"
-                        .parse::<axum::http::HeaderValue>()
-                        .unwrap(),
-                ])
-                .allow_methods([
-                    axum::http::Method::GET,
-                    axum::http::Method::POST,
-                    axum::http::Method::PUT,
-                    axum::http::Method::DELETE,
-                    axum::http::Method::OPTIONS,
-                ])
-                .allow_headers([
-                    axum::http::header::CONTENT_TYPE,
-                    axum::http::header::AUTHORIZATION,
-                    axum::http::header::ACCEPT,
-                ])
+                .allow_origin(tower_http::cors::Any)
+                .allow_headers(tower_http::cors::Any)
+                .allow_methods(tower_http::cors::Any)
                 .allow_credentials(true),
         )
         .with_state(app_state)

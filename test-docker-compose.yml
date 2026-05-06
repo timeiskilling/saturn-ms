@@ -113,6 +113,8 @@ services:
     networks:
       saturn_redis_net:
         ipv4_address: 10.0.0.3
+    ports:
+      - "26381:26379"
     depends_on:
       - redis-master
       - redis-replica
@@ -125,6 +127,8 @@ services:
     networks:
       saturn_redis_net:
         ipv4_address: 10.0.0.20
+    ports:
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -140,6 +144,8 @@ services:
     networks:
       saturn_redis_net:
         ipv4_address: 10.0.0.21
+    ports:
+      - "3001:3001"
     env_file:
       - .env
     environment:
@@ -161,6 +167,8 @@ services:
     networks:
       saturn_redis_net:
         ipv4_address: 10.0.0.30
+    ports:
+      - "3002:3001"
     env_file:
       - .env
     environment:
@@ -183,6 +191,8 @@ services:
     networks:
       saturn_redis_net:
         ipv4_address: 10.0.0.32
+    ports:
+      - "3000:3000"
     env_file:
       - .env
     environment:
@@ -242,6 +252,8 @@ services:
     networks:
       saturn_redis_net:
         ipv4_address: 10.0.0.31
+    ports:
+      - "3030:3030"
     env_file:
       - .env
     environment:

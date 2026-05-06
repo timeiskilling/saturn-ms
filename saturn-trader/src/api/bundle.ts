@@ -1,4 +1,5 @@
-import { bundleService, BASE_URL } from "@/protoTypes/grpcClient";
+import { appConfig } from "@/config/appConfig";
+import { bundleService } from "@/protoTypes/grpcClient";
 import { streaming } from "@/protoTypes/streaming_status";
 
 export async function simulateBundle(
@@ -49,7 +50,7 @@ export async function sendBundleStream(
     body.set(requestBytes, 5);
 
     // Send the custom fetch request
-    const url = `${BASE_URL}/streaming.BundleService/SendTransactions`;
+    const url = `${appConfig.grpcBaseUrl}/streaming.BundleService/SendTransactions`;
     const res = await fetch(url, {
       method: "POST",
       headers: {

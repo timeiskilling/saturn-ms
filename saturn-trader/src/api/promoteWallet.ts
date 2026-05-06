@@ -12,6 +12,8 @@ export type PromoteWalletRequest = {
   address_type: string;
 };
 
+import { appConfig } from "@/config/appConfig";
+
 export async function promoteWallet(
   solana: ISolanaChain,
   primaryPublicKey: string,
@@ -21,10 +23,13 @@ export async function promoteWallet(
   addressType: string,
 ): Promise<boolean> {
   try {
-    const nonceResponse = await fetch("http://localhost:3001/auth/nonce", {
-      method: "GET",
-      credentials: "include",
-    });
+    const nonceResponse = await fetch(
+      `${appConfig.sessionBaseUrl}/auth/nonce`,
+      {
+        method: "GET",
+        credentials: "include",
+      },
+    );
 
     if (!nonceResponse.ok) {
       throw new Error(`Failed to fetch nonce: ${nonceResponse.statusText}`);
@@ -51,7 +56,7 @@ export async function promoteWallet(
       address_type: addressType,
     };
 
-    const response = await fetch("http://localhost:3001/wallet/promote", {
+    const response = await fetch(`${appConfig.sessionBaseUrl}/wallet/promote`, {
       method: "POST",
       credentials: "include",
       headers: {

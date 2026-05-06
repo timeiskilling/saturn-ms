@@ -1,3 +1,4 @@
+import { appConfig } from "@/config/appConfig";
 import { streaming } from "./streaming_status";
 
 export interface GrpcClientConfig {
@@ -123,7 +124,7 @@ export class GrpcClient {
   // }
 }
 
-export const BASE_URL = "http://127.0.0.1:3000";
+export const BASE_URL = appConfig.grpcBaseUrl;
 
 // Create a default instance pointing to your backend
 export const defaultGrpcClient = new GrpcClient({

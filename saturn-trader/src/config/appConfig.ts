@@ -1,14 +1,15 @@
 export interface AppConfig {
   priceServiceBaseUrl: string;
   tokenListRefreshIntervalMs: number;
+  sessionBaseUrl: string;
+  grpcBaseUrl: string;
 }
 
 export const appConfig: AppConfig = {
-  // Use environment variables if available, otherwise default to local price_service
   priceServiceBaseUrl:
-    import.meta.env?.VITE_PRICE_SERVICE_URL || "http://127.0.0.1:8080",
-
-  // Default to 5 minutes (300,000 ms) for refreshing the token list
+    import.meta.env.VITE_PRICE_SERVICE_URL || "http://127.0.0.1:8080",
   tokenListRefreshIntervalMs:
-    Number(import.meta.env?.VITE_TOKEN_LIST_REFRESH_INTERVAL_MS) || 300000,
+    Number(import.meta.env.VITE_TOKEN_LIST_REFRESH_INTERVAL_MS) || 300000,
+  sessionBaseUrl: import.meta.env.VITE_SESSION_URL || "http://127.0.0.1:3000",
+  grpcBaseUrl: import.meta.env.VITE_GRPC_URL || "http://127.0.0.1:3000",
 };

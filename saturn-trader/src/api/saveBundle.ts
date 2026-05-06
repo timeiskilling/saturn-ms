@@ -1,3 +1,5 @@
+import { appConfig } from "@/config/appConfig";
+
 export type Json =
   | string
   | number
@@ -14,7 +16,7 @@ export async function saveBundle(bundles: Json[]): Promise<boolean> {
   try {
     const payload: SaveBundlesPayload = { bundles };
 
-    const response = await fetch("http://localhost:3001/bundles", {
+    const response = await fetch(`${appConfig.sessionBaseUrl}/bundles`, {
       method: "POST",
       credentials: "include",
       headers: {
@@ -36,7 +38,7 @@ export async function saveBundle(bundles: Json[]): Promise<boolean> {
 
 export async function fetchBundles(): Promise<Json[] | null> {
   try {
-    const response = await fetch("http://localhost:3001/bundles", {
+    const response = await fetch(`${appConfig.sessionBaseUrl}/bundles`, {
       method: "GET",
       credentials: "include",
     });

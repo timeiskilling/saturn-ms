@@ -3,6 +3,7 @@ use std::sync::Arc;
 use axum::{Json, Router, extract::State, response::IntoResponse, routing::get};
 use reqwest::StatusCode;
 use serde_json::json;
+use tower_http::cors::CorsLayer;
 
 use crate::bundle_manager::bundle_tracker_api::{
     main_api::BundleTracker, saturn_tracker::tracker::SaturnBundleTracker,
@@ -12,6 +13,12 @@ pub async fn start_health_server(tracker: Arc<SaturnBundleTracker>, port: u16) {
     let app = Router::new()
         .route("/health", get(health_check))
         .route("/metrics", get(metrics_handler))
+        .layer(
+            CorsLayer::new()
+                .allow_origin(tower_http::cors::Any)
+                .allow_headers(tower_http::cors::Any)
+                .allow_methods(tower_http::cors::Any),
+        )
         .with_state(tracker);
 
     let addr = format!("0.0.0.0:{}", port);

@@ -1,6 +1,8 @@
+import { appConfig } from "@/config/appConfig";
+
 export async function logout(): Promise<boolean> {
   try {
-    const response = await fetch("http://localhost:3001/auth/logout", {
+    const response = await fetch(`${appConfig.sessionBaseUrl}/auth/logout`, {
       method: "POST",
       credentials: "include",
     });

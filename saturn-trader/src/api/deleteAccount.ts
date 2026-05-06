@@ -1,6 +1,7 @@
 import bs58 from "bs58";
 import { type ISolanaChain } from "@phantom/react-sdk";
 import type { NonceResponse } from "./verifyWallet";
+import { appConfig } from "@/config/appConfig";
 
 export type DeleteAccountRequest = {
   request_id: string;
@@ -13,10 +14,13 @@ export async function deleteAccount(
   publicKey: string,
 ): Promise<boolean> {
   try {
-    const nonceResponse = await fetch("http://localhost:3001/auth/nonce", {
-      method: "GET",
-      credentials: "include",
-    });
+    const nonceResponse = await fetch(
+      `${appConfig.sessionBaseUrl}/auth/nonce`,
+      {
+        method: "GET",
+        credentials: "include",
+      },
+    );
 
     if (!nonceResponse.ok) {
       throw new Error(`Failed to fetch nonce: ${nonceResponse.statusText}`);
@@ -37,14 +41,17 @@ export async function deleteAccount(
       public_key: publicKey,
     };
 
-    const verifyResponse = await fetch("http://localhost:3001/auth/account", {
-      method: "DELETE",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
+    const verifyResponse = await fetch(
+      `${appConfig.sessionBaseUrl}/auth/account`,
+      {
+        method: "DELETE",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(verifyPayload),
       },
-      body: JSON.stringify(verifyPayload),
-    });
+    );
 
     if (!verifyResponse.ok) {
       throw new Error(`Failed to delete wallet: ${verifyResponse.statusText}`);

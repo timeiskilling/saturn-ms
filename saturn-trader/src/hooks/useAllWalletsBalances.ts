@@ -50,7 +50,8 @@ export function useAllWalletsBalances(
         const solanaAccount = wallet.accounts.find(
           (a) => a.addressType === "solana" || !a.addressType,
         );
-        const addressStr = solanaAccount?.address || wallet.accounts[0]?.address;
+        const addressStr =
+          solanaAccount?.address || wallet.accounts[0]?.address;
 
         if (!addressStr) return;
 

@@ -1,3 +1,5 @@
+import { appConfig } from "@/config/appConfig";
+
 let fetchPromise: Promise<string[]> | null = null;
 
 export async function getLinkedWallets(): Promise<string[]> {
@@ -7,10 +9,13 @@ export async function getLinkedWallets(): Promise<string[]> {
 
   fetchPromise = (async () => {
     try {
-      const response = await fetch("http://localhost:3001/wallet/linked", {
-        method: "GET",
-        credentials: "include",
-      });
+      const response = await fetch(
+        `${appConfig.sessionBaseUrl}/wallet/linked`,
+        {
+          method: "GET",
+          credentials: "include",
+        },
+      );
 
       if (response.status === 401) {
         // Unauthorized is expected if there is no session token, return empty array silently
