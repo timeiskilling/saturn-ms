@@ -21,3 +21,8 @@ launch
 // - Set up PostgreSQL Read Replicas for heavy SELECT queries on the bundles_data JSONB.
 // - Containerize app (Docker) and deploy multiple replicas behind the Load Balancer (K8s HPA).
 // - Consider Redis Cluster upgrade if Redis Sentinel memory becomes a bottleneck for sessions.
+
+
+
+--
+polling tokens from token-price

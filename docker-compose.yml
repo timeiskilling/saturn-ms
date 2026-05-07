@@ -23,14 +23,14 @@ services:
 
   haproxy:
     image: haproxy:latest
-    container_name: haproxy
+    container_name: saturn-haproxy
     networks:
       saturn_redis_net:
-        ipv4_address: 10.0.0.40
+        ipv4_address: 10.0.0.5
     ports:
       - "80:80"
       - "443:443"
-      - "8404:8404"
+      # - "8404:8404"
     volumes:
       - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
       - ./haproxy/certs:/etc/haproxy/certs:ro
@@ -38,6 +38,7 @@ services:
       - user-session-manager
       - saturn-bundle-tracker
       - bundle_status_service
+      - price_service
       - saturn-trader
 
   redis-master:
@@ -49,8 +50,6 @@ services:
     networks:
       saturn_redis_net:
         ipv4_address: 10.0.0.10
-    ports:
-      - "6379:6379"
 
   redis-replica:
     image: bitnami/redis:latest
@@ -77,8 +76,6 @@ services:
     networks:
       saturn_redis_net:
         ipv4_address: 10.0.0.1
-    ports:
-      - "26379:26379"
     depends_on:
       - redis-master
       - redis-replica
@@ -95,8 +92,6 @@ services:
     networks:
       saturn_redis_net:
         ipv4_address: 10.0.0.2
-    ports:
-      - "26380:26379"
     depends_on:
       - redis-master
       - redis-replica
@@ -238,6 +233,11 @@ services:
     build:
       context: ./saturn-trader
       dockerfile: Dockerfile
+      args:
+        - VITE_PRICE_SERVICE_URL=https://my-domain.com
+        - VITE_SESSION_URL=https://my-domain.com
+        - VITE_GRPC_URL=https://my-domain.com
+
     container_name: saturn-trader
     networks:
       saturn_redis_net:

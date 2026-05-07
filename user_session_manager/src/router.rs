@@ -34,7 +34,7 @@ pub fn create_router(app_state: Arc<AppState>) -> Router {
 
     // Connected device management
     let device_routes = Router::<Arc<AppState>>::new()
-        .route("/", get(device::connected_devices))
+        .route("", get(device::connected_devices))
         .route("/{public_id}", delete(device::disconnect_target_device));
 
     // Combine all routes and inject the application state
