@@ -7,7 +7,7 @@ use saturn_errors::error::SaturnTransactionsServiceError;
 use tracing_subscriber::fmt::format::FmtSpan;
 
 use crate::{
-    build::{AppState, build_router, build_ws_url},
+    build::{AppState, build_router},
     redis_interface::connection::redis_conn,
     ws_listener::run_binance_ws_client,
 };
@@ -41,12 +41,19 @@ async fn main() -> Result<(), SaturnTransactionsServiceError> {
         .with_target(false)
         .init();
 
-    let router: Router = build_router(exchange_binance_url, http_client, state.clone()).await?;
-    let url = build_ws_url(state.clone()).await?;
+    let router: Router = build_router(
+        exchange_binance_url.clone(),
+        http_client.clone(),
+        state.clone(),
+    )
+    .await?;
 
     let redis_for_ws = redis_conn.clone();
+    let state_for_ws = state.clone();
+
+    crate::build::spawn_token_poller(exchange_binance_url, http_client, state.clone());
     tokio::spawn(async move {
-        run_binance_ws_client(url, redis_for_ws).await;
+        run_binance_ws_client(state_for_ws, redis_for_ws).await;
     });
 
     let addr = config.price_service_socket_addr();

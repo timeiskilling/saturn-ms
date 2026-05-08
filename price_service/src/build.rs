@@ -1,5 +1,4 @@
 use std::{
-    collections::HashMap,
     fmt::Display,
     sync::{Arc, atomic::AtomicU64},
 };
@@ -14,7 +13,7 @@ use crate::handlers::token_list_handler;
 
 pub struct AppState {
     pub cached_tokens: Arc<RwLock<Vec<TokenInfo>>>,
-    pub token_map: Arc<RwLock<HashMap<String, TokenInfo>>>,
+    // pub token_map: Arc<RwLock<HashMap<String, TokenInfo>>>,
     _version: AtomicU64,
 }
 
@@ -22,7 +21,7 @@ impl AppState {
     pub fn new() -> Self {
         Self {
             cached_tokens: Arc::new(RwLock::new(Vec::new())),
-            token_map: Arc::new(RwLock::new(HashMap::new())),
+            // token_map: Arc::new(RwLock::new(HashMap::new())),
             _version: AtomicU64::new(1),
         }
     }
@@ -80,6 +79,37 @@ pub async fn build_ws_url(state: Arc<AppState>) -> Result<String, SaturnTransact
     Ok(ws_url)
 }
 
+pub fn spawn_token_poller(
+    binance_url: String,
+    http_client: Arc<dyn JupiterProvider>,
+    state: Arc<AppState>,
+) {
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(std::time::Duration::from_hours(2));
+
+        interval.tick().await;
+
+        loop {
+            interval.tick().await;
+            tracing::info!("Refetching tokens from Jupiter...");
+
+            match setup_tokens(Query::Verified, &binance_url, http_client.clone()).await {
+                Ok(new_tokens) => {
+                    let mut cached = state.cached_tokens.write().await;
+                    *cached = new_tokens;
+                    tracing::info!(
+                        "Successfully updated token cache with {} tokens",
+                        cached.len()
+                    );
+                }
+                Err(e) => {
+                    tracing::error!("Failed to refetch tokens: {}", e);
+                }
+            }
+        }
+    });
+}
+
 pub async fn build_router(
     binance_url: String,
     http_client: Arc<dyn JupiterProvider>,
@@ -87,13 +117,13 @@ pub async fn build_router(
 ) -> Result<Router, SaturnTransactionsServiceError> {
     let initial_tokens = setup_tokens(Query::Verified, &binance_url, http_client).await?;
 
-    let token_map: HashMap<String, TokenInfo> = initial_tokens
-        .iter()
-        .map(|t| (t.symbol.clone(), t.clone()))
-        .collect();
+    // let token_map: HashMap<String, TokenInfo> = initial_tokens
+    //     .iter()
+    //     .map(|t| (t.symbol.clone(), t.clone()))
+    //     .collect();
 
     state.cached_tokens.write().await.extend(initial_tokens);
-    state.token_map.write().await.extend(token_map);
+    // state.token_map.write().await.extend(token_map);
 
     let cors_layer = tower::ServiceBuilder::new().layer(
         tower_http::cors::CorsLayer::new()

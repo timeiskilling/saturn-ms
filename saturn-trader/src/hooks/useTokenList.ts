@@ -32,7 +32,7 @@ export function useTokenList() {
       const now = Date.now();
       const isCacheValid =
         globalCache.data &&
-        now - globalCache.timestamp < appConfig.tokenListRefreshIntervalMs;
+        now - globalCache.timestamp < appConfig.tokenListRefreshIntervalSec;
 
       // If cache is valid and we aren't forcing a refresh, return the cached data immediately.
       if (isCacheValid && !forceRefresh) {
@@ -117,7 +117,7 @@ export function useTokenList() {
         .catch((err) =>
           console.warn(`Token list fetch retry failed: ${err.message}`),
         );
-    }, appConfig.tokenListRefreshIntervalMs);
+    }, appConfig.tokenListRefreshIntervalSec * 1000);
 
     return () => {
       clearInterval(intervalId);
