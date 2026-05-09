@@ -13,7 +13,7 @@ pub async fn run_binance_ws_client(
     state: Arc<AppState>,
     redis_conn: redis::aio::MultiplexedConnection,
 ) {
-    let mut interval = tokio::time::interval(std::time::Duration::from_hours(2));
+    let mut interval = tokio::time::interval(std::time::Duration::from_hours(2) + std::time::Duration::from_secs(15));
     loop {
         let url = match build_ws_url(state.clone()).await {
             Ok(u) => u,
@@ -70,7 +70,7 @@ pub async fn run_binance_ws_client(
                         }
 
                         _ = interval.tick() => {
-                            tracing::info!("80 seconds passed. Reconnecting to WS to update token streams.");
+                            tracing::info!("2 hours passed. Reconnecting to WS to update token streams.");
                             break;
                         }
                     }

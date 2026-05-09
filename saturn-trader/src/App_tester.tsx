@@ -21,7 +21,7 @@ function AppContent() {
       <div className="flex flex-col w-full h-full pb-16 lg:pb-0">
         <div className="shrink-0 flex items-center justify-between border-b border-zinc-800 bg-zinc-950 pr-2 lg:pr-4 overflow-x-auto scrollbar-hide">
           <BasicCard
-            title="Saturn Trader"
+            title="Saturn"
             className="flex rounded-none border-none bg-transparent w-auto shadow-none shrink-0"
             classNames={{
               header: "p-2.5 lg:p-4",
@@ -205,7 +205,7 @@ export function AppTest() {
         addressTypes: [AddressType.solana],
       }}
       theme={darkTheme}
-      appName="Saturn Trader"
+      appName="Saturn"
       appIcon="./public/saturn_d.jpg"
     >
       <Toaster

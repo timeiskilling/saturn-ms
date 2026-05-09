@@ -1,4 +1,5 @@
 import { appConfig } from "@/config/appConfig";
+import { toast } from "sonner";
 
 export type Json =
   | string
@@ -13,6 +14,13 @@ export type SaveBundlesPayload = {
 };
 
 export async function saveBundle(bundles: Json[]): Promise<boolean> {
+  if (!navigator.onLine) {
+    toast.error("Network Error", {
+      description: "You are offline. Cannot save bundles.",
+    });
+    return false;
+  }
+
   try {
     const payload: SaveBundlesPayload = { bundles };
 
@@ -32,11 +40,23 @@ export async function saveBundle(bundles: Json[]): Promise<boolean> {
     return true;
   } catch (error) {
     console.error("Save bundles error:", error);
+    if (!navigator.onLine) {
+      toast.error("Network Error", {
+        description: "Connection lost while saving bundles.",
+      });
+    }
     return false;
   }
 }
 
 export async function fetchBundles(): Promise<Json[] | null> {
+  if (!navigator.onLine) {
+    toast.error("Network Error", {
+      description: "You are offline. Cannot fetch bundles.",
+    });
+    return null;
+  }
+
   try {
     const response = await fetch(`${appConfig.sessionBaseUrl}/bundles`, {
       method: "GET",
@@ -56,6 +76,11 @@ export async function fetchBundles(): Promise<Json[] | null> {
     return Array.isArray(data) ? data : [];
   } catch (error) {
     console.error("Fetch bundles error:", error);
+    if (!navigator.onLine) {
+      toast.error("Network Error", {
+        description: "Connection lost while fetching bundles.",
+      });
+    }
     return null;
   }
 }

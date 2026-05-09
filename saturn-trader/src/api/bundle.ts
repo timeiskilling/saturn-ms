@@ -1,10 +1,15 @@
 import { appConfig } from "@/config/appConfig";
 import { bundleService } from "@/protoTypes/grpcClient";
 import { streaming } from "@/protoTypes/streaming_status";
+import { toast } from "sonner";
 
 export async function simulateBundle(
   request: streaming.ISimulateBundleRequest,
 ) {
+  if (!navigator.onLine) {
+    toast.error("You are offline. Please check your internet connection.");
+    throw new Error("Offline");
+  }
   try {
     const response = await bundleService.simulateBundle(request);
     return response;
@@ -15,6 +20,10 @@ export async function simulateBundle(
 }
 
 export async function executeBundle(request: streaming.ITransactionsBuld) {
+  if (!navigator.onLine) {
+    toast.error("You are offline. Please check your internet connection.");
+    throw new Error("Offline");
+  }
   try {
     const response = await bundleService.createTransactions(request);
     return response;
@@ -34,6 +43,11 @@ export async function sendBundleStream(
   onError: (error: Error) => void,
   onComplete: () => void,
 ) {
+  if (!navigator.onLine) {
+    toast.error("You are offline. Please check your internet connection.");
+    onError(new Error("Offline"));
+    return;
+  }
   try {
     // 1. Encode the request to protobuf format
     const requestBytes = streaming.SignedTransactions.encode(request).finish();

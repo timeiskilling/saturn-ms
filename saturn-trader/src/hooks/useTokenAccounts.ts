@@ -1,3 +1,4 @@
+import { appConfig } from "@/config/appConfig";
 import { type TokenAccount } from "@/solanaAccountData/tokenAccount";
 import { usePhantom } from "@phantom/react-sdk";
 import { createSolanaClient, address } from "gill";
@@ -13,10 +14,10 @@ interface CacheEntry {
   timestamp: number;
 }
 const cache: Record<string, CacheEntry> = {};
-const CACHE_TTL = 15000; // 15 seconds cache
+const CACHE_TTL = 25000; // 25 seconds cache
 
 export function useTokenAccounts(
-  rpcUrl: string = "https://api.devnet.solana.com",
+  rpcUrl: string = appConfig.heliuspUrl,
   customAddress?: string,
 ) {
   const { isConnected, addresses } = usePhantom();

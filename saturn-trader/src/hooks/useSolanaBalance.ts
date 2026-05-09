@@ -7,6 +7,7 @@ import {
 // import { Connection, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { usePhantom } from "@phantom/react-sdk";
 import { AddressType } from "@phantom/browser-sdk";
+import { appConfig } from "@/config/appConfig";
 
 interface CacheEntry {
   promise: Promise<number> | null;
@@ -17,7 +18,7 @@ const cache: Record<string, CacheEntry> = {};
 const CACHE_TTL = 15000; // 15 seconds cache
 
 export function useSolanaBalance(
-  rpcUrl: string = "https://api.devnet.solana.com",
+  rpcUrl: string = appConfig.heliuspUrl,
   customAddress?: string,
 ) {
   const { isConnected, addresses } = usePhantom();

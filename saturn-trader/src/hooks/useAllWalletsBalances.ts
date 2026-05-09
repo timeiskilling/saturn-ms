@@ -6,6 +6,7 @@ import {
   TOKEN_PROGRAM_ADDRESS,
   TOKEN_2022_PROGRAM_ADDRESS,
 } from "gill/programs";
+import { appConfig } from "@/config/appConfig";
 
 export interface WalletBalance {
   walletId: string;
@@ -29,9 +30,7 @@ const allWalletsCache: Record<
 > = {};
 const CACHE_TTL = 15000; // 15 seconds cache
 
-export function useAllWalletsBalances(
-  rpcUrl: string = "https://api.devnet.solana.com",
-) {
+export function useAllWalletsBalances(rpcUrl: string = appConfig.heliuspUrl) {
   const { savedWallets } = useConnectedWallets();
   const [balances, setBalances] = useState<Record<string, WalletBalance>>({});
   const [loading, setLoading] = useState(false);
