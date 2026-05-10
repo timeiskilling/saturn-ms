@@ -88,7 +88,7 @@ impl JupiterTrader {
                     if let Ok(_conn) = ns_clone.get_redis_connection().await {
                         let client =
                             redis::Client::open(config.notification_redis_url().as_str()).unwrap();
-                        ns_clone.sentinal_start_redis_subscription(client).await;
+                        ns_clone.sentinal_start_redis_subscription(client);
                     }
                 });
                 ns
@@ -325,7 +325,7 @@ impl JupiterTrader {
         }
     }
 
-    pub async fn jito_tip_listener(&self) {
+    pub fn jito_tip_listener(&self) {
         const REDIS_KEY: &str = "jito:tip:latest";
         const VALUE_FIELD: &str = "value";
 

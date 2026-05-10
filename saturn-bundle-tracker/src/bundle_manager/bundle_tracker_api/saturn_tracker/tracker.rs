@@ -1,6 +1,5 @@
 use crate::bundle_manager::bundle_tracker_api::{main_api::BundleTracker, saturn_tracker::*};
 use crate::prelude::*;
-use async_trait::async_trait;
 use common::bundle_stage_api::{
     BundleStage, BundleStatusResponse, BundleStatusUpdate, InflightBundleStatusResponse,
 };
@@ -107,7 +106,6 @@ impl SaturnBundleTracker {
     }
 }
 
-#[async_trait]
 impl BundleTracker for SaturnBundleTracker {
     async fn get_redis_connection(
         &self,

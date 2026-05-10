@@ -42,7 +42,7 @@ test("should have Binance token price data in Redis", async () => {
   // Ensure we actually got data from Redis
   expect(
     Object.keys(targetData).length,
-    `No Binance price data found in Redis for key ${targetKey}`
+    `No Binance price data found in Redis for key ${targetKey}`,
   ).toBeGreaterThan(0);
 
   // Verify the exact fields written by the Rust `spawn_redis_price_worker` function

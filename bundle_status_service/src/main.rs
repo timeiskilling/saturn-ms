@@ -71,10 +71,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let rpc_client = Arc::new(RpcClient::new(helius_api_key));
     let blockhash_cache = blockhash_data::BlockhashCache::new(rpc_client.clone());
 
-    let trader_clone = trader.clone();
-    tokio::spawn(async move {
-        trader_clone.jito_tip_listener().await;
-    });
+    trader.jito_tip_listener();
 
     let transaction_serve = TransactionService {
         trader,

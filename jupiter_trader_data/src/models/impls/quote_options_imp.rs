@@ -44,13 +44,13 @@ impl QuoteOptions {
             );
         }
 
-        if let Some(val) = cleaned.blockhash_slots_to_expiry {
-            if !(1..=300).contains(&val) {
-                tracing::warn!(
-                    "QuoteOptions: blockhash_slots_to_expiry must be between 1 and 300. Clamping value."
-                );
-                cleaned.blockhash_slots_to_expiry = Some(val.clamp(1, 300));
-            }
+        if let Some(val) = cleaned.blockhash_slots_to_expiry
+            && !(1..=300).contains(&val)
+        {
+            tracing::warn!(
+                "QuoteOptions: blockhash_slots_to_expiry must be between 1 and 300. Clamping value."
+            );
+            cleaned.blockhash_slots_to_expiry = Some(val.clamp(1, 300));
         }
 
         cleaned

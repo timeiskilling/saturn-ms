@@ -13,7 +13,9 @@ pub async fn run_binance_ws_client(
     state: Arc<AppState>,
     redis_conn: redis::aio::MultiplexedConnection,
 ) {
-    let mut interval = tokio::time::interval(std::time::Duration::from_hours(2) + std::time::Duration::from_secs(15));
+    let mut interval = tokio::time::interval(
+        std::time::Duration::from_hours(2) + std::time::Duration::from_secs(15),
+    );
     loop {
         let url = match build_ws_url(state.clone()).await {
             Ok(u) => u,
@@ -28,7 +30,7 @@ pub async fn run_binance_ws_client(
 
         match connect_async(&url).await {
             Ok((mut ws_stream, _)) => {
-                let (tx, rx) = mpsc::channel::<Vec<u8>>(10_000);
+                let (tx, rx) = mpsc::channel::<Vec<u8>>(10);
                 spawn_redis_price_worker(redis_conn.clone(), rx);
 
                 loop {

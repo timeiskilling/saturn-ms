@@ -1,15 +1,13 @@
 use axum::{
+    Json,
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
-use serde_json::json; 
+use serde_json::json;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum SaturnError {
-
-    
     #[error("Template with ID '{0}' not found")]
     TemplateNotFound(String),
 
@@ -72,47 +70,70 @@ pub enum SaturnError {
 impl IntoResponse for SaturnError {
     fn into_response(self) -> Response {
         let (status, error_message, error_code_str) = match &self {
-            SaturnError::TemplateNotFound(_id) | SaturnError::ExecutionNotFound(_id) => {
-                (StatusCode::NOT_FOUND, format!("{}", self), "NOT_FOUND".to_string())
-            }
-            SaturnError::InvalidInput(msg) => {
-                (StatusCode::BAD_REQUEST, msg.clone(), "INVALID_INPUT".to_string())
-            }
-            SaturnError::DynamicAmountNotImplemented(_) => {
-                (StatusCode::BAD_REQUEST, format!("{}", self), "DYNAMIC_AMOUNT_NOT_IMPLEMENTED".to_string())
-            }
-            SaturnError::RetryNotAllowed(_) => {
-                (StatusCode::CONFLICT, format!("{}", self), "RETRY_NOT_ALLOWED".to_string()) 
-            }
-            SaturnError::TemplateCreationError(msg) => {
-                
-                (StatusCode::INTERNAL_SERVER_ERROR, msg.clone(), "TEMPLATE_CREATION_FAILED".to_string())
-            }
-            
-            SaturnError::JitoSendError(_) | SaturnError::JupiterQuoteError(_) |
-            SaturnError::BalanceError(_) | SaturnError::BundleStatusError(_) |
-            SaturnError::BundleExecutionFailed(_) => {
-                (StatusCode::SERVICE_UNAVAILABLE, format!("{}", self), "EXTERNAL_SERVICE_ERROR".to_string())
-            }
-            SaturnError::CancellationFailed(_) => {
-                
-                (StatusCode::INTERNAL_SERVER_ERROR, format!("{}", self), "CANCELLATION_FAILED".to_string())
-            }
-            SaturnError::ConfigError(_) => {
-                (StatusCode::INTERNAL_SERVER_ERROR, format!("{}", self), "CONFIG_ERROR".to_string())
-            }
-            SaturnError::TimeoutError(_) => {
-                (StatusCode::GATEWAY_TIMEOUT, format!("{}", self), "TIMEOUT_ERROR".to_string())
-            }
-            
-            SaturnError::IoError(_) | SaturnError::JoinError(_) | SaturnError::SdkError {..} | SaturnError::InternalServerError(_) => {
-                (StatusCode::INTERNAL_SERVER_ERROR, format!("{}", self), "INTERNAL_SERVER_ERROR".to_string())
-            }
+            SaturnError::TemplateNotFound(_id) | SaturnError::ExecutionNotFound(_id) => (
+                StatusCode::NOT_FOUND,
+                format!("{}", self),
+                "NOT_FOUND".to_string(),
+            ),
+            SaturnError::InvalidInput(msg) => (
+                StatusCode::BAD_REQUEST,
+                msg.clone(),
+                "INVALID_INPUT".to_string(),
+            ),
+            SaturnError::DynamicAmountNotImplemented(_) => (
+                StatusCode::BAD_REQUEST,
+                format!("{}", self),
+                "DYNAMIC_AMOUNT_NOT_IMPLEMENTED".to_string(),
+            ),
+            SaturnError::RetryNotAllowed(_) => (
+                StatusCode::CONFLICT,
+                format!("{}", self),
+                "RETRY_NOT_ALLOWED".to_string(),
+            ),
+            SaturnError::TemplateCreationError(msg) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                msg.clone(),
+                "TEMPLATE_CREATION_FAILED".to_string(),
+            ),
+
+            SaturnError::JitoSendError(_)
+            | SaturnError::JupiterQuoteError(_)
+            | SaturnError::BalanceError(_)
+            | SaturnError::BundleStatusError(_)
+            | SaturnError::BundleExecutionFailed(_) => (
+                StatusCode::SERVICE_UNAVAILABLE,
+                format!("{}", self),
+                "EXTERNAL_SERVICE_ERROR".to_string(),
+            ),
+            SaturnError::CancellationFailed(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("{}", self),
+                "CANCELLATION_FAILED".to_string(),
+            ),
+            SaturnError::ConfigError(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("{}", self),
+                "CONFIG_ERROR".to_string(),
+            ),
+            SaturnError::TimeoutError(_) => (
+                StatusCode::GATEWAY_TIMEOUT,
+                format!("{}", self),
+                "TIMEOUT_ERROR".to_string(),
+            ),
+
+            SaturnError::IoError(_)
+            | SaturnError::JoinError(_)
+            | SaturnError::SdkError { .. }
+            | SaturnError::InternalServerError(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("{}", self),
+                "INTERNAL_SERVER_ERROR".to_string(),
+            ),
         };
 
         let body = Json(json!({
             "error": {
-                "code": error_code_str, 
+                "code": error_code_str,
                 "message": error_message,
             }
         }));

@@ -89,7 +89,7 @@ impl UserStreamNotificationSystem {
         sender.subscribe()
     }
 
-    pub async fn start_connection_management(&self) {
+    pub fn start_connection_management(&self) {
         let cleanup_system: UserStreamNotificationSystem = self.clone();
 
         tokio::spawn(async move {
@@ -145,7 +145,7 @@ impl UserStreamNotificationSystem {
         Ok(())
     }
 
-    pub async fn sentinal_start_redis_subscription(&self, redis_client: redis::Client) {
+    pub fn sentinal_start_redis_subscription(&self, redis_client: redis::Client) {
         let notification_system = self.clone();
         tokio::spawn(async move {
             let mut conn = match redis_client.get_async_pubsub().await {

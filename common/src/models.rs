@@ -6,36 +6,6 @@ pub struct StreamWrapper<T> {
     pub data: T,
 }
 
-#[derive(Serialize, Clone)]
-struct SimplifiedPrice {
-    price: String,
-    change_percent: String,
-    image_url: String,
-    market_cap_rank: Option<u32>,
-    coin_name: String,
-}
-
-#[derive(Deserialize)]
-struct ExchangeInfo {
-    symbols: Vec<SymbolInfo>,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct SymbolInfo {
-    symbol: String,
-    status: String,
-}
-
-#[derive(Deserialize)]
-struct CoinGeckoCoin {
-    id: String,
-    symbol: String,
-    name: String,
-    image: String,
-    market_cap_rank: Option<u32>,
-}
-
 #[derive(Clone, Debug)]
 pub struct CoinInfo {
     pub name: String,

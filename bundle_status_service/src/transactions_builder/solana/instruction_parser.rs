@@ -7,6 +7,7 @@ use solana_sdk::instruction::{AccountMeta as SolanaAccountMeta, Instruction as S
 
 use crate::constant::JITO_DONT_FRONT;
 
+#[derive(Clone)]
 pub struct JupiterSolanaParser;
 
 impl InstructionParser<&JupiterSwapInstructionsRsponse, Vec<SolanaInstruction>>

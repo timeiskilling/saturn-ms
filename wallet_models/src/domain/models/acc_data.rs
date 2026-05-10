@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use strum_macros::{Display, EnumString};
+use strum_macros::{EnumString};
 
 use crate::domain::models::{token_models::TokenBalance, tx_models::TxSummary};
 
@@ -42,7 +42,7 @@ impl Default for AccData {
     }
 }
 
-#[derive(EnumString,Serialize, Deserialize, Debug, Clone, Copy)]
+#[derive(EnumString, Serialize, Deserialize, Debug, Clone, Copy)]
 pub enum Network {
     #[strum(serialize = "Solana")]
     Solana,

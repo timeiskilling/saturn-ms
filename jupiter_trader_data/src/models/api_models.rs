@@ -175,15 +175,6 @@ pub struct SwapRequestParams<'a> {
     pub options: QuoteOptions,
 }
 
-#[derive(Clone)]
-pub struct QuoteRequestParams {
-    input_mint: String,
-    output_mint: String,
-    amount: String,
-    slippage_bps: String,
-    additional_params: Vec<(&'static str, String)>,
-}
-
 pub type ImageFetch = Vec<ImageData>;
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]

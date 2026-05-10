@@ -9,7 +9,7 @@ members = [
     "jupiter_trader_data",
     "jupiter_trader_service",
     "price_service",
-    "stargate_service",
+    # "stargate_service",
     "ws_price_service",
     # "encryptions-service",
     "wallet_models",
