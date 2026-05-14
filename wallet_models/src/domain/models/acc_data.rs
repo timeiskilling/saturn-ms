@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use strum_macros::{EnumString};
+use strum_macros::EnumString;
 
 use crate::domain::models::{token_models::TokenBalance, tx_models::TxSummary};
 

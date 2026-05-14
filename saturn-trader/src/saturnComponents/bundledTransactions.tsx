@@ -365,7 +365,6 @@ export function BundledTransactions() {
     );
 
     if (validTemplates.length === 0) {
-      alert("No valid templates to execute.");
       return;
     }
 
@@ -489,7 +488,6 @@ export function BundledTransactions() {
         error?.message?.includes("User rejected") ||
         error?.message?.includes("User canceled")
       ) {
-        alert("Transaction signing was rejected by the user.");
       } else {
         console.error("Execution failed:", error);
       }
@@ -498,7 +496,6 @@ export function BundledTransactions() {
 
   const handleExecuteTemplate = async (template: Template) => {
     if (template.transactions.length === 0) {
-      alert("0 transactions in bundle");
       return;
     }
 
@@ -617,7 +614,6 @@ export function BundledTransactions() {
         error?.message?.includes("User rejected") ||
         error?.message?.includes("User canceled")
       ) {
-        alert("Transaction signing was rejected by the user.");
       } else {
         console.error("Execution failed:", error);
       }

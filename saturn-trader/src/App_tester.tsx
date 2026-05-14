@@ -5,6 +5,7 @@ import { WalletSidebar } from "./saturnComponents/walletSidebar";
 import { BottomPanel } from "./saturnComponents/bottomPanel";
 import { BundledTransactions } from "./saturnComponents/bundledTransactions";
 import { RoadmapView } from "./saturnComponents/RoadmapView";
+import { ForceUnlink } from "./saturnComponents/ForceUnlink";
 import { Toaster, toast } from "sonner";
 
 import { PhantomProvider, darkTheme, usePhantom } from "@phantom/react-sdk";
@@ -12,9 +13,9 @@ import { AddressType } from "@phantom/browser-sdk";
 import { CustomWalletProfile } from "./components/wallet/CustomWalletProfile";
 
 function AppContent() {
-  const [activeTab, setActiveTab] = useState<"trading" | "bundles" | "roadmap">(
-    "trading",
-  );
+  const [activeTab, setActiveTab] = useState<
+    "trading" | "bundles" | "roadmap" | "forceUnlink"
+  >("trading");
 
   return (
     <div className="select-none flex flex-col h-screen w-full overflow-hidden bg-zinc-950">
@@ -36,7 +37,6 @@ function AppContent() {
               </div>
             </div>
 
-            {/* Desktop Navigation */}
             <div className="hidden lg:flex gap-1 bg-zinc-900 p-1 rounded-lg border border-zinc-800">
               <button
                 onClick={() => setActiveTab("trading")}
@@ -68,6 +68,16 @@ function AppContent() {
               >
                 Roadmap
               </button>
+              <button
+                onClick={() => setActiveTab("forceUnlink")}
+                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  activeTab === "forceUnlink"
+                    ? "bg-zinc-800 text-white shadow-sm"
+                    : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+                }`}
+              >
+                Force Unlink
+              </button>
             </div>
           </div>
         </div>
@@ -79,7 +89,9 @@ function AppContent() {
                 ? "translate-x-0"
                 : activeTab === "bundles"
                   ? "-translate-x-full"
-                  : "-translate-x-[200%]"
+                  : activeTab === "roadmap"
+                    ? "translate-x-[-200%]"
+                    : "translate-x-[-300%]"
             }`}
           >
             {/* Terminal Page */}
@@ -105,6 +117,13 @@ function AppContent() {
             <div className="flex w-full h-full shrink-0">
               <div className="flex flex-1 flex-col overflow-hidden w-full bg-zinc-950">
                 <RoadmapView />
+              </div>
+            </div>
+
+            {/* Force Unlink Page */}
+            <div className="flex w-full h-full shrink-0">
+              <div className="flex flex-1 flex-col overflow-hidden w-full bg-zinc-950">
+                <ForceUnlink />
               </div>
             </div>
           </div>
@@ -189,6 +208,32 @@ function AppContent() {
           </svg>
           <span className="text-[10px] font-bold uppercase tracking-wider">
             Roadmap
+          </span>
+        </button>
+        <button
+          onClick={() => setActiveTab("forceUnlink")}
+          className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-all ${
+            activeTab === "forceUnlink"
+              ? "text-blue-500 scale-110"
+              : "text-zinc-500 hover:text-zinc-300"
+          }`}
+        >
+          <svg
+            className="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+            ></path>
+          </svg>
+          <span className="text-[10px] font-bold uppercase tracking-wider">
+            Unlink
           </span>
         </button>
       </div>
