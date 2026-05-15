@@ -1,18 +1,15 @@
+use crate::postgres::extractor::DbPool;
 use crate::postgres::models::{
     DeleteAccountResponse, LinkedWalletResponse, PromoteWalletResponse, SaveBundlesPayload,
     UnlinkWalletResponse, UnlinkedWalletResponse,
 };
-use crate::{
-    endpoints::errors::ApiError, middleware::session_token::AuthenticatedUser,
-    postgres::extractor::DatabaseConnection,
-};
+use crate::{endpoints::errors::ApiError, middleware::session_token::AuthenticatedUser};
 use axum::Json;
 use saturn_errors::error::UserServiceError;
-use sqlx::Acquire;
 
 pub async fn save_user_bundles(
     user: AuthenticatedUser,
-    mut db: DatabaseConnection,
+    db: DbPool,
     Json(payload): Json<SaveBundlesPayload>,
 ) -> Result<&'static str, ApiError> {
     tracing::info!("Saving bundles for wallet: {}", user.wallet_address);
@@ -26,7 +23,7 @@ pub async fn save_user_bundles(
         user.wallet_address,
         payload.bundles
     )
-    .execute(&mut *db.0)
+    .execute(&db.0)
     .await
     .map_err(|e| UserServiceError::PostgresError(e.to_string()))?;
 
@@ -35,7 +32,7 @@ pub async fn save_user_bundles(
 
 pub async fn get_user_bundles(
     user: AuthenticatedUser,
-    mut db: DatabaseConnection,
+    db: DbPool,
 ) -> Result<Json<serde_json::Value>, ApiError> {
     tracing::info!("Get bundles for wallet {}", user.wallet_address);
 
@@ -47,7 +44,7 @@ pub async fn get_user_bundles(
         "#,
         user.wallet_address
     )
-    .fetch_optional(&mut *db.0)
+    .fetch_optional(&db.0)
     .await
     .map_err(|e| UserServiceError::PostgresError(e.to_string()))?;
 
@@ -56,7 +53,7 @@ pub async fn get_user_bundles(
 
 pub async fn get_linked_wallets(
     user: AuthenticatedUser,
-    mut db: DatabaseConnection,
+    db: DbPool,
 ) -> Result<Json<serde_json::Value>, ApiError> {
     tracing::info!("Get linked wallets for wallet {}", user.wallet_address);
 
@@ -68,7 +65,7 @@ pub async fn get_linked_wallets(
         "#,
         user.wallet_address
     )
-    .fetch_all(&mut *db.0)
+    .fetch_all(&db.0)
     .await
     .map_err(|e| UserServiceError::PostgresError(e.to_string()))?;
 
@@ -88,7 +85,7 @@ pub async fn get_linked_wallets(
 }
 
 pub async fn insert_wallets(
-    mut db: DatabaseConnection,
+    db: &sqlx::PgPool,
     user: AuthenticatedUser,
     public_key: String,
     wallet_id: String,
@@ -123,7 +120,7 @@ pub async fn insert_wallets(
         name,
         address_type
     )
-    .execute(&mut *db.0)
+    .execute(db)
     .await
     .map_err(|e| UserServiceError::PostgresError(e.to_string()))?;
 
@@ -134,50 +131,77 @@ pub async fn insert_wallets(
     })
 }
 
-pub async fn check_if_is_primary_wallet(
-    db: &mut DatabaseConnection,
+pub struct WalletStatus {
+    pub is_primary: bool,
+    pub linked_to: Option<String>,
+}
+
+pub async fn check_if_is_linked_wallet(
+    db: &sqlx::PgPool,
     public_key: &str,
 ) -> Result<bool, ApiError> {
-    let hashed_public_key = crate::hash::hash_wallet_address(public_key);
     let result = sqlx::query_scalar!(
         r#"
         SELECT EXISTS(
-            SELECT 1 FROM user_bundles WHERE wallet_address = $1
+            SELECT 1 FROM linked_wallets WHERE address = $1
         )
         "#,
-        hashed_public_key
+        public_key
     )
-    .fetch_one(&mut *db.0)
+    .fetch_one(db)
     .await
     .map_err(|e| UserServiceError::PostgresError(e.to_string()))?;
 
     Ok(result.unwrap_or(false))
 }
 
-pub async fn check_if_is_linked_wallet(
-    db: &mut DatabaseConnection,
+// pub async fn check_if_linked_to_someone_else(
+//     db: &sqlx::PgPool,
+//     public_key: &str,
+//     current_user_wallet: &str,
+// ) -> Result<bool, ApiError> {
+//     let result = sqlx::query_scalar!(
+//         r#"
+//         SELECT EXISTS(
+//             SELECT 1 FROM linked_wallets
+//             WHERE address = $1 AND primary_wallet != $2
+//         )
+//         "#,
+//         public_key,
+//         current_user_wallet
+//     )
+//     .fetch_one(db)
+//     .await
+//     .map_err(|e| UserServiceError::PostgresError(e.to_string()))?;
+
+//     Ok(result.unwrap_or(false))
+// }
+
+pub async fn get_wallet_status(
+    pool: &sqlx::PgPool,
     public_key: &str,
-) -> Result<Option<String>, ApiError> {
-    let hashed_public_key = crate::hash::hash_wallet_address(public_key);
-    let result = sqlx::query_scalar!(
+) -> Result<WalletStatus, ApiError> {
+    let record = sqlx::query!(
         r#"
-        SELECT primary_wallet
-        FROM linked_wallets
-        WHERE address = $1
-        LIMIT 1
+        SELECT
+            EXISTS(SELECT 1 FROM user_bundles WHERE wallet_address = $1) AS is_primary,
+            (SELECT primary_wallet FROM linked_wallets WHERE address = $1 LIMIT 1) AS linked_to
         "#,
-        hashed_public_key
+        public_key
     )
-    .fetch_optional(&mut *db.0)
+    .fetch_one(pool)
     .await
     .map_err(|e| UserServiceError::PostgresError(e.to_string()))?;
 
-    Ok(result)
+    Ok(WalletStatus {
+        is_primary: record.is_primary.unwrap_or(false),
+        linked_to: record.linked_to,
+    })
 }
 
 pub async fn disconnect_wallet(
     user: AuthenticatedUser,
-    mut db: DatabaseConnection,
+    db: &sqlx::PgPool,
     Json(payload): Json<crate::endpoints::models::TargetPayload>,
 ) -> Result<UnlinkedWalletResponse, ApiError> {
     sqlx::query!(
@@ -185,7 +209,7 @@ pub async fn disconnect_wallet(
         payload.target_wallet,
         user.wallet_address
     )
-    .execute(&mut *db.0)
+    .execute(db)
     .await
     .map_err(|e| UserServiceError::PostgresError(e.to_string()))?;
 
@@ -195,7 +219,7 @@ pub async fn disconnect_wallet(
 }
 
 pub async fn promote_wallet(
-    mut db: DatabaseConnection,
+    db: &sqlx::PgPool,
     user: AuthenticatedUser,
     target_wallet: String,
     old_primary_wallet_id: String,
@@ -211,7 +235,7 @@ pub async fn promote_wallet(
         target_wallet,
         user.wallet_address
     )
-    .fetch_optional(&mut *db.0)
+    .fetch_optional(db)
     .await
     .map_err(|e| UserServiceError::PostgresError(e.to_string()))?;
 
@@ -221,10 +245,10 @@ pub async fn promote_wallet(
         )));
     }
 
-    let mut tx =
-        db.0.begin()
-            .await
-            .map_err(|e| UserServiceError::PostgresError(e.to_string()))?;
+    let mut tx = db
+        .begin()
+        .await
+        .map_err(|e| UserServiceError::PostgresError(e.to_string()))?;
 
     let bundle_data = sqlx::query_scalar!(
         "SELECT bundles_data FROM user_bundles WHERE wallet_address = $1",
@@ -299,7 +323,7 @@ pub async fn promote_wallet(
 }
 
 pub async fn unlink_wallet(
-    mut db: DatabaseConnection,
+    db: &sqlx::PgPool,
     target_wallet: String,
 ) -> Result<UnlinkWalletResponse, ApiError> {
     let hashed_target = crate::hash::hash_wallet_address(&target_wallet);
@@ -307,18 +331,16 @@ pub async fn unlink_wallet(
         r#"
         DELETE FROM linked_wallets
         WHERE address = $1
-        RETURNING primary_wallet
         "#,
         hashed_target
     )
-    .fetch_optional(&mut *db.0)
+    .fetch_optional(db)
     .await
     .map_err(|e| UserServiceError::PostgresError(e.to_string()))?;
 
     match result {
-        Some(row) => Ok(UnlinkWalletResponse {
+        Some(_) => Ok(UnlinkWalletResponse {
             status: "unlinked".to_string(),
-            new_primary: row.primary_wallet,
         }),
         None => Err(ApiError(UserServiceError::InternalError(
             "Target wallet is not a linked wallet".to_string(),
@@ -327,14 +349,14 @@ pub async fn unlink_wallet(
 }
 
 pub async fn delete_account(
-    mut db: DatabaseConnection,
+    db: &sqlx::PgPool,
     user: AuthenticatedUser,
 ) -> Result<DeleteAccountResponse, ApiError> {
     let result = sqlx::query!(
         "DELETE FROM user_bundles WHERE wallet_address = $1",
         user.wallet_address
     )
-    .execute(&mut *db.0)
+    .execute(db)
     .await
     .map_err(|e| UserServiceError::PostgresError(e.to_string()))?;
 

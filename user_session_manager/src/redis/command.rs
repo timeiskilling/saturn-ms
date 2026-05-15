@@ -15,7 +15,7 @@ pub async fn fetch_nonce_from_redis(
 ) -> Result<String, UserServiceError> {
     let redis_key = format!("auth_nonce:{}", request_id);
     let nonce: Option<String> = conn
-        .get(redis_key)
+        .get_del(redis_key)
         .await
         .map_err(|e| UserServiceError::RedisError(e.to_string()))?;
     nonce.ok_or(UserServiceError::InvalidNonce)
@@ -39,17 +39,17 @@ pub async fn write_get_nonce_to_redis(
     })
 }
 
-pub async fn delete_nonce_from_redis(
-    conn: &mut Connection,
-    request_id: &str,
-) -> Result<(), UserServiceError> {
-    let redis_key = format!("auth_nonce:{}", request_id);
-    let _: () = conn
-        .del(redis_key)
-        .await
-        .map_err(|e| UserServiceError::RedisError(e.to_string()))?;
-    Ok(())
-}
+// pub async fn delete_nonce_from_redis(
+//     conn: &mut Connection,
+//     request_id: &str,
+// ) -> Result<(), UserServiceError> {
+//     let redis_key = format!("auth_nonce:{}", request_id);
+//     let _: () = conn
+//         .del(redis_key)
+//         .await
+//         .map_err(|e| UserServiceError::RedisError(e.to_string()))?;
+//     Ok(())
+// }
 
 pub async fn create_session(
     pub_key: &str,

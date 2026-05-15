@@ -16,9 +16,9 @@ use crate::{
     },
     middleware::session_token::AuthenticatedUser,
     postgres::{
-        extractor::DatabaseConnection,
+        extractor::DbPool,
         models::UnlinkedWalletResponse,
-        query::{insert_wallets, unlink_wallet},
+        query::{check_if_is_linked_wallet, get_wallet_status, insert_wallets, unlink_wallet},
     },
     redis::{self, extractor::RedisConn},
 };
@@ -36,7 +36,7 @@ pub async fn get_nonce(mut redis: RedisConn) -> Result<Json<NonceResponse>, ApiE
 #[axum::debug_handler(state = Arc<AppState>)]
 pub async fn verify_signature(
     existing_session: Option<AuthenticatedUser>,
-    mut db: DatabaseConnection,
+    db: DbPool,
     mut redis: RedisConn,
     TypedHeader(user_agent): TypedHeader<UserAgent>,
     Json(payload): Json<SolVerifyRequest>,
@@ -44,8 +44,6 @@ pub async fn verify_signature(
     let expected_nonce =
         redis::command::fetch_nonce_from_redis(&mut redis.0, &payload.verify_data.request_id)
             .await?;
-    let _ = redis::command::delete_nonce_from_redis(&mut redis.0, &payload.verify_data.request_id)
-        .await;
     let expected_message = format!("Sign in to Saturn.\n\nNonce: {}", expected_nonce);
     let public_key = payload.verify_data.public_key.clone();
 
@@ -59,12 +57,10 @@ pub async fn verify_signature(
 
     match existing_session {
         Some(user) => {
-            let is_primary =
-                crate::postgres::query::check_if_is_primary_wallet(&mut db, &public_key).await?;
-
             let hashed_public_key = crate::hash::hash_wallet_address(&public_key);
+            let wallet_status = get_wallet_status(&db.0, &hashed_public_key).await?;
 
-            if is_primary && user.wallet_address != hashed_public_key {
+            if wallet_status.is_primary && user.wallet_address != hashed_public_key {
                 tracing::warn!(
                     "Rejected linking wallet {}. Already registered as a primary account.",
                     public_key
@@ -72,26 +68,19 @@ pub async fn verify_signature(
                 return Err(ApiError(UserServiceError::Unauthorized));
             }
 
-            let is_linked_to_primary =
-                crate::postgres::query::check_if_is_linked_wallet(&mut db, &public_key).await?;
-
-            if let Some(primary_wallet) = is_linked_to_primary
-                && primary_wallet != user.wallet_address
-            {
-                tracing::warn!(
-                    "Rejected linking wallet {}. Already linked to {}.",
-                    public_key,
-                    primary_wallet
-                );
+            if wallet_status.linked_to.is_some() {
+                tracing::warn!("Rejected linking wallet {}. Already linked.", public_key,);
                 return Err(ApiError(UserServiceError::Unauthorized));
             }
+
             tracing::info!(
                 "User {} is linking a new wallet: {}",
                 user.wallet_address,
                 public_key
             );
+
             let success_response = insert_wallets(
-                db,
+                &db.0,
                 user,
                 public_key,
                 payload.wallet_id,
@@ -102,14 +91,12 @@ pub async fn verify_signature(
             Ok((axum::http::StatusCode::OK, Json(success_response)).into_response())
         }
         None => {
-            let is_linked_to_primary =
-                crate::postgres::query::check_if_is_linked_wallet(&mut db, &public_key).await?;
+            let is_linked_to_primary = check_if_is_linked_wallet(&db.0, &public_key).await?;
 
-            if let Some(primary_wallet) = is_linked_to_primary {
+            if is_linked_to_primary {
                 tracing::warn!(
-                    "Rejected login for linked wallet {}. Belongs to primary {}.",
+                    "Rejected login for linked wallet {}. Belongs to primary.",
                     public_key,
-                    primary_wallet
                 );
                 return Err(ApiError(UserServiceError::Unauthorized));
             }
@@ -123,22 +110,19 @@ pub async fn verify_signature(
 
 pub async fn verify_unlink(
     mut redis: RedisConn,
-    mut db: DatabaseConnection,
+    db: DbPool,
     Json(payload): Json<SolVerifyRequest>,
 ) -> Result<impl IntoResponse, ApiError> {
     let expected_nonce =
         redis::command::fetch_nonce_from_redis(&mut redis.0, &payload.verify_data.request_id)
             .await?;
-    let _ = redis::command::delete_nonce_from_redis(&mut redis.0, &payload.verify_data.request_id)
-        .await;
     let public_key = payload.verify_data.public_key.clone();
 
     tracing::info!("Call Verify unlink for wallet {}", public_key);
 
-    let is_linked_to_primary =
-        crate::postgres::query::check_if_is_linked_wallet(&mut db, &public_key).await?;
+    let is_linked_to_primary = check_if_is_linked_wallet(&db.0, &public_key).await?;
 
-    if is_linked_to_primary.is_none() {
+    if !is_linked_to_primary {
         tracing::warn!(
             "Rejected unlink: Wallet is not linked to primary wallet {}.",
             public_key,
@@ -158,7 +142,7 @@ pub async fn verify_unlink(
         .verify()
         .map_err(|_| UserServiceError::InvalidSignature)?;
 
-    let response = unlink_wallet(db, public_key).await?;
+    let response = unlink_wallet(&db.0, public_key).await?;
     Ok((axum::http::StatusCode::OK, Json(response)).into_response())
 }
 
@@ -188,13 +172,12 @@ pub async fn logout(
 
 pub async fn promote_wallet(
     user: AuthenticatedUser,
-    db: DatabaseConnection,
+    db: DbPool,
     mut redis: RedisConn,
     Json(payload): Json<PromoteWalletRequest>,
 ) -> Result<impl IntoResponse, ApiError> {
     let expected_nonce =
         redis::command::fetch_nonce_from_redis(&mut redis.0, &payload.request_id).await?;
-    let _ = redis::command::delete_nonce_from_redis(&mut redis.0, &payload.request_id).await;
 
     tracing::info!("Promote wallet {}", payload.target_wallet);
 
@@ -212,7 +195,7 @@ pub async fn promote_wallet(
         .map_err(|_| UserServiceError::InvalidSignature)?;
 
     let success_response = crate::postgres::query::promote_wallet(
-        db,
+        &db.0,
         user.clone(),
         payload.target_wallet,
         payload.wallet_id,
@@ -228,13 +211,12 @@ pub async fn promote_wallet(
 
 pub async fn delete_account(
     user: AuthenticatedUser,
-    db: DatabaseConnection,
+    db: DbPool,
     mut redis: RedisConn,
     Json(payload): Json<DeleteAccountRequest>,
 ) -> Result<impl IntoResponse, ApiError> {
     let expected_nonce =
         redis::command::fetch_nonce_from_redis(&mut redis.0, &payload.request_id).await?;
-    let _ = redis::command::delete_nonce_from_redis(&mut redis.0, &payload.request_id).await;
 
     tracing::info!("Delete account for wallet {}", user.wallet_address);
 
@@ -245,7 +227,7 @@ pub async fn delete_account(
         .verify()
         .map_err(|_| UserServiceError::InvalidSignature)?;
 
-    let success_response = crate::postgres::query::delete_account(db, user.clone()).await?;
+    let success_response = crate::postgres::query::delete_account(&db.0, user.clone()).await?;
 
     let _ = redis::command::delete_all_user_sessions(&user.wallet_address, &mut redis.0).await;
 
@@ -254,11 +236,11 @@ pub async fn delete_account(
 
 pub async fn disconnect_wallet_handler(
     user: crate::middleware::session_token::AuthenticatedUser,
-    db: crate::postgres::extractor::DatabaseConnection,
+    db: DbPool,
     payload: axum::Json<TargetPayload>,
 ) -> Result<axum::Json<UnlinkedWalletResponse>, crate::endpoints::errors::ApiError> {
     tracing::info!("Disconnect linked wallet {}", payload.target_wallet);
 
-    let res = crate::postgres::query::disconnect_wallet(user, db, payload).await?;
+    let res = crate::postgres::query::disconnect_wallet(user, &db.0, payload).await?;
     Ok(axum::Json(res))
 }

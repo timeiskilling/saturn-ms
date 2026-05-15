@@ -32,5 +32,4 @@ pub struct DeleteAccountResponse {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UnlinkWalletResponse {
     pub status: String,
-    pub new_primary: String,
 }
