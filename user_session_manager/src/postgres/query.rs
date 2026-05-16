@@ -98,9 +98,7 @@ pub async fn insert_wallets(
         user.wallet_address
     );
 
-    let hashed_public_key = crate::hash::hash_wallet_address(&public_key);
-
-    if user.wallet_address == hashed_public_key {
+    if user.wallet_address == public_key {
         return Ok(LinkedWalletResponse {
             status: "linked".to_string(),
             primary_wallet: user.wallet_address,
@@ -115,7 +113,7 @@ pub async fn insert_wallets(
             ON CONFLICT (address) DO NOTHING
             "#,
         user.wallet_address,
-        hashed_public_key,
+        public_key,
         wallet_id,
         name,
         address_type
@@ -218,6 +216,63 @@ pub async fn disconnect_wallet(
     })
 }
 
+pub enum LoginEligibility {
+    NewWallet,
+    FreeWallet,
+    IsPrimary,
+    IsLinked,
+}
+
+pub async fn acquire_login_lock_and_check(
+    pool: &sqlx::PgPool,
+    hashed_public_key: &str,
+) -> Result<LoginEligibility, ApiError> {
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|e| UserServiceError::PostgresError(e.to_string()))?;
+
+    let lock_key = {
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        std::hash::Hash::hash(hashed_public_key, &mut hasher);
+        std::hash::Hasher::finish(&hasher) as i64
+    };
+
+    sqlx::query("SELECT pg_advisory_xact_lock($1)")
+        .bind(lock_key)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| UserServiceError::PostgresError(e.to_string()))?;
+
+    let record = sqlx::query!(
+        r#"
+        SELECT
+            EXISTS(
+                SELECT 1 FROM user_bundles WHERE wallet_address = $1
+            ) AS is_primary,
+            (
+                SELECT primary_wallet FROM linked_wallets WHERE address = $1 LIMIT 1
+            ) AS linked_to
+        "#,
+        hashed_public_key
+    )
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(|e| UserServiceError::PostgresError(e.to_string()))?;
+
+    let eligibility = match (record.is_primary.unwrap_or(false), record.linked_to) {
+        (_, Some(_)) => LoginEligibility::IsLinked,
+        (true, None) => LoginEligibility::IsPrimary,
+        (false, None) => LoginEligibility::FreeWallet,
+    };
+
+    tx.commit()
+        .await
+        .map_err(|e| UserServiceError::PostgresError(e.to_string()))?;
+
+    Ok(eligibility)
+}
+
 pub async fn promote_wallet(
     db: &sqlx::PgPool,
     user: AuthenticatedUser,
@@ -226,46 +281,52 @@ pub async fn promote_wallet(
     old_primary_name: String,
     old_primary_address_type: String,
 ) -> Result<PromoteWalletResponse, ApiError> {
-    let linked_wallet = sqlx::query!(
-        r#"
-        SELECT wallet_id, name, address_type
-        FROM linked_wallets
-        WHERE address = $1 AND primary_wallet = $2
-        "#,
-        target_wallet,
-        user.wallet_address
-    )
-    .fetch_optional(db)
-    .await
-    .map_err(|e| UserServiceError::PostgresError(e.to_string()))?;
-
-    if linked_wallet.is_none() {
-        return Err(ApiError(UserServiceError::InternalError(
-            "Target wallet is not a linked wallet".to_string(),
-        )));
-    }
-
     let mut tx = db
         .begin()
         .await
         .map_err(|e| UserServiceError::PostgresError(e.to_string()))?;
 
-    let bundle_data = sqlx::query_scalar!(
-        "SELECT bundles_data FROM user_bundles WHERE wallet_address = $1",
+    let lock_key = {
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        std::hash::Hash::hash(&target_wallet, &mut hasher);
+        std::hash::Hasher::finish(&hasher) as i64
+    };
+
+    sqlx::query("SELECT pg_advisory_xact_lock($1)")
+        .bind(lock_key)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| UserServiceError::PostgresError(e.to_string()))?;
+
+    let is_linked = sqlx::query_scalar!(
+        r#"
+            SELECT EXISTS(
+                SELECT 1 FROM linked_wallets
+                WHERE address = $1 AND primary_wallet = $2
+            )
+            "#,
+        target_wallet,
         user.wallet_address
     )
     .fetch_one(&mut *tx)
     .await
     .map_err(|e| UserServiceError::PostgresError(e.to_string()))?;
 
+    if !is_linked.unwrap_or(false) {
+        return Err(ApiError(UserServiceError::InternalError(
+            "Target wallet is not a linked wallet".to_string(),
+        )));
+    }
+
     sqlx::query!(
         r#"
-        INSERT INTO user_bundles (wallet_address, bundles_data)
-        VALUES ($1, $2)
-        ON CONFLICT (wallet_address) DO UPDATE SET bundles_data = $2
-        "#,
+            INSERT INTO user_bundles (wallet_address, bundles_data)
+            SELECT $1, bundles_data FROM user_bundles WHERE wallet_address = $2
+            ON CONFLICT (wallet_address)
+            DO UPDATE SET bundles_data = EXCLUDED.bundles_data
+            "#,
         target_wallet,
-        bundle_data
+        user.wallet_address
     )
     .execute(&mut *tx)
     .await
@@ -290,10 +351,10 @@ pub async fn promote_wallet(
 
     sqlx::query!(
         r#"
-        INSERT INTO linked_wallets (primary_wallet, address, wallet_id, name, address_type)
-        VALUES ($1, $2, $3, $4, $5)
-        ON CONFLICT (address) DO NOTHING
-        "#,
+            INSERT INTO linked_wallets (primary_wallet, address, wallet_id, name, address_type)
+            VALUES ($1, $2, $3, $4, $5)
+            ON CONFLICT (address) DO NOTHING
+            "#,
         target_wallet,
         user.wallet_address,
         old_primary_wallet_id,
@@ -326,13 +387,12 @@ pub async fn unlink_wallet(
     db: &sqlx::PgPool,
     target_wallet: String,
 ) -> Result<UnlinkWalletResponse, ApiError> {
-    let hashed_target = crate::hash::hash_wallet_address(&target_wallet);
     let result = sqlx::query!(
         r#"
         DELETE FROM linked_wallets
         WHERE address = $1
         "#,
-        hashed_target
+        target_wallet
     )
     .fetch_optional(db)
     .await
