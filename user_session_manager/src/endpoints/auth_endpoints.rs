@@ -6,12 +6,11 @@ use saturn_errors::error::UserServiceError;
 
 use crate::{
     app_state::AppState,
-    auth_manager::{inject_token::inject_token, signature_check::Verifiable},
+    auth_manager::{inject_token::inject_token, signature_check::verify_payload_signature},
     endpoints::{
         errors::ApiError,
         models::{
-            DeleteAccountRequest, NonceResponse, PromoteWalletRequest, SolVerifyRequest,
-            TargetPayload,
+            NonceResponse, PromoteWalletRequest, SolVerifyRequest, TargetPayload, VerifySignature,
         },
     },
     middleware::session_token::AuthenticatedUser,
@@ -26,8 +25,8 @@ use crate::{
     redis::{self, extractor::RedisConn},
 };
 
-pub async fn get_nonce(mut redis: RedisConn) -> Result<Json<NonceResponse>, ApiError> {
-    let resp = redis::command::write_get_nonce_to_redis(&mut redis.0).await?;
+pub async fn get_nonce(redis: RedisConn) -> Result<Json<NonceResponse>, ApiError> {
+    let resp = redis::command::write_get_nonce_to_redis(&mut redis.get_connection().await?).await?;
     let response = NonceResponse {
         nonce: resp.nonce.clone(),
         request_id: resp.request_id,
@@ -40,41 +39,22 @@ pub async fn get_nonce(mut redis: RedisConn) -> Result<Json<NonceResponse>, ApiE
 pub async fn verify_signature(
     existing_session: Option<AuthenticatedUser>,
     db: DbPool,
-    mut redis: RedisConn,
+    redis: RedisConn,
     TypedHeader(user_agent): TypedHeader<UserAgent>,
     Json(payload): Json<SolVerifyRequest>,
 ) -> Result<impl IntoResponse, ApiError> {
+    let mut conn = redis.get_connection().await?;
     let expected_nonce =
-        redis::command::fetch_nonce_from_redis(&mut redis.0, &payload.verify_data.request_id)
-            .await?;
+        redis::command::fetch_nonce_from_redis(&mut conn, &payload.verify_data.request_id).await?;
     let expected_message = format!("Sign in to Saturn.\n\nNonce: {}", expected_nonce);
-    let public_key = payload.verify_data.public_key.clone();
+    let hashed_public_key = crate::hash::hash_wallet_address(&payload.verify_data.public_key);
 
-    let task = tokio::task::spawn_blocking(move || {
-        let hashed_public_key = crate::hash::hash_wallet_address(&public_key);
-        let signature = payload
-            .verify_data
-            .try_into_domain(expected_message.into_bytes())?;
+    let expected_pubkey = existing_session
+        .as_ref()
+        .map(|user| user.wallet_address.as_str());
 
-        let _ = signature
-            .verify()
-            .map_err(|_| UserServiceError::InvalidSignature)?;
-
-        Ok(hashed_public_key)
-    });
-
-    let hashed_public_key = task
-        .await
-        .map_err(|err| {
-            tracing::error!(
-                "CRITICAL: Crypto blocking task panicked or was cancelled: {:?}",
-                err
-            );
-            ApiError(UserServiceError::InternalError(
-                "Internal cryptography error".to_string(),
-            ))
-        })?
-        .map_err(ApiError)?;
+    drop(conn);
+    verify_payload_signature(payload.verify_data, expected_message, expected_pubkey).await?;
 
     match existing_session {
         Some(user) => {
@@ -115,8 +95,11 @@ pub async fn verify_signature(
                 | LoginEligibility::FreeWallet
                 | LoginEligibility::IsPrimary => {
                     tracing::info!("Login approved for wallet");
+
+                    let mut cleanup_conn = redis.get_connection().await?;
                     let response =
-                        inject_token(hashed_public_key, &mut redis.0, user_agent.as_str()).await?;
+                        inject_token(hashed_public_key, &mut cleanup_conn, user_agent.as_str())
+                            .await?;
                     Ok(response.into_response())
                 }
             }
@@ -125,49 +108,41 @@ pub async fn verify_signature(
 }
 
 pub async fn verify_unlink(
-    mut redis: RedisConn,
+    redis: RedisConn,
     db: DbPool,
     Json(payload): Json<SolVerifyRequest>,
 ) -> Result<impl IntoResponse, ApiError> {
-    let expected_nonce =
-        redis::command::fetch_nonce_from_redis(&mut redis.0, &payload.verify_data.request_id)
-            .await?;
-    let public_key = payload.verify_data.public_key.clone();
+    let mut conn = redis.get_connection().await?;
+    let hashed_public_key = crate::hash::hash_wallet_address(&payload.verify_data.public_key);
 
-    tracing::info!("Call Verify unlink for wallet {}", public_key);
-
-    let is_linked_to_primary = check_if_is_linked_wallet(&db.0, &public_key).await?;
+    let (expected_nonce, is_linked_to_primary) = tokio::try_join!(
+        redis::command::fetch_nonce_from_redis(&mut conn, &payload.verify_data.request_id),
+        check_if_is_linked_wallet(&db.0, &hashed_public_key)
+    )?;
 
     if !is_linked_to_primary {
-        tracing::warn!(
-            "Rejected unlink: Wallet is not linked to primary wallet {}.",
-            public_key,
-        );
+        tracing::warn!("Rejected unlink: Wallet is not linked to primary wallet.",);
 
         return Err(ApiError(UserServiceError::InternalError(
             "Target wallet is not linked to this primary account".to_string(),
         )));
     }
-
     let expected_message = format!("Unlink from any primary account. Nonce: {}", expected_nonce);
-    let signature = payload
-        .verify_data
-        .try_into_domain(expected_message.into_bytes())?;
 
-    let _ = signature
-        .verify()
-        .map_err(|_| UserServiceError::InvalidSignature)?;
+    drop(conn);
+    verify_payload_signature(payload.verify_data, expected_message, None).await?;
 
-    let response = unlink_wallet(&db.0, public_key).await?;
+    let response = unlink_wallet(&db.0, hashed_public_key).await?;
     Ok((axum::http::StatusCode::OK, Json(response)).into_response())
 }
 
 pub async fn logout(
-    mut redis: RedisConn,
+    redis: RedisConn,
     jar: axum_extra::extract::cookie::CookieJar,
 ) -> Result<impl IntoResponse, ApiError> {
     if let Some(cookie) = jar.get("saturn_session") {
-        let _ = redis::command::delete_session(cookie.value(), &mut redis.0).await;
+        let mut conn = redis.get_connection().await?;
+        let _ = redis::command::delete_session(cookie.value(), &mut conn).await;
     }
 
     let mut removal_cookie = axum_extra::extract::cookie::Cookie::build(("saturn_session", ""))
@@ -187,32 +162,33 @@ pub async fn logout(
 }
 
 pub async fn promote_wallet(
-    user: AuthenticatedUser,
+    existing_session: AuthenticatedUser,
     db: DbPool,
-    mut redis: RedisConn,
+    redis: RedisConn,
     Json(payload): Json<PromoteWalletRequest>,
 ) -> Result<impl IntoResponse, ApiError> {
+    let mut conn = redis.get_connection().await?;
     let expected_nonce =
-        redis::command::fetch_nonce_from_redis(&mut redis.0, &payload.request_id).await?;
+        redis::command::fetch_nonce_from_redis(&mut conn, &payload.verify_data.request_id).await?;
 
     tracing::info!("Promote wallet {}", payload.target_wallet);
 
+    drop(conn);
     let expected_message = format!(
         "Promote wallet {}. Nonce: {}",
         payload.target_wallet, expected_nonce
     );
 
-    let signature = payload
-        .verify_data
-        .try_into_domain(&user.wallet_address, expected_message.into_bytes())?;
-
-    let _ = signature
-        .verify()
-        .map_err(|_| UserServiceError::InvalidSignature)?;
+    verify_payload_signature(
+        payload.verify_data,
+        expected_message,
+        Some(&existing_session.wallet_address),
+    )
+    .await?;
 
     let success_response = crate::postgres::query::promote_wallet(
         &db.0,
-        user.clone(),
+        existing_session.clone(),
         payload.target_wallet,
         payload.wallet_id,
         payload.name,
@@ -220,32 +196,49 @@ pub async fn promote_wallet(
     )
     .await?;
 
-    let _ = redis::command::delete_all_user_sessions(&user.wallet_address, &mut redis.0).await;
+    let mut cleanup_conn = redis.get_connection().await?;
+    let _ = redis::command::delete_all_user_sessions(
+        &existing_session.wallet_address,
+        &mut cleanup_conn,
+    )
+    .await;
 
     Ok((axum::http::StatusCode::OK, Json(success_response)).into_response())
 }
 
 pub async fn delete_account(
-    user: AuthenticatedUser,
+    existing_session: AuthenticatedUser,
     db: DbPool,
-    mut redis: RedisConn,
-    Json(payload): Json<DeleteAccountRequest>,
+    redis: RedisConn,
+    Json(payload): Json<VerifySignature>,
 ) -> Result<impl IntoResponse, ApiError> {
+    let mut conn = redis.get_connection().await?;
     let expected_nonce =
-        redis::command::fetch_nonce_from_redis(&mut redis.0, &payload.request_id).await?;
+        redis::command::fetch_nonce_from_redis(&mut conn, &payload.request_id).await?;
 
-    tracing::info!("Delete account for wallet {}", user.wallet_address);
-
+    tracing::info!(
+        "Delete account for wallet {}",
+        existing_session.wallet_address
+    );
+    drop(conn);
     let expected_message = format!("Delete account. Nonce: {}", expected_nonce);
-    let signature = payload.try_into_domain(&user.wallet_address, expected_message.into_bytes())?;
 
-    let _ = signature
-        .verify()
-        .map_err(|_| UserServiceError::InvalidSignature)?;
+    verify_payload_signature(
+        payload,
+        expected_message,
+        Some(&existing_session.wallet_address),
+    )
+    .await?;
 
-    let success_response = crate::postgres::query::delete_account(&db.0, user.clone()).await?;
+    let success_response =
+        crate::postgres::query::delete_account(&db.0, &existing_session.wallet_address).await?;
 
-    let _ = redis::command::delete_all_user_sessions(&user.wallet_address, &mut redis.0).await;
+    let mut cleanup_conn = redis.get_connection().await?;
+    let _ = redis::command::delete_all_user_sessions(
+        &existing_session.wallet_address,
+        &mut cleanup_conn,
+    )
+    .await;
 
     Ok((axum::http::StatusCode::OK, Json(success_response)).into_response())
 }

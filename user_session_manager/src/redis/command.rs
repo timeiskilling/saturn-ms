@@ -2,7 +2,9 @@ use deadpool_redis::sentinel::Connection;
 use redis::AsyncCommands;
 use saturn_errors::error::UserServiceError;
 
-use crate::{auth_manager::nonce::generate_nonce, redis::models::DeviceSession};
+use crate::{
+    auth_manager::nonce::generate_nonce, endpoints::errors::ApiError, redis::models::DeviceSession,
+};
 
 pub struct NonceResponse {
     pub nonce: String,
@@ -12,13 +14,13 @@ pub struct NonceResponse {
 pub async fn fetch_nonce_from_redis(
     conn: &mut Connection,
     request_id: &str,
-) -> Result<String, UserServiceError> {
+) -> Result<String, ApiError> {
     let redis_key = format!("auth_nonce:{}", request_id);
     let nonce: Option<String> = conn
         .get_del(redis_key)
         .await
         .map_err(|e| UserServiceError::RedisError(e.to_string()))?;
-    nonce.ok_or(UserServiceError::InvalidNonce)
+    nonce.ok_or(ApiError(UserServiceError::InvalidNonce))
 }
 
 pub async fn write_get_nonce_to_redis(
@@ -56,8 +58,6 @@ pub async fn create_session(
     redis_client: &mut Connection,
     user_agent: &str,
 ) -> Result<String, UserServiceError> {
-    let hashed_pub_key = crate::hash::hash_wallet_address(pub_key);
-
     let token = {
         let mut rng = rand::rng();
         let mut token_bytes = [0u8; 32];
@@ -69,31 +69,24 @@ pub async fn create_session(
 
     let session_data = serde_json::json!({
         "public_id": public_session_id,
-        "wallet": hashed_pub_key,
+        "wallet": pub_key,
         "device_name": user_agent,
         "created_at": chrono::Utc::now().to_rfc3339()
     })
     .to_string();
 
-    redis_client
-        .set_ex::<_, _, ()>(format!("session:{}", token), session_data.clone(), 604800)
-        .await
-        .map_err(|e| saturn_errors::error::UserServiceError::RedisError(e.to_string()))?;
+    let key_session = format!("session:{}", token);
+    let key_public = format!("public_session:{}", public_session_id);
+    let key_devices = format!("user_devices:{}", pub_key);
 
-    redis_client
-        .set_ex::<_, _, ()>(
-            format!("public_session:{}", public_session_id),
-            token.clone(),
-            604800,
-        )
-        .await
-        .map_err(|e| saturn_errors::error::UserServiceError::RedisError(e.to_string()))?;
+    let mut pipe = redis::pipe();
+    pipe.atomic()
+        .set_ex(&key_session, session_data, 604800)
+        .set_ex(&key_public, token.clone(), 604800)
+        .sadd(&key_devices, &public_session_id);
 
-    redis_client
-        .sadd::<_, _, ()>(
-            format!("user_devices:{}", hashed_pub_key),
-            &public_session_id,
-        )
+    let _: () = pipe
+        .query_async(&mut **redis_client)
         .await
         .map_err(|e| saturn_errors::error::UserServiceError::RedisError(e.to_string()))?;
 

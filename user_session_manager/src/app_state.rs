@@ -54,6 +54,10 @@ impl AppState {
             .map_err(|e| RedisError::from((redis::ErrorKind::Io, "Pool error", e.to_string())))
     }
 
+    pub fn redis_pool(&self) -> &deadpool_redis::sentinel::Pool {
+        &self.redis_pool
+    }
+
     pub fn db(&self) -> &PgPool {
         &self.db_pool
     }

@@ -410,11 +410,11 @@ pub async fn unlink_wallet(
 
 pub async fn delete_account(
     db: &sqlx::PgPool,
-    user: AuthenticatedUser,
+    wallet_address: &str,
 ) -> Result<DeleteAccountResponse, ApiError> {
     let result = sqlx::query!(
         "DELETE FROM user_bundles WHERE wallet_address = $1",
-        user.wallet_address
+        wallet_address
     )
     .execute(db)
     .await
