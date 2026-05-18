@@ -23,7 +23,6 @@ pub struct VerifySignature {
 pub struct SolVerifyRequest {
     #[serde(flatten)]
     pub verify_data: VerifySignature,
-
     #[serde(default)]
     pub wallet_id: String,
     #[serde(default)]
@@ -35,7 +34,7 @@ pub struct SolVerifyRequest {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PromoteWalletRequest {
     #[serde(flatten)]
-    pub verify_data: VerifySignature, // Знову використовуємо базу! Уніфікація!
+    pub verify_data: VerifySignature,
 
     pub target_wallet: String,
     pub wallet_id: String,

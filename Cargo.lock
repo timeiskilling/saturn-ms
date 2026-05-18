@@ -4146,6 +4146,7 @@ name = "saturn_errors"
 version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
+ "deadpool-redis",
  "redis 1.2.0",
  "serde",
  "solana-sdk",

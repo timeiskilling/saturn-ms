@@ -36,19 +36,7 @@ pub struct UserStreamNotificationSystem {
 }
 
 impl UserStreamNotificationSystem {
-    pub fn new(sentinel_urls: Vec<String>, master_name: String) -> Self {
-        let cfg = deadpool_redis::sentinel::Config {
-            urls: Some(sentinel_urls),
-            connections: None,
-            server_type: deadpool_redis::sentinel::SentinelServerType::Master,
-            master_name,
-            ..Default::default()
-        };
-
-        let pool = cfg
-            .create_pool(Some(Runtime::Tokio1))
-            .expect("Failed to create Redis Sentinel pool");
-
+    pub fn new(pool: deadpool_redis::sentinel::Pool) -> Self {
         Self {
             user_streams: Arc::new(DashMap::with_hasher(RandomState::new())),
             active_users: Arc::new(DashMap::with_hasher(RandomState::new())),
@@ -129,19 +117,17 @@ impl UserStreamNotificationSystem {
         user_id: &str,
         bundle_id: &str,
     ) -> Result<(), RedisError> {
+        let mut pipe = redis::pipe();
         let mut conn = self.get_redis_connection().await?;
         let owner_key = format!("bundle_owner:{}", bundle_id);
         let user_bundles_key = format!("user_bundles:{}", user_id);
 
-        // 1. Set the owner for the specific bundle with TTL
-        let _: () = conn.set_ex(owner_key, user_id, 3600).await?;
+        pipe.atomic()
+            .set_ex(owner_key, user_id, 3600)
+            .sadd(&user_bundles_key, bundle_id)
+            .expire(user_bundles_key, 3600);
 
-        // 2. Add the bundle to the user's set of active bundles
-        let _: () = conn.sadd(&user_bundles_key, bundle_id).await?;
-
-        // 3. Set/Refresh TTL on the user's bundle set
-        let _: () = conn.expire(user_bundles_key, 3600).await?;
-
+        let _: () = pipe.query_async(&mut conn).await?;
         Ok(())
     }
 

@@ -11,6 +11,7 @@ use tonic::{service::LayerExt, transport::Server};
 use tracing_subscriber::fmt::format::FmtSpan;
 
 use crate::{
+    constant::SEMAPHORE_PERMITS,
     proto_service::{TransactionService, service_jupiter_status},
     reqwest_client::HttpManager,
     trader::JupiterTrader,
@@ -29,7 +30,6 @@ pub mod test;
 pub mod trader;
 pub mod transactions_builder;
 
-const SEMAPHORE_PERMITS: usize = 5;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt()
@@ -41,7 +41,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = load();
     let helius_api_key = config.helius_url();
     let addr = config.service_socket_addr();
-    let notification_redis_url = config.notification_redis_url();
 
     let jito_manager = Arc::new(JitoHttpManager::new(
         "https://frankfurt.mainnet.block-engine.jito.wtf/api/v1".to_string(),
@@ -58,15 +57,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         &config.jupiter_api_key,
     ));
 
-    let trader = Arc::new(
-        JupiterTrader::new(
-            &helius_api_key.clone(),
-            notification_redis_url,
-            jito_manager,
-            http_client,
-        )
-        .await,
-    );
+    let trader =
+        Arc::new(JupiterTrader::new(&helius_api_key.clone(), jito_manager, http_client).await);
 
     let rpc_client = Arc::new(RpcClient::new(helius_api_key));
     let blockhash_cache = blockhash_data::BlockhashCache::new(rpc_client.clone());

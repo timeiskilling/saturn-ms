@@ -23,6 +23,14 @@ impl From<redis::RedisError> for SaturnTransactionsServiceError {
     }
 }
 
+impl From<deadpool_redis::PoolError> for SaturnTransactionsServiceError {
+    fn from(error: deadpool_redis::PoolError) -> Self {
+        SaturnTransactionsServiceError::Redis(RedisErr::QueryExecute {
+            issue: error.to_string(),
+        })
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum WalletError {
     Encryption(EncryptionError),

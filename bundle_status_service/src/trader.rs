@@ -1,5 +1,6 @@
 use crate::bundle_client::UserStreamNotificationSystem;
 use crate::constant::JITO_TIP_ADDRESSES;
+use crate::redis_con::initialize_pool::new_pool;
 use crate::reqwest_client::JupiterProvider;
 use crate::transactions_builder::solana::instruction_parser::JupiterSolanaParser;
 use crate::transactions_builder::solana::transaction_builder::SolanaTransactionsBuilder;
@@ -8,6 +9,7 @@ use common::jito_client_api::main_api::JitoClient;
 use common::traits::TransactionBuilder;
 use config::Config;
 use core::str;
+use deadpool_redis::sentinel::Pool;
 use jupiter_trader_data::models::jupiter_models::{
     JupiterSwapInstructionsRsponse, SwapRequestParams,
 };
@@ -35,7 +37,7 @@ pub struct JupiterTrader {
     // keypair: Arc<Keypair>,
     pub jito_manager: Arc<JitoHttpManager>,
     // pub shared_price_state: SharedPriceState,
-    pub redis: Mutex<redis::aio::MultiplexedConnection>,
+    pub redis: Pool,
     pub config: Config,
     jito_tip_redis: Arc<Mutex<redis::aio::MultiplexedConnection>>,
     // pub atl_pubkey: Pubkey,
@@ -45,7 +47,6 @@ pub struct JupiterTrader {
 impl JupiterTrader {
     pub async fn new(
         helius_api_key: &str,
-        /*keypair: Keypair*/ _notification_redis_url: String,
         jito_manager: Arc<JitoHttpManager>,
         http_client: Arc<dyn JupiterProvider>,
     ) -> Self {
@@ -55,34 +56,27 @@ impl JupiterTrader {
                 CommitmentConfig::confirmed(),
             ),
         );
-        // let jito_endpoint = JitoJsonRpcSDK::new(
-        //     "https://frankfurt.mainnet.block-engine.jito.wtf/api/v1",
-        //     None,
-        // );
 
         let config = config::load();
-        let transaction_builder = SolanaTransactionsBuilder::new(
-            client.clone(),
-            // redis_con::connection::atl_redis_conn(&config).await,
-            JupiterSolanaParser,
-        );
+        let transaction_builder =
+            SolanaTransactionsBuilder::new(client.clone(), JupiterSolanaParser);
 
+        let redis_pool = new_pool(
+            config.notification_sentinel_urls.clone(),
+            config.notification_sentinel_master_name.clone(),
+        );
         Self {
             transaction_builder,
-            // atl_pubkey: create_atl(&keypair, &client).await,
             client,
             http_client,
             jito_manager: jito_manager.clone(),
-            redis: Mutex::new(redis_con::connection::redis_conn(&config).await),
+            redis: redis_pool.clone(),
             jito_tip_redis: Arc::new(Mutex::new(
                 redis_con::connection::jito_tip_redis_conn(&config).await,
             )),
             config: config.clone(),
             notification_system: {
-                let ns = Arc::new(UserStreamNotificationSystem::new(
-                    config.notification_sentinel_urls.clone(),
-                    config.notification_sentinel_master_name.clone(),
-                ));
+                let ns = Arc::new(UserStreamNotificationSystem::new(redis_pool.clone()));
                 let ns_clone = ns.clone();
                 tokio::spawn(async move {
                     if let Ok(_conn) = ns_clone.get_redis_connection().await {
@@ -95,6 +89,19 @@ impl JupiterTrader {
             },
             tip_cache: Arc::new(RwLock::new(None)),
         }
+    }
+
+    pub async fn get_redis_connection(
+        &self,
+    ) -> Result<deadpool_redis::sentinel::Connection, redis::RedisError> {
+        let connection = self.redis.get().await.map_err(|e| {
+            redis::RedisError::from((
+                redis::ErrorKind::Io,
+                "Failed to get connection from pool",
+                e.to_string(),
+            ))
+        })?;
+        Ok(connection)
     }
 
     pub fn get_notification_system(&self) -> Arc<UserStreamNotificationSystem> {
@@ -255,8 +262,16 @@ impl JupiterTrader {
     }
 
     async fn queue_bundle_for_tracking(&self, bundle_id: &str) -> Result<(), redis::RedisError> {
-        let mut conn = self.redis.lock().await;
-        conn.rpush("queue:bundles_to_track", bundle_id).await
+        let mut conn = self.get_redis_connection().await?;
+        let _: () = conn
+            .xadd_maxlen(
+                "stream:bundles_to_track",
+                redis::streams::StreamMaxlen::Approx(10_000),
+                "*",
+                &[("bundle_id", bundle_id)],
+            )
+            .await?;
+        Ok(())
     }
 
     pub async fn send_transactions(

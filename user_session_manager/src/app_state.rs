@@ -45,15 +45,6 @@ impl AppState {
         })
     }
 
-    pub async fn get_redis_connection(
-        &self,
-    ) -> Result<deadpool_redis::sentinel::Connection, RedisError> {
-        self.redis_pool
-            .get()
-            .await
-            .map_err(|e| RedisError::from((redis::ErrorKind::Io, "Pool error", e.to_string())))
-    }
-
     pub fn redis_pool(&self) -> &deadpool_redis::sentinel::Pool {
         &self.redis_pool
     }

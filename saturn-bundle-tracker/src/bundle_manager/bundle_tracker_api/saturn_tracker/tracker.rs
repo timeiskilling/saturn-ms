@@ -5,9 +5,9 @@ use common::bundle_stage_api::{
 };
 use common::jito_client_api::main_api::JitoClient;
 use dashmap::DashMap;
-
 use deadpool_redis::Runtime;
 use deadpool_redis::sentinel::{Config, Pool};
+use redis::streams::{StreamId, StreamReadOptions, StreamReadReply};
 
 use futures::future::try_join_all;
 use redis::{AsyncCommands, RedisError, RedisResult};
@@ -74,32 +74,99 @@ impl SaturnBundleTracker {
         })
     }
 
-    pub async fn process_incoming_queue(&self) {
-        let mut interval = tokio::time::interval(tokio::time::Duration::from_millis(50));
-        loop {
-            interval.tick().await;
-            match self.get_redis_connection().await {
-                Ok(mut conn) => {
-                    let result: redis::RedisResult<Option<String>> = redis::cmd("LPOP")
-                        .arg("queue:bundles_to_track")
-                        .query_async(&mut conn)
-                        .await;
+    async fn ensure_consumer_group(&self) -> Result<(), redis::RedisError> {
+        let mut conn = self.get_redis_connection().await?;
 
-                    match result {
-                        Ok(Some(bundle_id)) => {
-                            info!("Processing incoming bundle: {}", bundle_id);
-                            if let Err(e) = self.add_bundles(vec![bundle_id]).await {
-                                error!("Failed to add bundle from queue: {}", e);
+        let result: redis::RedisResult<()> = redis::cmd("XGROUP")
+            .arg("CREATE")
+            .arg("stream:bundles_to_track")
+            .arg("bundle_trackers")
+            .arg("0")
+            .arg("MKSTREAM")
+            .query_async(&mut conn)
+            .await;
+
+        match result {
+            Ok(_) => {
+                tracing::info!("Consumer group created successfully");
+                Ok(())
+            }
+            Err(e) if e.to_string().contains("BUSYGROUP") => {
+                tracing::info!("Consumer group already exists, continuing");
+                Ok(())
+            }
+            Err(e) => Err(e),
+        }
+    }
+
+    pub async fn process_incoming_queue(&self) {
+        loop {
+            let conn_result = self.get_redis_connection().await;
+
+            let mut conn = match conn_result {
+                Ok(c) => c,
+                Err(e) => {
+                    tracing::error!("Failed to get redis connection: {}", e);
+                    tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+                    continue;
+                }
+            };
+
+            let opts = StreamReadOptions::default()
+                .group("bundle_trackers", "worker-1")
+                .count(50)
+                .block(5000);
+
+            let reply: redis::RedisResult<Option<StreamReadReply>> = conn
+                .xread_options(&["stream:bundles_to_track"], &[">"], &opts)
+                .await;
+
+            match reply {
+                Err(e) => {
+                    tracing::error!("XREADGROUP error: {}", e);
+                    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+                }
+
+                Ok(None) => {}
+
+                Ok(Some(reply)) => {
+                    for stream_key in reply.keys {
+                        let mut bundle_ids: Vec<String> = Vec::new();
+                        let mut stream_ids: Vec<String> = Vec::new();
+
+                        for StreamId { id, map, .. } in &stream_key.ids {
+                            if let Some(redis::Value::BulkString(bytes)) = map.get("bundle_id")
+                                && let Ok(bundle_id) = String::from_utf8(bytes.clone())
+                            {
+                                bundle_ids.push(bundle_id);
+                                stream_ids.push(id.clone());
                             }
                         }
-                        Ok(None) => {}
-                        Err(e) => {
-                            error!("Error popping from queue: {}", e);
+
+                        if bundle_ids.is_empty() {
+                            continue;
+                        }
+
+                        tracing::info!("Processing batch of {} bundles", bundle_ids.len());
+
+                        match self.add_bundles(bundle_ids).await {
+                            Ok(_) => {
+                                let ack_result: redis::RedisResult<()> = conn
+                                    .xack(&stream_key.key, "bundle_trackers", &stream_ids)
+                                    .await;
+
+                                if let Err(e) = ack_result {
+                                    tracing::error!("Failed to XACK messages: {}", e);
+                                }
+                            }
+                            Err(e) => {
+                                tracing::error!(
+                                    "Failed to process bundle batch, messages remain in PEL: {}",
+                                    e
+                                );
+                            }
                         }
                     }
-                }
-                Err(e) => {
-                    error!("Failed to get redis connection: {}", e);
                 }
             }
         }
@@ -193,6 +260,11 @@ impl BundleTracker for SaturnBundleTracker {
 
     async fn start_tracking(&self) -> RedisResult<()> {
         info!("Starting bundle tracking");
+
+        if let Err(e) = self.ensure_consumer_group().await {
+            tracing::error!("Failed to initialize consumer group: {}", e);
+            return Err(e);
+        }
 
         let mut cleanup_timer = tokio::time::interval(self.config.cleanup_interval);
         let mut inflight_timer = tokio::time::interval(self.config.inflight_check_interval);

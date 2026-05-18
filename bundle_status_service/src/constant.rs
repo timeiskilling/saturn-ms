@@ -43,3 +43,4 @@ pub const PLATFORM_FEE_BPS: u32 = 50;
 // - authority (32 bytes, optional)
 // - addresses (32 bytes each)
 pub const HEADER_SIZE: usize = 56;
+pub const SEMAPHORE_PERMITS: usize = 10;

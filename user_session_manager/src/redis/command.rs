@@ -41,18 +41,6 @@ pub async fn write_get_nonce_to_redis(
     })
 }
 
-// pub async fn delete_nonce_from_redis(
-//     conn: &mut Connection,
-//     request_id: &str,
-// ) -> Result<(), UserServiceError> {
-//     let redis_key = format!("auth_nonce:{}", request_id);
-//     let _: () = conn
-//         .del(redis_key)
-//         .await
-//         .map_err(|e| UserServiceError::RedisError(e.to_string()))?;
-//     Ok(())
-// }
-
 pub async fn create_session(
     pub_key: &str,
     redis_client: &mut Connection,
@@ -78,11 +66,12 @@ pub async fn create_session(
     let key_session = format!("session:{}", token);
     let key_public = format!("public_session:{}", public_session_id);
     let key_devices = format!("user_devices:{}", pub_key);
+    let public_session_val = format!("{}:{}", token, pub_key);
 
     let mut pipe = redis::pipe();
     pipe.atomic()
         .set_ex(&key_session, session_data, 604800)
-        .set_ex(&key_public, token.clone(), 604800)
+        .set_ex(&key_public, public_session_val, 604800)
         .sadd(&key_devices, &public_session_id);
 
     let _: () = pipe
@@ -167,21 +156,17 @@ pub async fn delete_session(
 ) -> Result<(), UserServiceError> {
     let session = get_session(token, redis_client).await?;
 
-    let _: () = redis_client
+    let mut pipe = redis::pipe();
+    pipe.atomic()
         .del(format!("session:{}", token))
-        .await
-        .map_err(|e| UserServiceError::RedisError(e.to_string()))?;
-
-    let _: () = redis_client
         .del(format!("public_session:{}", session.public_id))
-        .await
-        .map_err(|e| UserServiceError::RedisError(e.to_string()))?;
-
-    let _: () = redis_client
         .srem(
             format!("user_devices:{}", session.wallet),
             session.public_id,
-        )
+        );
+
+    let _: () = pipe
+        .query_async(&mut **redis_client)
         .await
         .map_err(|e| UserServiceError::RedisError(e.to_string()))?;
 
@@ -192,15 +177,25 @@ pub async fn disconnect_device(
     public_id: &str,
     redis_client: &mut Connection,
 ) -> Result<(), UserServiceError> {
-    let token: Option<String> = redis_client
+    let data: Option<String> = redis_client
         .get(format!("public_session:{}", public_id))
         .await
         .map_err(|e| UserServiceError::RedisError(e.to_string()))?;
 
-    if let Some(secret_token) = token {
-        delete_session(&secret_token, redis_client).await?;
-    }
+    if let Some(val) = data
+        && let Some((token, wallet)) = val.split_once(':')
+    {
+        let mut pipe = redis::pipe();
+        pipe.atomic()
+            .del(format!("session:{}", token))
+            .del(format!("public_session:{}", public_id))
+            .srem(format!("user_devices:{}", wallet), public_id);
 
+        let _: () = pipe
+            .query_async(&mut **redis_client)
+            .await
+            .map_err(|e| UserServiceError::RedisError(e.to_string()))?;
+    }
     Ok(())
 }
 
@@ -215,9 +210,43 @@ pub async fn delete_all_user_sessions(
         .await
         .map_err(|e| UserServiceError::RedisError(e.to_string()))?;
 
-    for public_id in public_ids {
-        let _ = disconnect_device(&public_id, redis_client).await;
+    if public_ids.is_empty() {
+        return Ok(());
     }
+
+    let public_keys_to_fetch: Vec<String> = public_ids
+        .iter()
+        .map(|id| format!("public_session:{}", id))
+        .collect();
+
+    let secret_tokens: Vec<Option<String>> = redis_client
+        .mget(&public_keys_to_fetch)
+        .await
+        .map_err(|e| UserServiceError::RedisError(e.to_string()))?;
+
+    let valid_tokens: Vec<String> = secret_tokens.into_iter().flatten().collect();
+
+    let session_keys_to_delete: Vec<String> = valid_tokens
+        .iter()
+        .map(|token| format!("session:{}", token))
+        .collect();
+
+    let mut pipe = redis::pipe();
+    pipe.atomic();
+
+    if !session_keys_to_delete.is_empty() {
+        pipe.del(&session_keys_to_delete);
+    }
+    if !public_keys_to_fetch.is_empty() {
+        pipe.del(&public_keys_to_fetch);
+    }
+
+    pipe.del(&devices_key);
+
+    let _: () = pipe
+        .query_async(&mut **redis_client)
+        .await
+        .map_err(|e| UserServiceError::RedisError(e.to_string()))?;
 
     Ok(())
 }

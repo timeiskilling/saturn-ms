@@ -7,6 +7,7 @@ use std::sync::Arc;
 
 use crate::app_state::AppState;
 use crate::endpoints::errors::ApiError;
+
 #[derive(Debug, Clone)]
 pub struct AuthenticatedUser {
     pub wallet_address: String,
@@ -31,7 +32,8 @@ where
         let token = session_cookie.value();
 
         let mut redis_conn = app_state
-            .get_redis_connection()
+            .redis_pool()
+            .get()
             .await
             .map_err(|e| UserServiceError::RedisError(e.to_string()))?;
         let redis_key = format!("session:{}", token);
@@ -41,6 +43,7 @@ where
             .await
             .map_err(|e| UserServiceError::RedisError(e.to_string()))?;
 
+        drop(redis_conn);
         match session_data {
             Some(data) => {
                 let parsed: serde_json::Value = serde_json::from_str(&data)
@@ -81,9 +84,10 @@ where
         let token = session_cookie.value();
 
         let mut redis_conn = app_state
-            .get_redis_connection()
+            .redis_pool()
+            .get()
             .await
-            .map_err(|e| ApiError(UserServiceError::RedisError(e.to_string())))?;
+            .map_err(|e| UserServiceError::RedisError(e.to_string()))?;
 
         let redis_key = format!("session:{}", token);
 
@@ -92,6 +96,7 @@ where
             .await
             .map_err(|e| ApiError(UserServiceError::RedisError(e.to_string())))?;
 
+        drop(redis_conn);
         match session_data {
             Some(data) => {
                 let parsed: serde_json::Value = serde_json::from_str(&data)

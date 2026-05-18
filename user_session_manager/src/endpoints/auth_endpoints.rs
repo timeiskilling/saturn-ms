@@ -49,12 +49,8 @@ pub async fn verify_signature(
     let expected_message = format!("Sign in to Saturn.\n\nNonce: {}", expected_nonce);
     let hashed_public_key = crate::hash::hash_wallet_address(&payload.verify_data.public_key);
 
-    let expected_pubkey = existing_session
-        .as_ref()
-        .map(|user| user.wallet_address.as_str());
-
     drop(conn);
-    verify_payload_signature(payload.verify_data, expected_message, expected_pubkey).await?;
+    verify_payload_signature(payload.verify_data, expected_message, None).await?;
 
     match existing_session {
         Some(user) => {

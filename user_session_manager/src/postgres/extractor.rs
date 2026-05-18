@@ -8,7 +8,6 @@ use std::sync::Arc;
 use crate::{app_state::AppState, endpoints::errors::ApiError};
 
 pub struct DbPool(pub sqlx::PgPool);
-
 impl<S> FromRequestParts<S> for DbPool
 where
     S: Send + Sync,
