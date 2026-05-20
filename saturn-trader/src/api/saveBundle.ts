@@ -34,6 +34,9 @@ export async function saveBundle(bundles: Json[]): Promise<boolean> {
     });
 
     if (!response.ok) {
+      if (response.status === 401) {
+        window.dispatchEvent(new Event("saturn_wallet_logout"));
+      }
       throw new Error(`Failed to save bundles: ${response.statusText}`);
     }
 

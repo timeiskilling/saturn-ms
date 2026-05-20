@@ -16,18 +16,19 @@ const getEnv = (key: string, defaultValue: any): any => {
 export const appConfig: AppConfig = {
   priceServiceBaseUrl: getEnv(
     "VITE_PRICE_SERVICE_URL",
-    "http://127.0.0.1:8080",
+    "http://localhost:8080",
   ),
 
   tokenListRefreshIntervalSec: Number(
     getEnv("VITE_TOKEN_LIST_REFRESH_INTERVAL_SEC", 7320),
   ),
 
-  sessionBaseUrl: getEnv("VITE_SESSION_URL", "http://127.0.0.1:3000"),
+  sessionBaseUrl: getEnv("VITE_SESSION_URL", "http://localhost:3001"),
 
-  grpcBaseUrl: getEnv("VITE_GRPC_URL", "http://127.0.0.1:3000"),
+  grpcBaseUrl: getEnv("VITE_GRPC_URL", "http://localhost:3000"),
 
   heliuspUrl: getEnv("VITE_HELIUS_API_KEY", null)
     ? `https://mainnet.helius-rpc.com/?api-key=${getEnv("VITE_HELIUS_API_KEY", "")}`
-    : "https://api.mainnet.solana.com",
+    : "https://api.devnet.solana.com",
 };
+// "https://api.mainnet.solana.com"

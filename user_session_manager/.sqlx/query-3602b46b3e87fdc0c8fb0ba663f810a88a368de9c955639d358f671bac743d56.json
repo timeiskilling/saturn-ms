@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n            EXISTS(\n                SELECT 1 FROM user_bundles WHERE wallet_address = $1\n            ) AS is_primary,\n            (\n                SELECT primary_wallet FROM linked_wallets WHERE address = $1 LIMIT 1\n            ) AS linked_to\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "is_primary",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 1,
+        "name": "linked_to",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "3602b46b3e87fdc0c8fb0ba663f810a88a368de9c955639d358f671bac743d56"
+}

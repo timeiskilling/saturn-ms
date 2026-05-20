@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT EXISTS(\n            SELECT 1 FROM user_bundles WHERE wallet_address = $1\n        )\n        ",
+  "query": "\n        SELECT EXISTS(\n            SELECT 1 FROM linked_wallets WHERE address = $1\n        )\n        ",
   "describe": {
     "columns": [
       {
@@ -18,5 +18,5 @@
       null
     ]
   },
-  "hash": "2b039ba991c6c212e0f9b2e336bae04e96f3a9aa76404543d974dde7df635c14"
+  "hash": "adc7067b2ffabcf3371db17e35594ec3530b36708a0efb831f7d1edab83358e5"
 }

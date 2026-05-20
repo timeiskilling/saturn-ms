@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO user_bundles (wallet_address, bundles_data)\n            SELECT $1, bundles_data FROM user_bundles WHERE wallet_address = $2\n            ON CONFLICT (wallet_address)\n            DO UPDATE SET bundles_data = EXCLUDED.bundles_data\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5f2d218813050c9846d066f9b20eeb1f4953a79a58564aa1e60840a82a5530c1"
+}

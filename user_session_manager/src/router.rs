@@ -2,6 +2,7 @@ use crate::app_state::AppState;
 use crate::endpoints::auth_endpoints::disconnect_wallet_handler;
 use crate::endpoints::{auth_endpoints, device};
 use crate::postgres::query;
+use axum::http::{HeaderName, HeaderValue, Method};
 use axum::{
     Router,
     routing::{delete, get, post},
@@ -34,7 +35,7 @@ pub fn create_router(app_state: Arc<AppState>) -> Router {
 
     // Connected device management
     let device_routes = Router::<Arc<AppState>>::new()
-        .route("", get(device::connected_devices))
+        .route("/", get(device::connected_devices))
         .route("/{public_id}", delete(device::disconnect_target_device));
 
     // Combine all routes and inject the application state
@@ -49,9 +50,15 @@ pub fn create_router(app_state: Arc<AppState>) -> Router {
         .layer(GovernorLayer::new(governor_conf))
         .layer(
             CorsLayer::new()
-                .allow_origin(tower_http::cors::Any)
-                .allow_headers(tower_http::cors::Any)
-                .allow_methods(tower_http::cors::Any)
+                .allow_origin([
+                    "http://localhost:3030".parse::<HeaderValue>().unwrap(),
+                    "http://127.0.0.1:3030".parse::<HeaderValue>().unwrap(),
+                ])
+                .allow_headers([
+                    HeaderName::from_static("content-type"),
+                    HeaderName::from_static("authorization"),
+                ])
+                .allow_methods([Method::GET, Method::POST, Method::DELETE, Method::OPTIONS])
                 .allow_credentials(true),
         )
         .with_state(app_state)

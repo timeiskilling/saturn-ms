@@ -1,0 +1,136 @@
+# -----------------------------------------------------------------------------
+# Redis Sentinel Cluster for Saturn User Session Manager
+# -----------------------------------------------------------------------------
+# Provides 1 Master, 1 Replica, and 3 Sentinels using the specific IPs requested.
+#
+# Environment Variable Setup for your .env file:
+# USER_MANAGER_SENTINEL_URLS=redis://10.0.0.1:26379,redis://10.0.0.2:26379,redis://10.0.0.3:26379
+#
+# Note for Windows/Mac Users:
+# If Rust app is running on your host machine (not in Docker) and cannot
+# route to the 10.0.0.x subnet, you can alternatively use the exposed localhost ports:
+# USER_MANAGER_SENTINEL_URLS=redis://127.0.0.1:26379,redis://127.0.0.1:26380,redis://127.0.0.1:26381
+# -----------------------------------------------------------------------------
+
+networks:
+  saturn_redis_net:
+    ipam:
+      driver: default
+      config:
+        # Create the custom subnet to allow the requested static IPs
+        - subnet: "10.0.0.0/24"
+          gateway: "10.0.0.254"
+
+services:
+  redis-master:
+    image: bitnami/redis:latest
+    container_name: redis-master
+    environment:
+      - REDIS_REPLICATION_MODE=master
+      - ALLOW_EMPTY_PASSWORD=yes
+    networks:
+      saturn_redis_net:
+        ipv4_address: 10.0.0.10
+    ports:
+      - "6379:6379"
+
+  redis-replica:
+    image: bitnami/redis:latest
+    container_name: redis-replica
+    environment:
+      - REDIS_REPLICATION_MODE=slave
+      - REDIS_MASTER_HOST=10.0.0.10
+      - ALLOW_EMPTY_PASSWORD=yes
+    networks:
+      saturn_redis_net:
+        ipv4_address: 10.0.0.11
+    depends_on:
+      - redis-master
+
+  redis-sentinel-1:
+    image: bitnami/redis-sentinel:latest
+    container_name: redis-sentinel-1
+    environment:
+      - REDIS_MASTER_HOST=10.0.0.10
+      - REDIS_MASTER_SET=mymaster
+      - REDIS_SENTINEL_QUORUM=2
+      - REDIS_SENTINEL_DOWN_AFTER_MILLISECONDS=5000
+      - REDIS_SENTINEL_FAILOVER_TIMEOUT=10000
+    networks:
+      saturn_redis_net:
+        ipv4_address: 10.0.0.1
+    ports:
+      - "26379:26379"
+    depends_on:
+      - redis-master
+      - redis-replica
+
+  redis-sentinel-2:
+    image: bitnami/redis-sentinel:latest
+    container_name: redis-sentinel-2
+    environment:
+      - REDIS_MASTER_HOST=10.0.0.10
+      - REDIS_MASTER_SET=mymaster
+      - REDIS_SENTINEL_QUORUM=2
+      - REDIS_SENTINEL_DOWN_AFTER_MILLISECONDS=5000
+      - REDIS_SENTINEL_FAILOVER_TIMEOUT=10000
+    networks:
+      saturn_redis_net:
+        ipv4_address: 10.0.0.2
+    ports:
+      - "26380:26379"
+    depends_on:
+      - redis-master
+      - redis-replica
+
+  redis-sentinel-3:
+    image: bitnami/redis-sentinel:latest
+    container_name: redis-sentinel-3
+    environment:
+      - REDIS_MASTER_HOST=10.0.0.10
+      - REDIS_MASTER_SET=mymaster
+      - REDIS_SENTINEL_QUORUM=2
+      - REDIS_SENTINEL_DOWN_AFTER_MILLISECONDS=5000
+      - REDIS_SENTINEL_FAILOVER_TIMEOUT=10000
+    networks:
+      saturn_redis_net:
+        ipv4_address: 10.0.0.3
+    ports:
+      - "26381:26379"
+    depends_on:
+      - redis-master
+      - redis-replica
+
+  postgres:
+    image: postgres:15
+    container_name: saturn-postgres
+    env_file:
+      - .env
+    networks:
+      saturn_redis_net:
+        ipv4_address: 10.0.0.20
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  user-session-manager:
+    build:
+      context: .
+      dockerfile: user_session_manager/Dockerfile
+    container_name: user-session-manager
+    networks:
+      saturn_redis_net:
+        ipv4_address: 10.0.0.21
+    ports:
+      - "3001:3001"
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+      - redis-sentinel-1
+      - redis-sentinel-2
+      - redis-sentinel-3
+
+volumes:
+  postgres_data:

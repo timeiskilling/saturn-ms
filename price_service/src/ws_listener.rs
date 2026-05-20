@@ -16,6 +16,7 @@ pub async fn run_binance_ws_client(
     let mut interval = tokio::time::interval(
         std::time::Duration::from_hours(2) + std::time::Duration::from_secs(15),
     );
+    interval.tick().await;
     loop {
         let url = match build_ws_url(state.clone()).await {
             Ok(u) => u,
@@ -30,7 +31,7 @@ pub async fn run_binance_ws_client(
 
         match connect_async(&url).await {
             Ok((mut ws_stream, _)) => {
-                let (tx, rx) = mpsc::channel::<Vec<u8>>(10);
+                let (tx, rx) = mpsc::channel::<Vec<u8>>(500);
                 spawn_redis_price_worker(redis_conn.clone(), rx);
 
                 loop {

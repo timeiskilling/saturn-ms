@@ -8,7 +8,6 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::broadcast;
 
-use deadpool_redis::Runtime;
 use deadpool_redis::sentinel::Pool;
 use redis::{AsyncCommands, RedisError};
 
