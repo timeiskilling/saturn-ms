@@ -46,6 +46,9 @@ export function BundledTransactions() {
   const [selectedTemplateIds, setSelectedTemplateIds] = useState<Set<string>>(
     new Set(),
   );
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(
+    !!localStorage.getItem("isLoggedIn"),
+  );
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -89,6 +92,12 @@ export function BundledTransactions() {
 
   useEffect(() => {
     const loadBundles = async () => {
+      if (!isAuthenticated) {
+        setTemplates([]);
+        setIsFetchingBundles(false);
+        return;
+      }
+
       setIsFetchingBundles(true);
       const data = await fetchBundles();
       if (data && data.length > 0) {
@@ -106,18 +115,26 @@ export function BundledTransactions() {
     };
     loadBundles();
 
-    const handleAuthEvent = () => {
-      loadBundles();
+    const handleLogin = () => {
+      localStorage.setItem("isLoggedIn", "true");
+      setIsAuthenticated(true);
     };
 
-    window.addEventListener("saturn_wallet_verified", handleAuthEvent);
-    window.addEventListener("saturn_wallet_logout", handleAuthEvent);
+    const handleLogout = () => {
+      localStorage.removeItem("isLoggedIn");
+      setIsAuthenticated(false);
+      setTemplates([]);
+      setActiveTemplateId(null);
+    };
+
+    window.addEventListener("saturn_wallet_verified", handleLogin);
+    window.addEventListener("saturn_wallet_logout", handleLogout);
 
     return () => {
-      window.removeEventListener("saturn_wallet_verified", handleAuthEvent);
-      window.removeEventListener("saturn_wallet_logout", handleAuthEvent);
+      window.removeEventListener("saturn_wallet_verified", handleLogin);
+      window.removeEventListener("saturn_wallet_logout", handleLogout);
     };
-  }, []);
+  }, [isAuthenticated]);
 
   const handleSaveBundles = async (templatesToSave: Template[] = templates) => {
     setIsSavingBundles(true);
@@ -127,7 +144,7 @@ export function BundledTransactions() {
   };
 
   useEffect(() => {
-    if (isFetchingBundles) return;
+    if (isFetchingBundles || !isAuthenticated) return;
 
     const hasChanged =
       JSON.stringify(templates) !==
@@ -139,7 +156,7 @@ export function BundledTransactions() {
     }, 10000);
 
     return () => clearTimeout(timerId);
-  }, [templates, isFetchingBundles]);
+  }, [templates, isFetchingBundles, isAuthenticated]);
 
   const activeTemplate =
     templates.find((t) => t.id === activeTemplateId) || templates[0] || null;
