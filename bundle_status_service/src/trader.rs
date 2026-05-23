@@ -27,16 +27,12 @@ use crate::constant;
 use crate::prelude::*;
 use crate::{constant::MIN_JITO_TIP_LAMPORTS, redis_con};
 
-// pub type SharedPriceState = Arc<Mutex<HashMap<String, DayTickerEvent>>>;
-
 pub struct JupiterTrader {
     pub client: Arc<RpcClient>,
     pub http_client: Arc<dyn JupiterProvider>,
     tip_cache: Arc<RwLock<Option<f64>>>,
     transaction_builder: SolanaTransactionsBuilder<JupiterSolanaParser>,
-    // keypair: Arc<Keypair>,
     pub jito_manager: Arc<JitoHttpManager>,
-    // pub shared_price_state: SharedPriceState,
     pub redis: Pool,
     pub config: Config,
     jito_tip_redis: Arc<Mutex<redis::aio::MultiplexedConnection>>,

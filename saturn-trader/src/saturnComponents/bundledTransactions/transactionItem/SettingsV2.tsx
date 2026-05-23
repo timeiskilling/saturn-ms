@@ -6,7 +6,6 @@ import { HIGH_FEE_THRESHOLD_PERCENT } from "../../../lib/constants";
 import { cn } from "@/lib/utils";
 
 const SOLANA_DEXES = [
-  "Jupiter",
   "Raydium",
   "Orca",
   "Meteora",
@@ -133,7 +132,7 @@ const DexPicker = ({
       <div className="relative">
         <div
           className={cn(
-            "flex flex-wrap gap-2 p-2 min-h-[44px] bg-zinc-900/50 border border-zinc-800 rounded-xl focus-within:border-zinc-700 transition-colors",
+            "flex flex-wrap gap-2 p-2 min-h-11 bg-zinc-900/50 border border-zinc-800 rounded-xl focus-within:border-zinc-700 transition-colors",
             !disabled ? "cursor-text" : "cursor-not-allowed",
           )}
           onClick={() => !disabled && setIsOpen(true)}
@@ -340,7 +339,7 @@ export function AdvancedSettings({
       <div
         onClick={(e) => e.stopPropagation()}
         className={cn(
-          "w-full max-w-md max-h-[90vh] flex flex-col bg-zinc-950 border border-zinc-800 rounded-[2rem] shadow-2xl overflow-hidden transition-all duration-300 ease-out",
+          "w-full max-w-md max-h-[90vh] flex flex-col bg-zinc-950 border border-zinc-800 rounded-4xl shadow-2xl overflow-hidden transition-all duration-300 ease-out",
           isOpen && !isClosing
             ? "opacity-100 scale-100 translate-y-0"
             : "opacity-0 scale-95 translate-y-8",

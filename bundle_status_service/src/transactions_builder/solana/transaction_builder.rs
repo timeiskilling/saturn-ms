@@ -50,18 +50,17 @@ where
         swap_response: JupiterSwapInstructionsRsponse,
         (blockhash, pubkey): (Hash, Pubkey),
     ) -> Result<Self::Output, Self::Error> {
-        let parser = self.parser.clone();
-
-        let base58_tx = tokio::task::spawn_blocking(move || {
-            let instructions = parser.parse_instructions(&swap_response).map_err(|_| {
+        let instructions = self
+            .parser
+            .parse_instructions(&swap_response)
+            .map_err(|_| {
                 SaturnTransactionsServiceError::BuildTransaction(Box::new(
                     BuildTransactionError::General("Parse error".into()),
                 ))
             })?;
 
-            let address_lookup_table_accounts = if let Some(address_lookup_tables) =
-                &swap_response.addresses_by_lookup_table_address
-            {
+        let address_lookup_table_accounts =
+            if let Some(address_lookup_tables) = &swap_response.addresses_by_lookup_table_address {
                 fetch_map_address_lookup_tables(address_lookup_tables)?
             } else {
                 return Err(SaturnTransactionsServiceError::BuildTransaction(Box::new(
@@ -71,52 +70,42 @@ where
                 )));
             };
 
-            let message = Message::try_compile(
-                &pubkey,
-                &instructions,
-                &address_lookup_table_accounts,
-                blockhash,
-            )
-            .map_err(|e| {
-                SaturnTransactionsServiceError::BuildTransaction(Box::new(
-                    BuildTransactionError::V0message(e),
-                ))
-            })?;
-
-            let versioned_message = VersionedMessage::V0(message);
-
-            let num_required = match &versioned_message {
-                VersionedMessage::Legacy(m) => m.header.num_required_signatures,
-                VersionedMessage::V0(m) => m.header.num_required_signatures,
-                VersionedMessage::V1(m) => m.header.num_required_signatures,
-            } as usize;
-
-            let transaction = VersionedTransaction {
-                signatures: vec![Signature::default(); num_required],
-                message: versioned_message,
-            };
-
-            let serialized_tx = bincode::serialize(&transaction).map_err(|e| {
-                SaturnTransactionsServiceError::BuildTransaction(Box::new(
-                    BuildTransactionError::BincodeVersionedTransactionSerializetion {
-                        data: transaction.clone(),
-                        issue: e.to_string(),
-                    },
-                ))
-            })?;
-
-            let base58_encoded = bs58::encode(serialized_tx).into_string();
-
-            Ok::<String, SaturnTransactionsServiceError>(base58_encoded)
-        })
-        .await
+        let message = Message::try_compile(
+            &pubkey,
+            &instructions,
+            &address_lookup_table_accounts,
+            blockhash,
+        )
         .map_err(|e| {
             SaturnTransactionsServiceError::BuildTransaction(Box::new(
-                BuildTransactionError::General(format!("Spawn blocking failed: {}", e)),
+                BuildTransactionError::V0message(e),
             ))
-        })??;
+        })?;
 
-        Ok(base58_tx)
+        let versioned_message = VersionedMessage::V0(message);
+
+        let num_required = match &versioned_message {
+            VersionedMessage::Legacy(m) => m.header.num_required_signatures,
+            VersionedMessage::V0(m) => m.header.num_required_signatures,
+            VersionedMessage::V1(m) => m.header.num_required_signatures,
+        } as usize;
+
+        let transaction = VersionedTransaction {
+            signatures: vec![Signature::default(); num_required],
+            message: versioned_message,
+        };
+
+        let serialized_tx = bincode::serialize(&transaction).map_err(|e| {
+            SaturnTransactionsServiceError::BuildTransaction(Box::new(
+                BuildTransactionError::BincodeVersionedTransactionSerializetion {
+                    data: transaction.clone(),
+                    issue: e.to_string(),
+                },
+            ))
+        })?;
+
+        let base58_encoded = bs58::encode(serialized_tx).into_string();
+        Ok(base58_encoded)
     }
 }
 

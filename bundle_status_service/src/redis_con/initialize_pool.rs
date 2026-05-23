@@ -1,4 +1,4 @@
-use deadpool_redis::Runtime;
+use deadpool_redis::{PoolConfig, Runtime};
 
 pub fn new_pool(sentinel_urls: Vec<String>, master_name: String) -> deadpool_redis::sentinel::Pool {
     let cfg = deadpool_redis::sentinel::Config {
@@ -6,6 +6,10 @@ pub fn new_pool(sentinel_urls: Vec<String>, master_name: String) -> deadpool_red
         connections: None,
         server_type: deadpool_redis::sentinel::SentinelServerType::Master,
         master_name,
+        pool: Some(PoolConfig {
+            max_size: 4,
+            ..Default::default()
+        }),
         ..Default::default()
     };
 
