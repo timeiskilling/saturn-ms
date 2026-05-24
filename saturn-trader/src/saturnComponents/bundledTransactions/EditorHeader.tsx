@@ -8,6 +8,7 @@ interface EditorHeaderProps {
   updateActiveTemplate: (template: Template) => void;
   handleSaveBundles: () => void;
   isSavingBundles: boolean;
+  isSaveDisabled?: boolean;
   bundleWalletAddress?: string;
   activeBundleWallet?: SavedWallet;
   discoveredWallets: any[];
@@ -18,6 +19,7 @@ export function EditorHeader({
   updateActiveTemplate,
   handleSaveBundles,
   isSavingBundles,
+  isSaveDisabled = false,
   bundleWalletAddress,
   activeBundleWallet,
   discoveredWallets,
@@ -30,7 +32,7 @@ export function EditorHeader({
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
         e.preventDefault();
-        if (!isSavingBundles) {
+        if (!isSavingBundles && !isSaveDisabled) {
           handleSaveBundles();
         }
       }
@@ -50,9 +52,11 @@ export function EditorHeader({
     prevSavingRef.current = isSavingBundles;
   }, [isSavingBundles]);
 
+  const isButtonDisabled = isSavingBundles || isSaveDisabled;
+
   return (
     <div className="w-full px-4 py-2.5 sm:px-6 sm:py-4 md:px-8 md:py-5 border-b border-zinc-800 flex flex-wrap items-center justify-between gap-2.5 sm:gap-4 bg-zinc-950/50 backdrop-blur-sm shrink-0">
-      <div className="flex flex-col flex-1 min-w-[140px]">
+      <div className="flex flex-col flex-1 min-w-35">
         <input
           value={activeTemplate.name}
           maxLength={25}
@@ -82,18 +86,20 @@ export function EditorHeader({
 
           <button
             onClick={handleSaveBundles}
-            disabled={isSavingBundles}
+            disabled={isButtonDisabled}
             className={`
-              inline-flex items-center gap-1.5 px-2 md:px-3 py-1.5 rounded-md border text-xs md:text-[13px]
-              font-medium transition-all duration-200 outline-none active:scale-[0.97]
-              ${
-                isSavingBundles
-                  ? "border-white/10 text-white/35 bg-white/[0.04] cursor-default"
-                  : justSaved
-                    ? "border-white/90 text-black bg-white cursor-default"
-                    : "border-white/25 text-white bg-white/[0.06] hover:border-white/45 hover:bg-white/[0.12]"
-              }
-            `}
+                inline-flex items-center gap-1.5 px-2 md:px-3 py-1.5 rounded-md border text-xs md:text-[13px]
+                font-medium transition-all duration-200 outline-none active:scale-[0.97]
+                ${
+                  isSavingBundles
+                    ? "border-white/10 text-white/35 bg-white/4 cursor-default" // Стан збереження
+                    : justSaved
+                      ? "border-white/90 text-black bg-white cursor-default" // Стан "Щойно збережено"
+                      : isSaveDisabled
+                        ? "border-transparent text-zinc-600 bg-zinc-900/50 cursor-not-allowed" // Стан "Немає змін / Не авторизований"
+                        : "border-white/25 text-white bg-white/6 hover:border-white/45 hover:bg-white/12" // Активний стан
+                }
+              `}
           >
             {isSavingBundles ? (
               <Loader2 className="w-3 md:w-3.5 h-3 md:h-3.5 animate-spin" />
@@ -107,8 +113,8 @@ export function EditorHeader({
               {isSavingBundles ? "Saving" : justSaved ? "Saved" : "Save"}
             </span>
 
-            {!isSavingBundles && !justSaved && (
-              <span className="hidden md:inline-block ml-0.5 text-[10px] font-mono px-1 py-0.5 rounded bg-white/[0.08] border border-white/15 text-white/40 leading-none">
+            {!isButtonDisabled && !justSaved && (
+              <span className="hidden md:inline-block ml-0.5 text-[10px] font-mono px-1 py-0.5 rounded bg-white/8 border border-white/15 text-white/40 leading-none">
                 ⌘S
               </span>
             )}

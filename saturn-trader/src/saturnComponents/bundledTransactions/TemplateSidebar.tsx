@@ -145,7 +145,6 @@ export function TemplateSidebar({
             <SelectAllIcon className="w-3.5 h-3.5 md:w-4 md:h-4" />
           </button>
 
-          {/* New template */}
           <button
             onClick={handleAddTemplate}
             className="p-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-md transition-colors"
@@ -156,7 +155,6 @@ export function TemplateSidebar({
         </div>
       </div>
 
-      {/* ── Delete-confirm modal ── */}
       <DeleteConfirmationModal
         isOpen={!!templateToDelete || isDeleteSelectedModalOpen}
         onClose={() => {
@@ -197,7 +195,6 @@ export function TemplateSidebar({
         }
       />
 
-      {/* ── Template list ── */}
       <div className="flex-1 overflow-y-auto h-full scrollbar-hide overscroll-contain">
         <div className="p-3 space-y-1.5 pb-28">
           {templates.map((template) => {
@@ -210,7 +207,6 @@ export function TemplateSidebar({
                   ${isSelected ? "ring-1 ring-blue-500/30 bg-blue-500/5" : ""}
                 `}
               >
-                {/* Checkbox */}
                 <button
                   onClick={() => onToggleSelection?.(template.id)}
                   className={`

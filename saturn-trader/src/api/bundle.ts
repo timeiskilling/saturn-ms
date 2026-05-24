@@ -41,6 +41,7 @@ interface StreamGrpcParams<TReq, TRes> {
   onUpdate: (update: TRes) => void;
   onError: (error: Error) => void;
   onComplete: () => void;
+  signal?: AbortSignal;
 }
 
 export async function executeGrpcStream<TReq, TRes>({
@@ -51,6 +52,7 @@ export async function executeGrpcStream<TReq, TRes>({
   onUpdate,
   onError,
   onComplete,
+  signal,
 }: StreamGrpcParams<TReq, TRes>) {
   if (!navigator.onLine) {
     toast.error("You are offline. Please check your internet connection.");
@@ -81,6 +83,7 @@ export async function executeGrpcStream<TReq, TRes>({
         Accept: "application/grpc-web+proto",
       },
       body: body,
+      signal,
     });
 
     if (!res.ok) {
@@ -136,7 +139,11 @@ export async function executeGrpcStream<TReq, TRes>({
     }
 
     onComplete();
-  } catch (error) {
+  } catch (error: any) {
+    if (error.name === "AbortError") {
+      console.log(`Stream ${endpoint} aborted by client`);
+      return;
+    }
     console.error("gRPC stream error:", error);
     onError(error instanceof Error ? error : new Error(String(error)));
   }
@@ -147,6 +154,7 @@ export async function subscribeToBundles(
   onUpdate: (update: streaming.UserBundleUpdate) => void,
   onError: (error: Error) => void,
   onComplete: () => void,
+  signal?: AbortSignal,
 ) {
   return executeGrpcStream({
     request,
@@ -156,6 +164,7 @@ export async function subscribeToBundles(
     onUpdate,
     onError,
     onComplete,
+    signal,
   });
 }
 
@@ -164,6 +173,7 @@ export async function sendBundleStream(
   onUpdate: (update: streaming.UserBundleUpdate) => void,
   onError: (error: Error) => void,
   onComplete: () => void,
+  signal?: AbortSignal,
 ) {
   return executeGrpcStream({
     request,
@@ -173,5 +183,6 @@ export async function sendBundleStream(
     onUpdate,
     onError,
     onComplete,
+    signal,
   });
 }

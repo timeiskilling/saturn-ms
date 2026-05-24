@@ -15,8 +15,8 @@ function ChangeTriangle({ dir }: { dir: "up" | "dn" }) {
   return (
     <span
       className={`
-        inline-block w-0 h-0 flex-shrink-0 transition-transform duration-300
-        border-l-[4px] border-r-[4px] border-l-transparent border-r-transparent
+        inline-block w-0 h-0 shrink-0 transition-transform duration-300
+        border-l-4 border-r-4 border-l-transparent border-r-transparent
         ${
           dir === "up"
             ? "border-b-[6px] border-b-current"
@@ -73,7 +73,7 @@ function TokenRow({ symbol }: { symbol: string }) {
     <div className="flex items-center justify-between p-3 rounded-lg hover:bg-zinc-900/40 transition-colors">
       {/* Icon + symbol */}
       <div className="flex items-center gap-3 min-w-0">
-        <div className="w-8 h-8 rounded-full bg-zinc-800 overflow-hidden flex-shrink-0 flex items-center justify-center text-[10px] font-bold text-zinc-500">
+        <div className="w-8 h-8 rounded-full bg-zinc-800 overflow-hidden shrink-0 flex items-center justify-center text-[10px] font-bold text-zinc-500">
           {TOKEN_ICONS[symbol] ? (
             <img
               src={TOKEN_ICONS[symbol]}
@@ -88,7 +88,7 @@ function TokenRow({ symbol }: { symbol: string }) {
       </div>
 
       {/* Price + change */}
-      <div className="flex items-center gap-4 flex-shrink-0">
+      <div className="flex items-center gap-4 shrink-0">
         {priceData ? (
           <>
             <span
@@ -97,7 +97,7 @@ function TokenRow({ symbol }: { symbol: string }) {
               {formatPrice(priceData.price)}
             </span>
             <span
-              className={`inline-flex items-center gap-1 text-xs font-medium w-[60px] justify-end tabular-nums ${pctColor}`}
+              className={`inline-flex items-center gap-1 text-xs font-medium w-15 justify-end tabular-nums ${pctColor}`}
             >
               <ChangeTriangle dir={currentDir} />
               {Math.abs(priceData.percentChange).toFixed(2)}%
