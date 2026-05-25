@@ -1,13 +1,3 @@
-# -----------------------------------------------------------------------------
-# Unified Redis Sentinel Cluster & Microservices for Saturn
-# -----------------------------------------------------------------------------
-# Provides 1 Master, 1 Replica, and 3 Sentinels using the specific IPs requested.
-# All microservices connect to this central highly-available cache layer.
-#
-# Environment Variable Setup for local development (not via Docker):
-# USER_MANAGER_SENTINEL_URLS=redis://127.0.0.1:26379,redis://127.0.0.1:26380,redis://127.0.0.1:26381
-# -----------------------------------------------------------------------------
-
 networks:
   saturn_redis_net:
     ipam:
@@ -233,11 +223,6 @@ services:
     build:
       context: ./saturn-trader
       dockerfile: Dockerfile
-      args:
-        - VITE_PRICE_SERVICE_URL=https://my-domain.com
-        - VITE_SESSION_URL=https://my-domain.com
-        - VITE_GRPC_URL=https://my-domain.com
-
     container_name: saturn-trader
     networks:
       saturn_redis_net:

@@ -120,7 +120,7 @@ services:
   jito-fee-service:
     build:
       context: ..
-      dockerfile: bundle_status_service/Dockerfile
+      dockerfile: ./jito_fee_service/Dockerfile
     container_name: jito-fee-service
     networks:
       bundle_status_net:

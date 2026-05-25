@@ -1,0 +1,112 @@
+networks:
+  saturn_redis_net:
+    ipam:
+      driver: default
+      config:
+        - subnet: "10.0.0.0/24"
+          gateway: "10.0.0.254"
+
+services:
+  haproxy:
+    image: haproxy:latest
+    container_name: saturn-haproxy
+    restart: unless-stopped
+    networks:
+      saturn_redis_net:
+        ipv4_address: 10.0.0.5
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+      - ./haproxy/certs:/etc/haproxy/certs:ro
+    depends_on:
+      - user-session-manager
+      - saturn-bundle-tracker
+      - bundle_status_service
+      - price_service
+      - saturn-trader
+
+  redis-master:
+    image: bitnami/redis:latest
+    container_name: redis-master
+    restart: unless-stopped
+    environment:
+      - REDIS_REPLICATION_MODE=master
+      - ALLOW_EMPTY_PASSWORD=yes
+    networks:
+      saturn_redis_net:
+        ipv4_address: 10.0.0.10
+
+  postgres:
+    image: postgres:15
+    container_name: saturn-postgres
+    restart: unless-stopped
+    env_file:
+      - .env
+    networks:
+      saturn_redis_net:
+        ipv4_address: 10.0.0.20
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  user-session-manager:
+    image: ghcr.io/timeiskilling/saturn-user-session-manager:latest
+    container_name: user-session-manager
+    restart: unless-stopped
+    networks:
+      saturn_redis_net:
+        ipv4_address: 10.0.0.21
+    env_file:
+      - .env
+
+  saturn-bundle-tracker:
+    image: ghcr.io/timeiskilling/saturn-saturn-bundle-tracker:latest
+    container_name: saturn-bundle-tracker
+    restart: unless-stopped
+    networks:
+      saturn_redis_net:
+        ipv4_address: 10.0.0.30
+    env_file:
+      - .env
+
+  bundle_status_service:
+    image: ghcr.io/timeiskilling/saturn-bundle-status-service:latest
+    container_name: bundle_status_service
+    restart: unless-stopped
+    networks:
+      saturn_redis_net:
+        ipv4_address: 10.0.0.32
+    env_file:
+      - .env
+
+  jito_tip_service:
+    image: ghcr.io/timeiskilling/saturn-jito-tip-service:latest
+    container_name: jito_tip_service
+    restart: unless-stopped
+    networks:
+      saturn_redis_net:
+        ipv4_address: 10.0.0.33
+    env_file:
+      - .env
+
+  price_service:
+    image: ghcr.io/timeiskilling/saturn-price-service:latest
+    container_name: price_service
+    restart: unless-stopped
+    networks:
+      saturn_redis_net:
+        ipv4_address: 10.0.0.34
+    env_file:
+      - .env
+
+  saturn-trader:
+    image: ghcr.io/timeiskilling/saturn-saturn-trader:latest
+    container_name: saturn-trader
+    restart: unless-stopped
+    networks:
+      saturn_redis_net:
+        ipv4_address: 10.0.0.31
+
+volumes:
+  postgres_data:

@@ -10,6 +10,7 @@ use jupiter_trader_data::models::{
     api_models::{ImageFetch, TokenPricesV2},
     jupiter_models::{JupiterSwapInstructionsRsponse, QuoteOptions, QuoteRequestParams},
 };
+use rand::Rng;
 use reqwest::Client;
 use std::{num::NonZeroU32, sync::atomic::Ordering, time::Duration};
 use tokio::time::sleep;
@@ -136,20 +137,30 @@ impl HttpManager {
                     return Ok(result);
                 }
                 Err(e) => {
+                    let error_str = e.to_string().to_lowercase();
                     let is_retryable = if let Some(reqwest_err) = e.downcast_ref::<reqwest::Error>()
                     {
                         self.is_retryable_error(reqwest_err)
                     } else {
-                        let error_str = e.to_string().to_lowercase();
                         error_str.contains("timeout")
                             || error_str.contains("connection")
                             || error_str.contains("429")
+                            || error_str.contains("rate limit")
                             || error_str.contains("503")
                             || error_str.contains("502")
                     };
 
                     if !is_retryable || attempt >= self.retry_config.max_attempts {
                         self.metrics.failed_requests.fetch_add(1, Ordering::Relaxed);
+
+                        tracing::error!(
+                            operation = operation_name,
+                            attempt = attempt,
+                            is_retryable = is_retryable,
+                            error = %e,
+                            "Giving up on request"
+                        );
+
                         return Err(self.convert_anyhow_error(e));
                     }
 
@@ -161,6 +172,12 @@ impl HttpManager {
                         error = %e,
                         "Jito API request failed, retrying"
                     );
+
+                    let jitter_factor = rand::rng().random_range(0.8..1.2);
+                    let jittered_backoff =
+                        Duration::from_secs_f64(backoff.as_secs_f64() * jitter_factor);
+
+                    sleep(jittered_backoff).await;
 
                     sleep(backoff).await;
 

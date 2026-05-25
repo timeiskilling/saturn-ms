@@ -12,7 +12,7 @@ pub struct RetryConfig {
 impl Default for RetryConfig {
     fn default() -> Self {
         Self {
-            max_attempts: 3,
+            max_attempts: 10,
             initial_backoff: Duration::from_millis(100),
             backoff_multiplier: 2.0,
             max_backoff: Duration::from_secs(5),

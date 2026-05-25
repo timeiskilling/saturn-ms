@@ -1,30 +1,7 @@
-// add HAProxy
-//some
-
-// test on HTTP 2
-
-// add 3d animation
-
-// --- Make bundle_status_service Stateless ---
-// - Externalize Bundle Ownership: Replace the local `bundle_ownership` DashMap in `UserStreamNotificationSystem` with Redis (`SET bundle_owner:{bundle_id} {user_id}`).
-
-// - Modify Redis Pub/Sub Listener: Update `start_redis_subscription` so that when a bundle update arrives, it queries Redis for the `user_id` instead of local memory. If the user has an active gRPC stream on the current instance, push the update.
-
-// - Decouple Streams: Add a dedicated `SubscribeToBundles(UserRequest) returns (stream UserBundleUpdate)` gRPC method. This allows clients to reconnect to any load-balanced instance and resume their stream without needing to resend transactions.
-
-launch
-
-
-// --- Future Scaling Tasks (Post-MVP) ---
+// --- Future Scaling Tasks ---
 // - Add PgBouncer for PostgreSQL connection pooling to prevent connection exhaustion when scaling instances.
 // - Migrate tower_governor rate limiter to use Redis-backed storage for distributed rate limiting across multiple servers.
 // - Set up PostgreSQL Read Replicas for heavy SELECT queries on the bundles_data JSONB.
 // - Containerize app (Docker) and deploy multiple replicas behind the Load Balancer (K8s HPA).
 // - Consider Redis Cluster upgrade if Redis Sentinel memory becomes a bottleneck for sessions.
-
-
-
---
-polling tokens from token-price
-
-i forgot
+---
