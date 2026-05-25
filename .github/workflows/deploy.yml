@@ -73,6 +73,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            ${{ matrix.is_frontend && format('VITE_PRICE_SERVICE_URL={0}', vars.VITE_PRICE_SERVICE_URL) || '' }}
-            ${{ matrix.is_frontend && format('VITE_SESSION_URL={0}', vars.VITE_SESSION_URL) || '' }}
-            ${{ matrix.is_frontend && format('VITE_GRPC_URL={0}', vars.VITE_GRPC_URL) || '' }}
+            ${{ matrix.is_frontend && format('VITE_PRICE_SERVICE_URL={0}', secrets.VITE_PRICE_SERVICE_URL) || '' }}
+            ${{ matrix.is_frontend && format('VITE_SESSION_URL={0}', secrets.VITE_SESSION_URL) || '' }}
+            ${{ matrix.is_frontend && format('VITE_GRPC_URL={0}', secrets.VITE_GRPC_URL) || '' }}
