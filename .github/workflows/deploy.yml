@@ -89,3 +89,4 @@ jobs:
             VITE_PRICE_SERVICE_URL=${{ secrets.VITE_PRICE_SERVICE_URL }}
             VITE_SESSION_URL=${{ secrets.VITE_SESSION_URL }}
             VITE_GRPC_URL=${{ secrets.VITE_GRPC_URL }}
+            VITE_HELIUS_API_KEY=${{ secrets.VITE_HELIUS_API_KEY }}
