@@ -42,6 +42,11 @@ jobs:
             dockerfile: price_service/Dockerfile
             paths: price_service
             is_frontend: false
+          - service: bun_price_service
+            context: ./bun_price_service
+            dockerfile: ./bun_price_service/Dockerfile
+            paths: bun_price_service
+            is_frontend: false
           - service: saturn-trader
             context: ./saturn-trader
             dockerfile: ./saturn-trader/Dockerfile

@@ -51,7 +51,7 @@ export function useTokenList() {
       globalCache.promise = (async () => {
         try {
           const response = await fetch(
-            `${appConfig.priceServiceBaseUrl}/get/list_of_tokens`,
+            `/https://sutrn.com/get/list_of_tokens`,
             {
               headers: {
                 "X-Auth-Token": "test-token", // Modify or pass down your real auth token logic
