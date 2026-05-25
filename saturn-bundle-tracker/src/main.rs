@@ -5,15 +5,17 @@ use crate::bundle_manager::bundle_tracker_api::{
 use crate::prelude::*;
 use common::jito_client_api::jito_http_manager::JitoHttpManager;
 use common::jito_client_api::retry_config::RetryConfig;
+use tracing_subscriber::fmt::format::FmtSpan;
 pub mod bundle_manager;
 pub mod health;
 pub mod prelude;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    tracing_subscriber::registry()
-        .with(tracing_subscriber::fmt::layer())
-        .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")))
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::DEBUG)
+        .with_span_events(FmtSpan::CLOSE)
+        .with_target(false)
         .init();
 
     let config = TrackerConfig {
