@@ -26,6 +26,7 @@ services:
       - bundle_status_service
       - price_service
       - saturn-trader
+      - ws_price_service
 
   redis-master:
     image: bitnami/redis:latest
@@ -109,8 +110,8 @@ services:
         ipv4_address: 10.0.0.31
 
   ws_price_service:
-    build: ./ws_price_service
-    container_name: ws_price_service
+    image: ghcr.io/timeiskilling/saturn-bun_price_service:latest
+    container_name: bun_price_service
     restart: always
     networks:
       - saturn_redis_net
