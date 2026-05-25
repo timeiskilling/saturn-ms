@@ -17,7 +17,7 @@ const THROTTLE_MS = 250; // Max 4 updates per second per symbol
 
 function getSharedWebSocket(): WebSocket {
   if (!sharedWs || sharedWs.readyState === WebSocket.CLOSED) {
-    const wsUrl = `ws://${window.location.host}/ws`;
+    const wsUrl = `wss://sutrn.com/ws`;
     sharedWs = new WebSocket(wsUrl);
 
     sharedWs.onmessage = (event) => {
