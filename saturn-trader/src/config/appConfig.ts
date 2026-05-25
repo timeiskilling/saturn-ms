@@ -5,27 +5,19 @@ export interface AppConfig {
   grpcBaseUrl: string;
   heliuspUrl: string;
 }
-
-const getEnv = (key: string, defaultValue: any): any => {
-  if (typeof import.meta !== "undefined" && import.meta.env) {
-    return import.meta.env[key] ?? defaultValue;
-  }
-  return defaultValue;
-};
-
 export const appConfig: AppConfig = {
-  priceServiceBaseUrl: getEnv("VITE_PRICE_SERVICE_URL", "https://sutrn.com"),
+  priceServiceBaseUrl:
+    import.meta.env.VITE_PRICE_SERVICE_URL || "https://sutrn.com",
 
   tokenListRefreshIntervalSec: Number(
-    getEnv("VITE_TOKEN_LIST_REFRESH_INTERVAL_SEC", 7320),
+    import.meta.env.VITE_TOKEN_LIST_REFRESH_INTERVAL_SEC || 7320,
   ),
 
-  sessionBaseUrl: getEnv("VITE_SESSION_URL", "https://sutrn.com"),
+  sessionBaseUrl: import.meta.env.VITE_SESSION_URL || "https://sutrn.com",
 
-  grpcBaseUrl: getEnv("VITE_GRPC_URL", "https://sutrn.com"),
+  grpcBaseUrl: import.meta.env.VITE_GRPC_URL || "https://sutrn.com",
 
-  heliuspUrl: getEnv("VITE_HELIUS_API_KEY", null)
-    ? `https://mainnet.helius-rpc.com/?api-key=${getEnv("VITE_HELIUS_API_KEY", "")}`
+  heliuspUrl: import.meta.env.VITE_HELIUS_API_KEY
+    ? `https://mainnet.helius-rpc.com/?api-key=${import.meta.env.VITE_HELIUS_API_KEY}`
     : "https://api.devnet.solana.com",
 };
-// "https://api.mainnet.solana.com"

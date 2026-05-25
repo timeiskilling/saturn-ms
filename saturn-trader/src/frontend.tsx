@@ -4,7 +4,6 @@
  *
  * It is included in `src/index.html`.
  */
-import { appConfig } from "./config/appConfig";
 import "./polyfill";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
@@ -12,7 +11,6 @@ import "./index.css";
 import { AppTest } from "./App_tester";
 import "@fontsource/jetbrains-mono";
 
-console.log("=== SATURN TRADER CONFIG ===", appConfig);
 const elem = document.getElementById("root")!;
 const app = (
   <StrictMode>
