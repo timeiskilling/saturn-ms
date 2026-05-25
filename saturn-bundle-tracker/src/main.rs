@@ -11,6 +11,11 @@ pub mod prelude;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    tracing_subscriber::registry()
+        .with(tracing_subscriber::fmt::layer())
+        .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")))
+        .init();
+
     let config = TrackerConfig {
         inflight_check_interval: Duration::from_millis(500),
         landed_check_interval: Duration::from_millis(500),
@@ -53,7 +58,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     info!("Tracker loop started");
     if let Err(e) = bundle_tracker.start_tracking().await {
-        error!("Tracker failed: {e}");
+        tracing::error!("Tracker failed with error: {e}");
+        return Err(e.into());
     }
 
     Ok(())
