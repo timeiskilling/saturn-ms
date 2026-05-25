@@ -22,4 +22,5 @@ members = [
 exclude = [
     "saturn-wallet",
     "saturn-trader"
+    "privat_vps"
 ]
