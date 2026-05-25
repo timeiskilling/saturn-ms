@@ -26,7 +26,18 @@ use crate::{
 };
 
 pub async fn get_nonce(redis: RedisConn) -> Result<Json<NonceResponse>, ApiError> {
-    let resp = redis::command::write_get_nonce_to_redis(&mut redis.get_connection().await?).await?;
+    let mut conn = redis.get_connection().await.map_err(|e| {
+        tracing::error!("Failed to acquire Redis connection: {:?}", e);
+        e
+    })?;
+
+    let resp = redis::command::write_get_nonce_to_redis(&mut conn)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to write nonce to Redis: {:?}", e);
+            e
+        })?;
+
     let response = NonceResponse {
         nonce: resp.nonce.clone(),
         request_id: resp.request_id,

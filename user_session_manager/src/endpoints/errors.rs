@@ -6,8 +6,8 @@ use axum::{
 use saturn_errors::error::UserServiceError;
 use serde_json::json;
 
-// We wrap the external UserServiceError in a newtype struct
-// so we can implement Axum's IntoResponse trait for it locally.
+// 1. ДОДАНО #[derive(Debug)] ТУТ
+#[derive(Debug)]
 pub struct ApiError(pub UserServiceError);
 
 impl From<UserServiceError> for ApiError {
@@ -18,7 +18,9 @@ impl From<UserServiceError> for ApiError {
 
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
-        let (status, error_message) = match self.0 {
+        tracing::error!("API Error occurred: {:?}", self.0);
+
+        let (status, error_message) = match &self.0 {
             UserServiceError::InvalidSignature | UserServiceError::InvalidNonce => {
                 (StatusCode::BAD_REQUEST, self.0.to_string())
             }

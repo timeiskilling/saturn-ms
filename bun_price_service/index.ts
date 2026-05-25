@@ -10,6 +10,7 @@ let serverRef: any = null;
 
 const server = Bun.serve({
   port: 3030,
+  hostname: "0.0.0.0",
   websocket: {
     open(ws) {
       ws.subscribe("binance_prices");

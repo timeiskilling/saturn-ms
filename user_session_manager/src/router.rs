@@ -50,10 +50,7 @@ pub fn create_router(app_state: Arc<AppState>) -> Router {
         .layer(GovernorLayer::new(governor_conf))
         .layer(
             CorsLayer::new()
-                .allow_origin([
-                    "http://localhost:3030".parse::<HeaderValue>().unwrap(),
-                    "http://127.0.0.1:3030".parse::<HeaderValue>().unwrap(),
-                ])
+                .allow_origin("https://sutrn.com".parse::<HeaderValue>().unwrap())
                 .allow_headers([
                     HeaderName::from_static("content-type"),
                     HeaderName::from_static("authorization"),

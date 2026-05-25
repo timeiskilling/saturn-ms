@@ -59,7 +59,7 @@ export function useConnectedWallets() {
 
       try {
         if (!fetchPromise) {
-          fetchPromise = fetch("http://localhost:3001/wallet/linked", {
+          fetchPromise = fetch("https://sutrn.com/wallet/linked", {
             credentials: "include",
           })
             .then((res) => {
