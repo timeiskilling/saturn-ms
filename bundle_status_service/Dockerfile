@@ -13,11 +13,11 @@ COPY . .
 
 RUN cargo build --release --bin bundle_status_service
 
-FROM ubuntu:22.04
-
+FROM ubuntu:24.04
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     libssl3 \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
