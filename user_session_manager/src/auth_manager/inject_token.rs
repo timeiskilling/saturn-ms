@@ -23,7 +23,7 @@ pub async fn inject_token(
         .path("/")
         .http_only(true)
         .secure(true)
-        .same_site(axum_extra::extract::cookie::SameSite::Strict)
+        .same_site(axum_extra::extract::cookie::SameSite::Lax)
         .max_age(Duration::days(7))
         .build();
 

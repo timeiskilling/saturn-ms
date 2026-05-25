@@ -126,7 +126,11 @@ pub async fn get_devices(
     let session_keys_to_fetch: Vec<String> = secret_tokens
         .into_iter()
         .flatten()
-        .map(|token| format!("session:{}", token))
+        .filter_map(|val| {
+            val.split(':')
+                .next()
+                .map(|token| format!("session:{}", token))
+        })
         .collect();
 
     if session_keys_to_fetch.is_empty() {
