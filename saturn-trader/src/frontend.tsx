@@ -11,6 +11,7 @@ import "./index.css";
 import { AppTest } from "./App_tester";
 import "@fontsource/jetbrains-mono";
 
+console.log("Welcome to Saturn");
 const elem = document.getElementById("root")!;
 const app = (
   <StrictMode>
