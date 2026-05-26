@@ -10,7 +10,9 @@ import { createRoot } from "react-dom/client";
 import "./index.css";
 import { AppTest } from "./App_tester";
 import "@fontsource/jetbrains-mono";
+import { appConfig } from "./config/appConfig";
 
+console.log(appConfig);
 console.log("Welcome to Saturn");
 const elem = document.getElementById("root")!;
 const app = (
