@@ -16,9 +16,9 @@ export const TokenIcon = ({
 
   const sources = [
     cleanIcon,
-    `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/${token.mint}/logo.png`, // Надійний Trust Wallet
-    `https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/${token.mint}/logo.png`, // Старий репозиторій (як останній шанс)
-  ].filter(Boolean) as string[];
+    `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/${token.mint}/logo.png?cache=${token.mint}`,
+    `https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/${token.mint}/logo.png`,
+  ].filter(Boolean);
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [imageFailed, setImageFailed] = useState(false);

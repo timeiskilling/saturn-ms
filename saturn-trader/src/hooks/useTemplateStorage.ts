@@ -19,29 +19,51 @@ export function useTemplateStorage({
 }: UseTemplateStorageProps) {
   const [isFetchingBundles, setIsFetchingBundles] = useState(true);
   const [isSavingBundles, setIsSavingBundles] = useState(false);
+
+  // last persisted server state
   const lastSavedTemplatesRef = useRef<Template[]>([]);
+
+  // always keep latest templates for autosave
+  const latestTemplatesRef = useRef<Template[]>([]);
+  useEffect(() => {
+    latestTemplatesRef.current = templates;
+  }, [templates]);
 
   useEffect(() => {
     const loadBundles = async () => {
       if (!isAuthenticated) {
         setTemplates([]);
+        setActiveTemplateId(null);
+        lastSavedTemplatesRef.current = [];
         setIsFetchingBundles(false);
         return;
       }
 
       setIsFetchingBundles(true);
-      const data = await fetchBundles();
-      if (data && data.length > 0) {
-        const loadedTemplates = data as unknown as Template[];
-        setTemplates(loadedTemplates);
-        lastSavedTemplatesRef.current = loadedTemplates;
-        setActiveTemplateId(loadedTemplates[0]?.id ?? null);
-      } else {
+
+      try {
+        const data = await fetchBundles();
+
+        if (data && data.length > 0) {
+          const loadedTemplates = data as unknown as Template[];
+
+          setTemplates(loadedTemplates);
+          setActiveTemplateId(loadedTemplates[0]?.id ?? null);
+
+          lastSavedTemplatesRef.current = loadedTemplates;
+        } else {
+          setTemplates([]);
+          setActiveTemplateId(null);
+          lastSavedTemplatesRef.current = [];
+        }
+      } catch (err) {
+        console.error("Failed to load bundles:", err);
         setTemplates([]);
-        lastSavedTemplatesRef.current = [];
         setActiveTemplateId(null);
+        lastSavedTemplatesRef.current = [];
+      } finally {
+        setIsFetchingBundles(false);
       }
-      setIsFetchingBundles(false);
     };
 
     loadBundles();
@@ -56,6 +78,7 @@ export function useTemplateStorage({
       setIsAuthenticated(false);
       setTemplates([]);
       setActiveTemplateId(null);
+      lastSavedTemplatesRef.current = [];
     };
 
     window.addEventListener("saturn_wallet_verified", handleLogin);
@@ -67,30 +90,37 @@ export function useTemplateStorage({
     };
   }, [isAuthenticated, setTemplates, setActiveTemplateId, setIsAuthenticated]);
 
-  const handleSaveBundles = async (templatesToSave: Template[] = templates) => {
+  const handleSaveBundles = async (
+    templatesToSave: Template[] = latestTemplatesRef.current,
+  ) => {
+    if (!isAuthenticated) return;
+
     setIsSavingBundles(true);
-    await saveBundle(templatesToSave as any);
-    lastSavedTemplatesRef.current = templatesToSave;
-    setIsSavingBundles(false);
+
+    try {
+      await saveBundle(templatesToSave as any);
+      lastSavedTemplatesRef.current = templatesToSave;
+    } catch (err) {
+      console.error("Save bundles failed:", err);
+    } finally {
+      setIsSavingBundles(false);
+    }
   };
 
   const hasUnsavedChanges =
+    isAuthenticated &&
     JSON.stringify(templates) !== JSON.stringify(lastSavedTemplatesRef.current);
 
+  // autosave with debounce
   useEffect(() => {
-    if (isFetchingBundles || !isAuthenticated) return;
-
-    const hasChanged =
-      JSON.stringify(templates) !==
-      JSON.stringify(lastSavedTemplatesRef.current);
-    if (!hasChanged) return;
+    if (!isAuthenticated || isFetchingBundles) return;
 
     const timerId = setTimeout(() => {
-      handleSaveBundles(templates);
+      handleSaveBundles();
     }, 10000);
 
     return () => clearTimeout(timerId);
-  }, [templates, isFetchingBundles, isAuthenticated]);
+  }, [templates, isAuthenticated, isFetchingBundles]);
 
   return {
     isFetchingBundles,
