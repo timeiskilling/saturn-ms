@@ -62,7 +62,14 @@ export function useTokenList() {
             );
           }
 
-          const data: TokenInfo[] = await response.json();
+          const rawData: TokenInfo[] = await response.json();
+
+          const data: TokenInfo[] = rawData.map((token) => ({
+            ...token,
+            icon: token.icon
+              ? token.icon
+              : `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/${token.mint}/logo.png`,
+          }));
 
           globalCache.data = data;
           globalCache.timestamp = Date.now();

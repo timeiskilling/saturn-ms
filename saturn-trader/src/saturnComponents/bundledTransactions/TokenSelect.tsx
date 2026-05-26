@@ -5,6 +5,7 @@ import { useAllWalletsBalances } from "@/hooks/useAllWalletsBalances";
 import { useTokenList } from "@/hooks/useTokenList";
 import { useNestedScrollbar } from "@/hooks/useNestedScrollbar";
 import { useDiscoveredWallets } from "@phantom/react-sdk";
+import { TokenIcon } from "../TokenIcon";
 
 interface TokenSelectProps {
   value: string;
@@ -254,7 +255,7 @@ export function TokenSelect({
       {isOpen && (
         <div
           tabIndex={-1}
-          className="absolute z-50 top-full left-0 mt-2 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl shadow-black/50 overflow-hidden flex flex-col w-[350px] sm:w-[400px]"
+          className="absolute z-50 top-full left-0 mt-2 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl shadow-black/50 overflow-hidden flex flex-col w-87.5 sm:w-100"
         >
           <div className="p-2 border-b border-zinc-800">
             <div className="relative">
@@ -341,17 +342,10 @@ export function TokenSelect({
                               >
                                 <td className="px-3 py-2.5">
                                   <div className="flex items-center gap-2">
-                                    <div className="w-6 h-6 rounded-full bg-zinc-800 border border-zinc-700/50 flex shrink-0 items-center justify-center text-xs font-bold text-zinc-400 overflow-hidden shadow-sm">
-                                      {token.icon ? (
-                                        <img
-                                          src={token.icon}
-                                          alt={token.symbol}
-                                          className="w-full h-full object-cover"
-                                        />
-                                      ) : (
-                                        token.symbol[0]
-                                      )}
-                                    </div>
+                                    <TokenIcon
+                                      token={token}
+                                      className="w-6 h-6 rounded-full bg-zinc-800 border border-zinc-700/50 shrink-0 text-xs font-bold text-zinc-400 overflow-hidden shadow-sm object-cover"
+                                    />
                                     <div className="flex flex-col">
                                       <span className="font-medium text-zinc-200 group-hover:text-white transition-colors">
                                         {token.symbol}
@@ -415,17 +409,10 @@ export function TokenSelect({
                         className="flex items-center justify-between px-2 py-2 hover:bg-zinc-800 rounded-lg cursor-pointer transition-colors"
                       >
                         <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-zinc-800 border border-zinc-700/50 flex shrink-0 items-center justify-center text-xs font-bold text-zinc-400 overflow-hidden shadow-sm">
-                            {"icon" in token && token.icon ? (
-                              <img
-                                src={(token as any).icon}
-                                alt={token.symbol}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              token.symbol[0]
-                            )}
-                          </div>
+                          <TokenIcon
+                            token={token as any}
+                            className="w-6 h-6 rounded-full bg-zinc-800 border border-zinc-700/50 shrink-0 text-xs font-bold text-zinc-400 overflow-hidden shadow-sm object-cover"
+                          />
                           <span className="text-sm font-medium text-zinc-200">
                             {token.symbol}
                           </span>
@@ -457,17 +444,10 @@ export function TokenSelect({
                     className="flex items-center justify-between px-2 py-2 hover:bg-zinc-800 rounded-lg cursor-pointer transition-colors"
                   >
                     <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-zinc-800 border border-zinc-700/50 flex shrink-0 items-center justify-center text-xs font-bold text-zinc-400 overflow-hidden shadow-sm">
-                        {"icon" in token && token.icon ? (
-                          <img
-                            src={(token as any).icon}
-                            alt={token.symbol}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          token.symbol[0]
-                        )}
-                      </div>
+                      <TokenIcon
+                        token={token as any}
+                        className="w-6 h-6 rounded-full bg-zinc-800 border border-zinc-700/50 shrink-0 text-xs font-bold text-zinc-400 overflow-hidden shadow-sm object-cover"
+                      />
                       <span className="text-sm font-medium text-zinc-200">
                         {token.symbol}
                       </span>
