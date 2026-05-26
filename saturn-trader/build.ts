@@ -123,11 +123,18 @@ if (existsSync(outdir)) {
 
 const start = performance.now();
 
-const entrypoints = [...new Bun.Glob("**.html").scanSync("src")]
-  .map((a) => path.resolve("src", a))
-  .filter((dir) => !dir.includes("node_modules"));
-console.log(
-  `📄 Found ${entrypoints.length} HTML ${entrypoints.length === 1 ? "file" : "files"} to process\n`,
+const envDefines: Record<string, string> = {
+  "process.env.NODE_ENV": JSON.stringify("production"),
+};
+
+for (const key in process.env) {
+  if (key.startsWith("VITE_")) {
+    envDefines[`process.env.${key}`] = JSON.stringify(process.env[key]);
+  }
+}
+
+const entrypoints = [...new Bun.Glob("**/*.html").scanSync("src")].map((file) =>
+  path.resolve("src", file),
 );
 
 const result = await Bun.build({
@@ -137,9 +144,7 @@ const result = await Bun.build({
   minify: true,
   target: "browser",
   sourcemap: "linked",
-  define: {
-    "process.env.NODE_ENV": JSON.stringify("production"),
-  },
+  define: envDefines,
   ...cliConfig,
 });
 
