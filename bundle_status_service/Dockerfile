@@ -11,7 +11,8 @@ WORKDIR /app
 
 COPY . .
 
-RUN cargo build --release --bin bundle_status_service
+ARG BIN_NAME=bundle_status_service
+RUN cargo build --release --bin ${BIN_NAME}
 
 FROM ubuntu:24.04
 RUN apt-get update && apt-get install -y \
@@ -22,10 +23,12 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-COPY --from=builder /app/target/release/bundle_status_service ./bundle_status_service
+ARG BIN_NAME=bundle_status_service
 
-RUN chmod +x ./bundle_status_service
+COPY --from=builder /app/target/release/${BIN_NAME} ./app_binary
+
+RUN chmod +x ./app_binary
 
 EXPOSE 3000
 
-CMD ["./bundle_status_service"]
+CMD ["./app_binary"]

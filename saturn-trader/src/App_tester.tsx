@@ -19,7 +19,22 @@ function AppContent() {
 
   return (
     <div className="select-none flex flex-col h-screen w-full overflow-hidden bg-zinc-950">
-      <div className="flex flex-col w-full h-full pb-16 lg:pb-0">
+      <div className="w-full bg-amber-950/30 border-b border-amber-900/50 px-2 lg:px-4 py-1.5 lg:py-2 flex items-center justify-center shrink-0 z-50">
+        <div className="flex items-center">
+          <span className="relative flex h-2 w-2 lg:h-2.5 lg:w-2.5 shrink-0"></span>
+          <p className="text-[10px] lg:text-xs text-amber-200/80 font-medium text-center tracking-wide">
+            Built and maintained independently. Current blockchain interactions
+            are simulated while mainnet infrastructure is being finalized.
+            <span className="font-bold text-amber-200">
+              {" "}
+              Certain application data is stored securely to support platform
+              functionality. Sensitive information is never shared externally.
+            </span>
+          </p>
+        </div>
+      </div>
+
+      <div className="flex flex-col w-full flex-1 min-h-0 pb-16 lg:pb-0">
         <div className="shrink-0 flex items-center justify-between border-b border-zinc-800 bg-zinc-950 pr-2 lg:pr-4 overflow-x-auto scrollbar-hide">
           <BasicCard
             title="Saturn"

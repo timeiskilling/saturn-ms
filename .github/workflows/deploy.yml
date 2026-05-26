@@ -22,31 +22,45 @@ jobs:
             dockerfile: user_session_manager/Dockerfile
             paths: user_session_manager
             is_frontend: false
+
           - service: saturn-bundle-tracker
             context: .
             dockerfile: saturn-bundle-tracker/Dockerfile
             paths: saturn-bundle-tracker
             is_frontend: false
+
           - service: bundle-status-service
             context: .
             dockerfile: bundle_status_service/Dockerfile
             paths: bundle_status_service
             is_frontend: false
+            bin_name: bundle_status_service
+
+          - service: bundle-status-service-mock
+            context: .
+            dockerfile: bundle_status_service/Dockerfile
+            paths: bundle_status_service
+            is_frontend: false
+            bin_name: mock_service
+
           - service: jito-tip-service
             context: .
             dockerfile: jito_fee_service/Dockerfile
             paths: jito_fee_service
             is_frontend: false
+
           - service: price-service
             context: .
             dockerfile: price_service/Dockerfile
             paths: price_service
             is_frontend: false
+
           - service: bun_price_service
             context: ./bun_price_service
             dockerfile: ./bun_price_service/Dockerfile
             paths: bun_price_service
             is_frontend: false
+
           - service: saturn-trader
             context: ./saturn-trader
             dockerfile: ./saturn-trader/Dockerfile
@@ -86,6 +100,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
+            BIN_NAME=${{ matrix.bin_name }}
             VITE_PRICE_SERVICE_URL=${{ secrets.VITE_PRICE_SERVICE_URL }}
             VITE_SESSION_URL=${{ secrets.VITE_SESSION_URL }}
             VITE_GRPC_URL=${{ secrets.VITE_GRPC_URL }}

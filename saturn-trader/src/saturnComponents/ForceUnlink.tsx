@@ -70,9 +70,9 @@ export function ForceUnlink() {
   };
 
   return (
-    <div className="flex flex-col w-full h-full bg-zinc-950 overflow-hidden items-center">
+    <div className="flex flex-col w-full h-full bg-zinc-950 overflow-y-auto scrollbar-hide items-center">
       <div
-        className={`text-center shrink-0 px-4 transition-all duration-300 ${isShortScreen ? "pt-2 pb-1" : "pt-4 sm:pt-6 pb-2"}`}
+        className={`text-center shrink-0 px-4 transition-all duration-300 ${isShortScreen ? "pt-2 pb-1" : "pt-4 sm:pt-5 pb-2"}`}
       >
         <p
           className={`text-[10px] text-zinc-500 tracking-[0.2em] uppercase font-mono mb-1 ${isShortScreen ? "mt-1" : "mt-2"}`}
@@ -85,19 +85,18 @@ export function ForceUnlink() {
           Force Unlink Wallet
         </h1>
         {!isShortScreen && (
-          <p className="text-zinc-600 text-xs sm:text-sm mt-3 font-mono max-w-lg mx-auto">
-            if you have lost access to your primary account but still have other
-            active wallets linked to it, you can force unlink a wallet here.
-            Enter the public key of the wallet you wish to remove and sign a
-            message with your currently active wallet to verify ownership
+          <p className="text-zinc-600 text-xs mt-2 font-mono max-w-lg mx-auto leading-relaxed">
+            Execute forceful detachment of inaccessible accounts. Requires
+            target public key and cryptographic authorization from an active
+            connected wallet.
           </p>
         )}
       </div>
 
       <div
-        className={`w-full flex-1 flex justify-center items-start min-h-0 ${isShortScreen ? "pt-4" : "pt-12"}`}
+        className={`w-full flex-1 flex justify-center items-start min-h-0 ${isShortScreen ? "pt-2" : "pt-4"}`}
       >
-        <div className="w-full max-w-md px-4 flex flex-col gap-6">
+        <div className="w-full max-w-md px-4 flex flex-col gap-4">
           <div className="flex flex-col gap-2">
             <label className="text-zinc-400 text-sm font-mono uppercase tracking-wider">
               Wallet Type
