@@ -1,57 +1,43 @@
-import type { TokenInfo } from "@/hooks/useTokenList";
+import { getBestIcon } from "@/hooks/iconCache";
 import { useState, useEffect } from "react";
 
 interface TokenIconProps {
   token: { mint: string; symbol: string; icon?: string };
   className?: string;
 }
-
 export const TokenIcon = ({
   token,
   className = "w-6 h-6 rounded-full",
 }: TokenIconProps) => {
-  const cleanIcon = token.icon?.startsWith("ipfs://")
-    ? token.icon.replace("ipfs://", "https://cloudflare-ipfs.com/ipfs/")
-    : token.icon;
-
-  const sources = [
-    cleanIcon,
-    `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/${token.mint}/logo.png?cache=${token.mint}`,
-    `https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/${token.mint}/logo.png`,
-  ].filter(Boolean);
-
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [imageFailed, setImageFailed] = useState(false);
+  const [resolvedSrc, setResolvedSrc] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setCurrentIndex(0);
-    setImageFailed(false);
+    const sources = [
+      token.icon,
+      `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/${token.mint}/logo.png`,
+      `https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/${token.mint}/logo.png`,
+    ].filter(Boolean) as string[];
+
+    setLoading(true);
+    getBestIcon(token, sources).then((url) => {
+      setResolvedSrc(url);
+      setLoading(false);
+    });
   }, [token.mint]);
 
-  const handleError = () => {
-    if (currentIndex < sources.length - 1) {
-      setCurrentIndex((prev) => prev + 1);
-    } else {
-      setImageFailed(true);
-    }
-  };
+  if (loading)
+    return <div className={`animate-pulse bg-zinc-700 ${className}`} />;
 
-  if (sources.length === 0 || imageFailed) {
+  if (!resolvedSrc) {
     return (
       <div
-        className={`flex items-center justify-center bg-zinc-800 text-zinc-300 font-bold ${className}`}
+        className={`flex items-center justify-center bg-zinc-800 ${className}`}
       >
-        {token.symbol ? token.symbol[0]?.toUpperCase() : "?"}
+        {token.symbol[0]?.toUpperCase()}
       </div>
     );
   }
 
-  return (
-    <img
-      src={sources[currentIndex]}
-      alt={`${token.symbol} logo`}
-      onError={handleError}
-      className={className}
-    />
-  );
+  return <img src={resolvedSrc} className={className} alt={token.symbol} />;
 };
