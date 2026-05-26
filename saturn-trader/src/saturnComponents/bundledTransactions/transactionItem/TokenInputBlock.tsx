@@ -102,9 +102,10 @@ export function TokenInputBlock({
         index={index}
         walletAddress={walletAddress}
         onWalletChange={onWalletChange}
+        align={label === "To" ? "right" : "left"}
       />
     ),
-    [mint, isInput, transactions, index, walletAddress, onWalletChange],
+    [mint, isInput, transactions, index, walletAddress, onWalletChange, label],
   );
 
   const [displayAmount, setDisplayAmount] = useState(amount);
