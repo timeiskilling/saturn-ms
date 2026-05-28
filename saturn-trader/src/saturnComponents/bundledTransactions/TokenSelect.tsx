@@ -40,7 +40,6 @@ export function TokenSelect({
 
   const { wallets: discoveredWallets } = useDiscoveredWallets();
   const { balances, loading: tokensLoading } = useAllWalletsBalances();
-
   const { tokens: allTokens } = useTokenList();
 
   const scrollContainerRef = useNestedScrollbar(isOpen);
@@ -60,9 +59,7 @@ export function TokenSelect({
         setIsOpen(false);
       }
     }
-
     document.addEventListener("mousedown", handleClickOutside);
-
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
@@ -88,12 +85,9 @@ export function TokenSelect({
               },
             ]
           : []),
-
         ...wallet.tokens.map((t) => {
           const popularMatch = POPULAR_TOKENS.find((p) => p.mint === t.mint);
-
           const allListMatch = allTokens.find((p) => p.mint === t.mint);
-
           return {
             mint: t.mint,
             symbol: popularMatch?.symbol || allListMatch?.symbol || "Unknown",
@@ -104,6 +98,7 @@ export function TokenSelect({
         }),
       ];
 
+      // Optimistic Balance Simulation
       let walletTokens: Array<{
         mint: string;
         symbol: string;
@@ -113,12 +108,9 @@ export function TokenSelect({
         realBalance?: string;
       }> = initialWalletTokens.map((token) => {
         let simulatedBalance = parseFloat(token.balance);
-
         for (let i = 0; i < index; i++) {
           const tx = transactions[i] as TransactionInstruction;
-
           if (!tx) continue;
-
           if (
             (tx.userPk && tx.userPk === wallet.address) ||
             (!tx.userPk && walletAddress === wallet.address) ||
@@ -127,7 +119,6 @@ export function TokenSelect({
             if (tx.inputMint === token.mint) {
               simulatedBalance -= parseFloat(tx.amount || "0");
             }
-
             if (tx.outputMint === token.mint && tx.calculatedOutput) {
               simulatedBalance += parseFloat(tx.calculatedOutput || "0");
             }
@@ -141,11 +132,10 @@ export function TokenSelect({
         };
       });
 
+      // Add tokens that we didn't have but received in previous steps
       for (let i = 0; i < index; i++) {
         const tx = transactions[i] as TransactionInstruction;
-
         if (!tx) continue;
-
         if (
           (tx.userPk && tx.userPk === wallet.address) ||
           (!tx.userPk && walletAddress === wallet.address) ||
@@ -155,16 +145,13 @@ export function TokenSelect({
             const existingToken = walletTokens.find(
               (t) => t.mint === tx.outputMint,
             );
-
             if (!existingToken) {
               const popularMatch = POPULAR_TOKENS.find(
                 (p) => p.mint === tx.outputMint,
               );
-
               const allListMatch = allTokens.find(
                 (p) => p.mint === tx.outputMint,
               );
-
               walletTokens.push({
                 mint: tx.outputMint,
                 symbol:
@@ -193,11 +180,9 @@ export function TokenSelect({
 
   const displayTokensByWallet = useMemo(() => {
     if (!isInput) return [];
-
     return allOwnedTokensByWallet
       .map((wallet) => ({
         ...wallet,
-
         tokens: wallet.tokens
           .filter(
             (t) =>
@@ -210,16 +195,22 @@ export function TokenSelect({
   }, [isInput, allOwnedTokensByWallet, search]);
 
   const displaySourceTokens = useMemo(() => {
-    if (isInput && displayTokensByWallet.length > 0) return [];
-
+    // ВАЖЛИВО: Прибрано логіку return [], щоб популярні токени завжди були доступні
     return sourceTokens
       .filter(
         (t) =>
           t.mint.toLowerCase().includes(search.toLowerCase()) ||
           t.symbol.toLowerCase().includes(search.toLowerCase()),
       )
+      .filter(
+        (token) =>
+          // Відфільтровуємо дублікати (якщо токен вже є у гаманці, не показуємо його знову знизу)
+          !displayTokensByWallet.some((wallet) =>
+            wallet.tokens.some((t) => t.mint === token.mint),
+          ),
+      )
       .slice(0, 20);
-  }, [isInput, displayTokensByWallet, sourceTokens, search]);
+  }, [displayTokensByWallet, sourceTokens, search]);
 
   const showCustomOption = useMemo(
     () =>
@@ -281,34 +272,13 @@ export function TokenSelect({
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{
-              opacity: 0,
-              y: -8,
-              scale: 0.985,
-            }}
-            animate={{
-              opacity: 1,
-              y: 0,
-              scale: 1,
-            }}
-            exit={{
-              opacity: 0,
-              y: -8,
-              scale: 0.985,
-            }}
-            transition={{
-              duration: 0.16,
-              ease: [0.22, 1, 0.36, 1],
-            }}
-            className={`
-              absolute z-50 top-full mt-2
-              bg-zinc-900 border border-zinc-800
-              rounded-xl shadow-2xl shadow-black/40
-              overflow-hidden flex flex-col
-              w-[min(400px,calc(100vw-24px))]
-              max-w-[calc(100vw-24px)]
-              ${align === "right" ? "right-0" : "left-0"}
-            `}
+            initial={{ opacity: 0, y: -8, scale: 0.985 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.985 }}
+            transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
+            className={`absolute z-50 top-full mt-2 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl shadow-black/40 overflow-hidden flex flex-col w-[min(400px,calc(100vw-24px))] max-w-[calc(100vw-24px)] ${
+              align === "right" ? "right-0" : "left-0"
+            }`}
           >
             <div className="p-2 border-b border-zinc-800">
               <div className="relative">
@@ -328,15 +298,18 @@ export function TokenSelect({
 
             <div
               ref={scrollContainerRef}
-              className="flex-1 overflow-hidden max-h-[60vh]"
+              className="flex-1 overflow-hidden max-h-[60vh] overflow-y-auto"
             >
               {isInput ? (
-                <div className="w-full min-w-max">
-                  {tokensLoading ? (
+                <div className="w-full min-w-max pb-2">
+                  {tokensLoading && (
                     <div className="p-4 text-center text-sm text-zinc-500">
                       Loading wallet tokens...
                     </div>
-                  ) : displayTokensByWallet.length > 0 ? (
+                  )}
+
+                  {!tokensLoading &&
+                    displayTokensByWallet.length > 0 &&
                     displayTokensByWallet.map((wallet) => (
                       <div key={wallet.walletId} className="mb-2">
                         <div className="flex items-center gap-2 px-3 py-2 bg-zinc-950 border-y border-zinc-800/50 sticky top-0 z-10">
@@ -363,18 +336,157 @@ export function TokenSelect({
                           )}
 
                           <span className="text-xs font-semibold text-zinc-400 tracking-wider">
-                            ({wallet.address.slice(0, 4)}
-                            ...
+                            ({wallet.address.slice(0, 4)}...
                             {wallet.address.slice(-4)})
                           </span>
                         </div>
 
-                        {/* rest of your table */}
+                        {/* ВІДНОВЛЕНА ТАБЛИЦЯ */}
+                        <table className="w-full text-left text-sm">
+                          <thead className="bg-zinc-900 text-zinc-500 text-xs uppercase shadow-sm">
+                            <tr>
+                              <th className="px-3 py-2 font-medium">Token</th>
+                              <th className="px-3 py-2 font-medium text-right">
+                                Balance
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-zinc-800/50">
+                            {wallet.tokens.map((token: any) => {
+                              const isSimulated =
+                                token.realBalance &&
+                                token.balance !== token.realBalance;
+                              const diff =
+                                parseFloat(token.balance) -
+                                parseFloat(token.realBalance || "0");
+
+                              return (
+                                <motion.tr
+                                  key={token.mint}
+                                  initial={{ opacity: 0, y: 4 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ duration: 0.14 }}
+                                  onClick={() => {
+                                    onChange(token.mint);
+                                    if (onWalletChange) {
+                                      onWalletChange(wallet.address);
+                                    }
+                                    setIsOpen(false);
+                                  }}
+                                  className="hover:bg-zinc-800/50 cursor-pointer transition-colors group"
+                                >
+                                  <td className="px-3 py-2.5">
+                                    <div className="flex items-center gap-2">
+                                      <TokenIcon
+                                        token={token}
+                                        className="w-6 h-6 rounded-full bg-zinc-800 border border-zinc-700/50 shrink-0 text-xs font-bold text-zinc-400 overflow-hidden shadow-sm object-cover"
+                                      />
+                                      <div className="flex flex-col">
+                                        <span className="font-medium text-zinc-200 group-hover:text-white transition-colors">
+                                          {token.symbol}
+                                        </span>
+                                        <span className="text-[10px] text-zinc-500">
+                                          {token.mint.slice(0, 8)}...
+                                          {token.mint.slice(-4)}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </td>
+
+                                  <td className="px-3 py-2.5 text-right">
+                                    <div className="flex flex-col items-end">
+                                      <span className="text-zinc-300 font-medium">
+                                        {Number(token.balance).toLocaleString(
+                                          undefined,
+                                          {
+                                            maximumFractionDigits: 6,
+                                          },
+                                        )}
+                                      </span>
+
+                                      {isSimulated && (
+                                        <motion.span
+                                          initial={{ opacity: 0 }}
+                                          animate={{ opacity: 1 }}
+                                          className={`text-[10px] ${
+                                            diff > 0
+                                              ? "text-green-400"
+                                              : "text-red-400"
+                                          }`}
+                                        >
+                                          (
+                                          {Number(
+                                            token.realBalance,
+                                          ).toLocaleString(undefined, {
+                                            maximumFractionDigits: 4,
+                                          })}
+                                          {" in wallet "}
+                                          {diff > 0 ? "+" : "-"}{" "}
+                                          {Math.abs(diff).toLocaleString(
+                                            undefined,
+                                            {
+                                              maximumFractionDigits: 4,
+                                            },
+                                          )}
+                                          {" from step"}
+                                          {index === 1 ? " 1" : "s"})
+                                        </motion.span>
+                                      )}
+                                    </div>
+                                  </td>
+                                </motion.tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
                       </div>
-                    ))
-                  ) : null}
+                    ))}
+
+                  {!tokensLoading && displaySourceTokens.length > 0 && (
+                    <div className="p-1 min-w-max mt-1">
+                      <div className="px-2 py-1.5 text-xs font-semibold text-zinc-500 uppercase tracking-wider sticky top-0 bg-zinc-900 z-10 border-t border-zinc-800/50 pt-2">
+                        Popular Tokens
+                      </div>
+                      {displaySourceTokens.map((token) => (
+                        <div
+                          key={token.mint}
+                          onClick={() => {
+                            onChange(token.mint);
+                            setIsOpen(false);
+                          }}
+                          className="flex items-center justify-between px-2 py-2 hover:bg-zinc-800 rounded-lg cursor-pointer transition-colors"
+                        >
+                          <div className="flex items-center gap-2">
+                            <TokenIcon
+                              token={token as any}
+                              className="w-6 h-6 rounded-full bg-zinc-800 border border-zinc-700/50 shrink-0 text-xs font-bold text-zinc-400 overflow-hidden shadow-sm object-cover"
+                            />
+                            <span className="text-sm font-medium text-zinc-200">
+                              {token.symbol}
+                            </span>
+                          </div>
+                          <span className="text-xs text-zinc-500">
+                            {token.mint.slice(0, 4)}...{token.mint.slice(-4)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {!tokensLoading &&
+                    displayTokensByWallet.length === 0 &&
+                    displaySourceTokens.length === 0 &&
+                    !showCustomOption && (
+                      <div className="p-6 flex flex-col items-center justify-center text-center">
+                        <Coins className="w-8 h-8 text-zinc-700 mb-2 opacity-50" />
+                        <span className="text-zinc-500 text-sm">
+                          No tokens found
+                        </span>
+                      </div>
+                    )}
                 </div>
               ) : (
+                /* ВИГЛЯД, КОЛИ ЦЕ НЕ INPUT (наприклад Output токен) */
                 <div className="p-1 min-w-max">
                   <div className="px-2 py-1.5 text-xs font-semibold text-zinc-500 uppercase tracking-wider sticky top-0 bg-zinc-900 z-10">
                     Popular Tokens
@@ -394,22 +506,20 @@ export function TokenSelect({
                           token={token as any}
                           className="w-6 h-6 rounded-full bg-zinc-800 border border-zinc-700/50 shrink-0 text-xs font-bold text-zinc-400 overflow-hidden shadow-sm object-cover"
                         />
-
                         <span className="text-sm font-medium text-zinc-200">
                           {token.symbol}
                         </span>
                       </div>
 
                       <span className="text-xs text-zinc-500">
-                        {token.mint.slice(0, 4)}
-                        ...
-                        {token.mint.slice(-4)}
+                        {token.mint.slice(0, 4)}...{token.mint.slice(-4)}
                       </span>
                     </div>
                   ))}
                 </div>
               )}
 
+              {/* 4. CUSTOM ADDRESS OPTION */}
               {showCustomOption && (
                 <div
                   onClick={() => {
@@ -426,7 +536,6 @@ export function TokenSelect({
                     <span className="text-sm font-medium text-blue-400">
                       Use Custom Address
                     </span>
-
                     <span className="text-xs text-zinc-500 truncate w-full">
                       {search}
                     </span>

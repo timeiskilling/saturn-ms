@@ -4,6 +4,7 @@ import { MaxButton } from "./MaxButton";
 import { HalfButton } from "./HalfButton";
 import { useTokenList } from "@/hooks/useTokenList";
 import { type TransactionInstruction } from "../types";
+import BigNumber from "bignumber.js";
 
 interface TokenInputBlockProps {
   label: "From" | "To";
@@ -22,24 +23,17 @@ interface TokenInputBlockProps {
   actualBalance?: string | null;
 }
 
-function formatTokenDisplay(value: string, maxDecimals: number): string {
+function formatTokenDisplay(
+  value: string | undefined,
+  maxDecimals: number,
+): string {
   if (!value) return "";
-  const num = parseFloat(value);
-  if (isNaN(num) || num === 0) return value;
 
-  if (num < 0.0001) {
-    return num.toFixed(Math.min(maxDecimals, 10)).replace(/\.?0+$/, "");
-  }
+  const bn = new BigNumber(value);
 
-  let displayDecimals = 6;
-  if (num >= 1000) {
-    displayDecimals = 2;
-  } else if (num >= 1) {
-    displayDecimals = 4;
-  }
+  if (bn.isNaN()) return "0";
 
-  displayDecimals = Math.min(displayDecimals, maxDecimals);
-  return num.toFixed(displayDecimals).replace(/\.?0+$/, "");
+  return bn.decimalPlaces(maxDecimals, BigNumber.ROUND_DOWN).toString();
 }
 
 function formatDecimalInput(value: string, maxDecimals: number): string {

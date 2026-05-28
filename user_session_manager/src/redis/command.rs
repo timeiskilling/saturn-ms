@@ -181,6 +181,8 @@ pub async fn disconnect_device(
     public_id: &str,
     redis_client: &mut Connection,
 ) -> Result<(), UserServiceError> {
+    tracing::trace!("disconnect_device: public_id={public_id}");
+
     let data: Option<String> = redis_client
         .get(format!("public_session:{}", public_id))
         .await
@@ -200,6 +202,8 @@ pub async fn disconnect_device(
             .await
             .map_err(|e| UserServiceError::RedisError(e.to_string()))?;
     }
+
+    tracing::trace!("disconnect_device: public_id={public_id} completed");
     Ok(())
 }
 

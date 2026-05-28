@@ -10,7 +10,9 @@ import { createRoot } from "react-dom/client";
 import "./index.css";
 import { AppTest } from "./App_tester";
 import "@fontsource/jetbrains-mono";
+import BigNumber from "bignumber.js";
 
+BigNumber.config({ EXPONENTIAL_AT: 1e9 });
 console.log("Welcome to Saturn");
 const elem = document.getElementById("root")!;
 const app = (
