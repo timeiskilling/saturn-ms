@@ -278,8 +278,9 @@ export function TemplateSidebar({
               <X className="w-3 h-3 md:w-3.5 md:h-3.5" />
             </button>
           </div>
-
+          
           {/* Actions */}
+          
           <div className="flex items-center gap-1.5 md:gap-2">
             <button
               onClick={() => setIsDeleteSelectedModalOpen(true)}

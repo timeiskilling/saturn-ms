@@ -4,6 +4,7 @@ import { type Template } from "./types";
 import { type TemplateStatus } from "./TemplateSidebar";
 import { useTemplateStatus } from "@/hooks/useTemplateStatus";
 import { validateTemplateExecution } from "./validation";
+import { TemplateRecap } from "./TemplateRecap";
 
 const FILL_STYLES = `
   .wf {
@@ -140,6 +141,10 @@ export function TemplateSidebarItem({
               )}
             </h3>
             <div className="flex items-center gap-0.5 md:gap-1 shrink-0">
+              <TemplateRecap
+                template={template}
+                getTokenSymbol={getTokenSymbol}
+              />
               <button
                 onClick={(e) => {
                   e.stopPropagation();

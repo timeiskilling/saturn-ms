@@ -1,16 +1,14 @@
-use std::sync::Arc;
-
-use axum::Json;
-
-use crate::app_state::AppState;
+// use std::sync::Arc;
+// use crate::app_state::AppState;
 use crate::endpoints::errors::ApiError;
 use crate::middleware::session_token::AuthenticatedUser;
 use crate::redis::command::{disconnect_device, get_devices};
 use crate::redis::extractor::RedisConn;
 use crate::redis::models::DeviceSession;
+use axum::Json;
 use axum::extract::Path;
 
-#[axum::debug_handler(state = Arc<AppState>)]
+// #[axum::debug_handler(state = Arc<AppState>)]
 pub async fn connected_devices(
     user: AuthenticatedUser,
     redis: RedisConn,
