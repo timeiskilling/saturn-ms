@@ -106,7 +106,7 @@ export function TemplateSidebarItem({
       <style>{FILL_STYLES}</style>
       <div
         onClick={onSelect}
-        className={`relative overflow-hidden p-3 rounded-lg border cursor-pointer transition-all ${bgClass}`}
+        className={`relative p-3 rounded-lg border cursor-pointer transition-all ${bgClass}`}
       >
         {/* Water fill */}
         {!isFailed && !isSuccessExpired && status && (
@@ -122,7 +122,7 @@ export function TemplateSidebarItem({
         )}
 
         {/* Content */}
-        <div className="relative z-10">
+        <div className="relative z-20 overflow-visible">
           <div className="flex justify-between items-center mb-1 gap-2">
             <h3 className="text-sm font-semibold text-zinc-100 min-w-0 flex items-center gap-1.5 flex-1">
               <span className="truncate">{template.name}</span>

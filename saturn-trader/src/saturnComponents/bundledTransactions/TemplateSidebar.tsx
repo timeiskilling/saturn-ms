@@ -195,8 +195,8 @@ export function TemplateSidebar({
         }
       />
 
-      <div className="flex-1 overflow-y-auto h-full scrollbar-hide overscroll-contain">
-        <div className="p-3 space-y-1.5 pb-28">
+      <div className="flex-1 overflow-y-auto overflow-x-visible h-full scrollbar-hide overscroll-contain">
+        <div className="p-3 space-y-1.5 pb-28 overflow-visible">
           {templates.map((template) => {
             const isSelected = selectedTemplateIds.has(template.id);
             return (
@@ -278,9 +278,8 @@ export function TemplateSidebar({
               <X className="w-3 h-3 md:w-3.5 md:h-3.5" />
             </button>
           </div>
-          
+
           {/* Actions */}
-          
           <div className="flex items-center gap-1.5 md:gap-2">
             <button
               onClick={() => setIsDeleteSelectedModalOpen(true)}
