@@ -35,6 +35,7 @@ pub trait JupiterProvider: Send + Sync {
         slippage_bps: u16,
         options: QuoteOptions,
         pubkey: &'a Pubkey,
+        optional_destination: Option<String>,
     ) -> Result<JupiterSwapInstructionsRsponse, SaturnTransactionsServiceError>;
 
     async fn get_list_of_tokens<'a>(
@@ -206,6 +207,14 @@ impl HttpManager {
             ("slippageBps", params.slippage_bps.clone()),
             ("taker", pubkey_str),
         ];
+
+        if let Some(dest) = params.optional_destination {
+            if params.output_mint == "So11111111111111111111111111111111111111112" {
+                query.push(("nativeDestinationAccount", dest));
+            } else {
+                query.push(("destinationTokenAccount", dest));
+            }
+        }
 
         for (k, v) in &params.additional_params {
             query.push((*k, v.clone()));
@@ -462,6 +471,7 @@ impl JupiterProvider for HttpManager {
         slippage_bps: u16,
         options: QuoteOptions,
         pubkey: &'a Pubkey,
+        optional_destination: Option<String>,
     ) -> Result<JupiterSwapInstructionsRsponse, SaturnTransactionsServiceError> {
         let pubkey_string = pubkey.to_string();
         let pubkey_bytes = pubkey.as_array().to_vec();
@@ -472,6 +482,7 @@ impl JupiterProvider for HttpManager {
             amount: amount.to_string(),
             slippage_bps: slippage_bps.to_string(),
             additional_params: options.cleaned().to_params(),
+            optional_destination,
         };
 
         // Match the previous wrapAndUnwrapSol logic from JupiterSwapRequest

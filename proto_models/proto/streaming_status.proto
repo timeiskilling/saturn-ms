@@ -85,7 +85,8 @@ message TrasnactionInstruction {
   uint32 slippage_bps = 4;
   QuoteOptions options = 5;
   string user_pk = 6;
-  string id = 7;
+  optional string optional_destination = 7;
+  string id = 8;
 }
 
 message QuoteOptions {

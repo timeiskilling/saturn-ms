@@ -1,4 +1,4 @@
-/*eslint-disable block-scoped-var, id-length, no-control-regex, no-magic-numbers, no-prototype-builtins, no-redeclare, no-shadow, no-var, sort-vars*/
+/*eslint-disable block-scoped-var, id-length, no-control-regex, no-magic-numbers, no-prototype-builtins, no-redeclare, no-shadow, no-var, sort-vars, default-case, jsdoc/require-param*/
 "use strict";
 
 var $protobuf = require("protobufjs/minimal");
@@ -189,30 +189,43 @@ $root.streaming = (function() {
 
         /**
          * Properties of a SimulateBundleRequest.
+         * @typedef {Object} streaming.SimulateBundleRequest.$Properties
+         * @property {Array.<streaming.SwapSimulationRequest.$Properties>|null} [swaps] SimulateBundleRequest swaps
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding
+         */
+
+        /**
+         * Properties of a SimulateBundleRequest.
          * @memberof streaming
          * @interface ISimulateBundleRequest
-         * @property {Array.<streaming.ISwapSimulationRequest>|null} [swaps] SimulateBundleRequest swaps
+         * @augments streaming.SimulateBundleRequest.$Properties
+         * @deprecated Use streaming.SimulateBundleRequest.$Properties instead.
+         */
+
+        /**
+         * Shape of a SimulateBundleRequest.
+         * @typedef {streaming.SimulateBundleRequest.$Properties} streaming.SimulateBundleRequest.$Shape
          */
 
         /**
          * Constructs a new SimulateBundleRequest.
          * @memberof streaming
          * @classdesc Represents a SimulateBundleRequest.
-         * @implements ISimulateBundleRequest
          * @constructor
-         * @param {streaming.ISimulateBundleRequest=} [properties] Properties to set
+         * @param {streaming.SimulateBundleRequest.$Properties=} [properties] Properties to set
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding
          */
         function SimulateBundleRequest(properties) {
             this.swaps = [];
             if (properties)
                 for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
-                    if (properties[keys[i]] != null)
+                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
                         this[keys[i]] = properties[keys[i]];
         }
 
         /**
          * SimulateBundleRequest swaps.
-         * @member {Array.<streaming.ISwapSimulationRequest>} swaps
+         * @member {Array.<streaming.SwapSimulationRequest.$Properties>} swaps
          * @memberof streaming.SimulateBundleRequest
          * @instance
          */
@@ -223,8 +236,12 @@ $root.streaming = (function() {
          * @function create
          * @memberof streaming.SimulateBundleRequest
          * @static
-         * @param {streaming.ISimulateBundleRequest=} [properties] Properties to set
+         * @param {streaming.SimulateBundleRequest.$Properties=} [properties] Properties to set
          * @returns {streaming.SimulateBundleRequest} SimulateBundleRequest instance
+         * @type {{
+         *   (properties: streaming.SimulateBundleRequest.$Shape): streaming.SimulateBundleRequest & streaming.SimulateBundleRequest.$Shape;
+         *   (properties?: streaming.SimulateBundleRequest.$Properties): streaming.SimulateBundleRequest;
+         * }}
          */
         SimulateBundleRequest.create = function create(properties) {
             return new SimulateBundleRequest(properties);
@@ -235,7 +252,7 @@ $root.streaming = (function() {
          * @function encode
          * @memberof streaming.SimulateBundleRequest
          * @static
-         * @param {streaming.ISimulateBundleRequest} message SimulateBundleRequest message or plain object to encode
+         * @param {streaming.SimulateBundleRequest.$Properties} message SimulateBundleRequest message or plain object to encode
          * @param {$protobuf.Writer} [writer] Writer to encode to
          * @returns {$protobuf.Writer} Writer
          */
@@ -245,6 +262,9 @@ $root.streaming = (function() {
             if (message.swaps != null && message.swaps.length)
                 for (var i = 0; i < message.swaps.length; ++i)
                     $root.streaming.SwapSimulationRequest.encode(message.swaps[i], writer.uint32(/* id 1, wireType 2 =*/10).fork()).ldelim();
+            if (message.$unknowns != null && Object.hasOwnProperty.call(message, "$unknowns"))
+                for (var i = 0; i < message.$unknowns.length; ++i)
+                    writer.raw(message.$unknowns[i]);
             return writer;
         };
 
@@ -253,7 +273,7 @@ $root.streaming = (function() {
          * @function encodeDelimited
          * @memberof streaming.SimulateBundleRequest
          * @static
-         * @param {streaming.ISimulateBundleRequest} message SimulateBundleRequest message or plain object to encode
+         * @param {streaming.SimulateBundleRequest.$Properties} message SimulateBundleRequest message or plain object to encode
          * @param {$protobuf.Writer} [writer] Writer to encode to
          * @returns {$protobuf.Writer} Writer
          */
@@ -268,30 +288,42 @@ $root.streaming = (function() {
          * @static
          * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
          * @param {number} [length] Message length if known beforehand
-         * @returns {streaming.SimulateBundleRequest} SimulateBundleRequest
+         * @returns {streaming.SimulateBundleRequest & streaming.SimulateBundleRequest.$Shape} SimulateBundleRequest
          * @throws {Error} If the payload is not a reader or valid buffer
          * @throws {$protobuf.util.ProtocolError} If required fields are missing
          */
-        SimulateBundleRequest.decode = function decode(reader, length, error) {
+        SimulateBundleRequest.decode = function decode(reader, length, _end, _depth, _target) {
             if (!(reader instanceof $Reader))
                 reader = $Reader.create(reader);
-            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.SimulateBundleRequest();
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $Reader.recursionLimit)
+                throw Error("max depth exceeded");
+            var end = length === undefined ? reader.len : reader.pos + length, message = _target || new $root.streaming.SimulateBundleRequest();
             while (reader.pos < end) {
-                var tag = reader.uint32();
-                if (tag === error)
-                    break;
-                switch (tag >>> 3) {
-                case 1: {
-                        if (!(message.swaps && message.swaps.length))
-                            message.swaps = [];
-                        message.swaps.push($root.streaming.SwapSimulationRequest.decode(reader, reader.uint32()));
-                        break;
-                    }
-                default:
-                    reader.skipType(tag & 7);
+                var start = reader.pos;
+                var tag = reader.tag();
+                if (tag === _end) {
+                    _end = undefined;
                     break;
                 }
+                var wireType = tag & 7;
+                switch (tag >>>= 3) {
+                case 1: {
+                        if (wireType !== 2)
+                            break;
+                        if (!(message.swaps && message.swaps.length))
+                            message.swaps = [];
+                        message.swaps.push($root.streaming.SwapSimulationRequest.decode(reader, reader.uint32(), undefined, _depth + 1));
+                        continue;
+                    }
+                }
+                reader.skipType(wireType, _depth, tag);
+                $util.makeProp(message, "$unknowns", false);
+                (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
             }
+            if (_end !== undefined)
+                throw Error("missing end group");
             return message;
         };
 
@@ -301,7 +333,7 @@ $root.streaming = (function() {
          * @memberof streaming.SimulateBundleRequest
          * @static
          * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-         * @returns {streaming.SimulateBundleRequest} SimulateBundleRequest
+         * @returns {streaming.SimulateBundleRequest & streaming.SimulateBundleRequest.$Shape} SimulateBundleRequest
          * @throws {Error} If the payload is not a reader or valid buffer
          * @throws {$protobuf.util.ProtocolError} If required fields are missing
          */
@@ -319,14 +351,18 @@ $root.streaming = (function() {
          * @param {Object.<string,*>} message Plain object to verify
          * @returns {string|null} `null` if valid, otherwise the reason why it is not
          */
-        SimulateBundleRequest.verify = function verify(message) {
+        SimulateBundleRequest.verify = function verify(message, _depth) {
             if (typeof message !== "object" || message === null)
                 return "object expected";
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                return "max depth exceeded";
             if (message.swaps != null && message.hasOwnProperty("swaps")) {
                 if (!Array.isArray(message.swaps))
                     return "swaps: array expected";
                 for (var i = 0; i < message.swaps.length; ++i) {
-                    var error = $root.streaming.SwapSimulationRequest.verify(message.swaps[i]);
+                    var error = $root.streaming.SwapSimulationRequest.verify(message.swaps[i], _depth + 1);
                     if (error)
                         return "swaps." + error;
                 }
@@ -342,18 +378,22 @@ $root.streaming = (function() {
          * @param {Object.<string,*>} object Plain object
          * @returns {streaming.SimulateBundleRequest} SimulateBundleRequest
          */
-        SimulateBundleRequest.fromObject = function fromObject(object) {
+        SimulateBundleRequest.fromObject = function fromObject(object, _depth) {
             if (object instanceof $root.streaming.SimulateBundleRequest)
                 return object;
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw Error("max depth exceeded");
             var message = new $root.streaming.SimulateBundleRequest();
             if (object.swaps) {
                 if (!Array.isArray(object.swaps))
                     throw TypeError(".streaming.SimulateBundleRequest.swaps: array expected");
-                message.swaps = [];
+                message.swaps = Array(object.swaps.length);
                 for (var i = 0; i < object.swaps.length; ++i) {
                     if (typeof object.swaps[i] !== "object")
                         throw TypeError(".streaming.SimulateBundleRequest.swaps: object expected");
-                    message.swaps[i] = $root.streaming.SwapSimulationRequest.fromObject(object.swaps[i]);
+                    message.swaps[i] = $root.streaming.SwapSimulationRequest.fromObject(object.swaps[i], _depth + 1);
                 }
             }
             return message;
@@ -375,7 +415,7 @@ $root.streaming = (function() {
             if (options.arrays || options.defaults)
                 object.swaps = [];
             if (message.swaps && message.swaps.length) {
-                object.swaps = [];
+                object.swaps = Array(message.swaps.length);
                 for (var j = 0; j < message.swaps.length; ++j)
                     object.swaps[j] = $root.streaming.SwapSimulationRequest.toObject(message.swaps[j], options);
             }
@@ -394,18 +434,17 @@ $root.streaming = (function() {
         };
 
         /**
-         * Gets the default type url for SimulateBundleRequest
+         * Gets the type url for SimulateBundleRequest
          * @function getTypeUrl
          * @memberof streaming.SimulateBundleRequest
          * @static
-         * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
-         * @returns {string} The default type url
+         * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns {string} The type url
          */
-        SimulateBundleRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
-            if (typeUrlPrefix === undefined) {
-                typeUrlPrefix = "type.googleapis.com";
-            }
-            return typeUrlPrefix + "/streaming.SimulateBundleRequest";
+        SimulateBundleRequest.getTypeUrl = function getTypeUrl(prefix) {
+            if (prefix === undefined)
+                prefix = "type.googleapis.com";
+            return prefix + "/streaming.SimulateBundleRequest";
         };
 
         return SimulateBundleRequest;
@@ -415,28 +454,41 @@ $root.streaming = (function() {
 
         /**
          * Properties of a SwapSimulationRequest.
-         * @memberof streaming
-         * @interface ISwapSimulationRequest
+         * @typedef {Object} streaming.SwapSimulationRequest.$Properties
          * @property {string|null} [id] SwapSimulationRequest id
          * @property {string|null} [inputMint] SwapSimulationRequest inputMint
          * @property {number|Long|null} [inputAmount] SwapSimulationRequest inputAmount
          * @property {string|null} [outputMint] SwapSimulationRequest outputMint
          * @property {number|Long|null} [expectedOutput] SwapSimulationRequest expectedOutput
          * @property {number|null} [slippageBps] SwapSimulationRequest slippageBps
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding
+         */
+
+        /**
+         * Properties of a SwapSimulationRequest.
+         * @memberof streaming
+         * @interface ISwapSimulationRequest
+         * @augments streaming.SwapSimulationRequest.$Properties
+         * @deprecated Use streaming.SwapSimulationRequest.$Properties instead.
+         */
+
+        /**
+         * Shape of a SwapSimulationRequest.
+         * @typedef {streaming.SwapSimulationRequest.$Properties} streaming.SwapSimulationRequest.$Shape
          */
 
         /**
          * Constructs a new SwapSimulationRequest.
          * @memberof streaming
          * @classdesc Represents a SwapSimulationRequest.
-         * @implements ISwapSimulationRequest
          * @constructor
-         * @param {streaming.ISwapSimulationRequest=} [properties] Properties to set
+         * @param {streaming.SwapSimulationRequest.$Properties=} [properties] Properties to set
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding
          */
         function SwapSimulationRequest(properties) {
             if (properties)
                 for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
-                    if (properties[keys[i]] != null)
+                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
                         this[keys[i]] = properties[keys[i]];
         }
 
@@ -493,8 +545,12 @@ $root.streaming = (function() {
          * @function create
          * @memberof streaming.SwapSimulationRequest
          * @static
-         * @param {streaming.ISwapSimulationRequest=} [properties] Properties to set
+         * @param {streaming.SwapSimulationRequest.$Properties=} [properties] Properties to set
          * @returns {streaming.SwapSimulationRequest} SwapSimulationRequest instance
+         * @type {{
+         *   (properties: streaming.SwapSimulationRequest.$Shape): streaming.SwapSimulationRequest & streaming.SwapSimulationRequest.$Shape;
+         *   (properties?: streaming.SwapSimulationRequest.$Properties): streaming.SwapSimulationRequest;
+         * }}
          */
         SwapSimulationRequest.create = function create(properties) {
             return new SwapSimulationRequest(properties);
@@ -505,7 +561,7 @@ $root.streaming = (function() {
          * @function encode
          * @memberof streaming.SwapSimulationRequest
          * @static
-         * @param {streaming.ISwapSimulationRequest} message SwapSimulationRequest message or plain object to encode
+         * @param {streaming.SwapSimulationRequest.$Properties} message SwapSimulationRequest message or plain object to encode
          * @param {$protobuf.Writer} [writer] Writer to encode to
          * @returns {$protobuf.Writer} Writer
          */
@@ -524,6 +580,9 @@ $root.streaming = (function() {
                 writer.uint32(/* id 5, wireType 0 =*/40).uint64(message.expectedOutput);
             if (message.slippageBps != null && Object.hasOwnProperty.call(message, "slippageBps"))
                 writer.uint32(/* id 6, wireType 0 =*/48).uint32(message.slippageBps);
+            if (message.$unknowns != null && Object.hasOwnProperty.call(message, "$unknowns"))
+                for (var i = 0; i < message.$unknowns.length; ++i)
+                    writer.raw(message.$unknowns[i]);
             return writer;
         };
 
@@ -532,7 +591,7 @@ $root.streaming = (function() {
          * @function encodeDelimited
          * @memberof streaming.SwapSimulationRequest
          * @static
-         * @param {streaming.ISwapSimulationRequest} message SwapSimulationRequest message or plain object to encode
+         * @param {streaming.SwapSimulationRequest.$Properties} message SwapSimulationRequest message or plain object to encode
          * @param {$protobuf.Writer} [writer] Writer to encode to
          * @returns {$protobuf.Writer} Writer
          */
@@ -547,48 +606,88 @@ $root.streaming = (function() {
          * @static
          * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
          * @param {number} [length] Message length if known beforehand
-         * @returns {streaming.SwapSimulationRequest} SwapSimulationRequest
+         * @returns {streaming.SwapSimulationRequest & streaming.SwapSimulationRequest.$Shape} SwapSimulationRequest
          * @throws {Error} If the payload is not a reader or valid buffer
          * @throws {$protobuf.util.ProtocolError} If required fields are missing
          */
-        SwapSimulationRequest.decode = function decode(reader, length, error) {
+        SwapSimulationRequest.decode = function decode(reader, length, _end, _depth, _target) {
             if (!(reader instanceof $Reader))
                 reader = $Reader.create(reader);
-            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.SwapSimulationRequest();
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $Reader.recursionLimit)
+                throw Error("max depth exceeded");
+            var end = length === undefined ? reader.len : reader.pos + length, message = _target || new $root.streaming.SwapSimulationRequest(), value;
             while (reader.pos < end) {
-                var tag = reader.uint32();
-                if (tag === error)
-                    break;
-                switch (tag >>> 3) {
-                case 1: {
-                        message.id = reader.string();
-                        break;
-                    }
-                case 2: {
-                        message.inputMint = reader.string();
-                        break;
-                    }
-                case 3: {
-                        message.inputAmount = reader.uint64();
-                        break;
-                    }
-                case 4: {
-                        message.outputMint = reader.string();
-                        break;
-                    }
-                case 5: {
-                        message.expectedOutput = reader.uint64();
-                        break;
-                    }
-                case 6: {
-                        message.slippageBps = reader.uint32();
-                        break;
-                    }
-                default:
-                    reader.skipType(tag & 7);
+                var start = reader.pos;
+                var tag = reader.tag();
+                if (tag === _end) {
+                    _end = undefined;
                     break;
                 }
+                var wireType = tag & 7;
+                switch (tag >>>= 3) {
+                case 1: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.string()).length)
+                            message.id = value;
+                        else
+                            delete message.id;
+                        continue;
+                    }
+                case 2: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.string()).length)
+                            message.inputMint = value;
+                        else
+                            delete message.inputMint;
+                        continue;
+                    }
+                case 3: {
+                        if (wireType !== 0)
+                            break;
+                        if (typeof (value = reader.uint64()) === "object" ? value.low || value.high : value !== 0)
+                            message.inputAmount = value;
+                        else
+                            delete message.inputAmount;
+                        continue;
+                    }
+                case 4: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.string()).length)
+                            message.outputMint = value;
+                        else
+                            delete message.outputMint;
+                        continue;
+                    }
+                case 5: {
+                        if (wireType !== 0)
+                            break;
+                        if (typeof (value = reader.uint64()) === "object" ? value.low || value.high : value !== 0)
+                            message.expectedOutput = value;
+                        else
+                            delete message.expectedOutput;
+                        continue;
+                    }
+                case 6: {
+                        if (wireType !== 0)
+                            break;
+                        if (value = reader.uint32())
+                            message.slippageBps = value;
+                        else
+                            delete message.slippageBps;
+                        continue;
+                    }
+                }
+                reader.skipType(wireType, _depth, tag);
+                $util.makeProp(message, "$unknowns", false);
+                (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
             }
+            if (_end !== undefined)
+                throw Error("missing end group");
             return message;
         };
 
@@ -598,7 +697,7 @@ $root.streaming = (function() {
          * @memberof streaming.SwapSimulationRequest
          * @static
          * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-         * @returns {streaming.SwapSimulationRequest} SwapSimulationRequest
+         * @returns {streaming.SwapSimulationRequest & streaming.SwapSimulationRequest.$Shape} SwapSimulationRequest
          * @throws {Error} If the payload is not a reader or valid buffer
          * @throws {$protobuf.util.ProtocolError} If required fields are missing
          */
@@ -616,9 +715,13 @@ $root.streaming = (function() {
          * @param {Object.<string,*>} message Plain object to verify
          * @returns {string|null} `null` if valid, otherwise the reason why it is not
          */
-        SwapSimulationRequest.verify = function verify(message) {
+        SwapSimulationRequest.verify = function verify(message, _depth) {
             if (typeof message !== "object" || message === null)
                 return "object expected";
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                return "max depth exceeded";
             if (message.id != null && message.hasOwnProperty("id"))
                 if (!$util.isString(message.id))
                     return "id: string expected";
@@ -648,36 +751,46 @@ $root.streaming = (function() {
          * @param {Object.<string,*>} object Plain object
          * @returns {streaming.SwapSimulationRequest} SwapSimulationRequest
          */
-        SwapSimulationRequest.fromObject = function fromObject(object) {
+        SwapSimulationRequest.fromObject = function fromObject(object, _depth) {
             if (object instanceof $root.streaming.SwapSimulationRequest)
                 return object;
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw Error("max depth exceeded");
             var message = new $root.streaming.SwapSimulationRequest();
             if (object.id != null)
-                message.id = String(object.id);
+                if (typeof object.id !== "string" || object.id.length)
+                    message.id = String(object.id);
             if (object.inputMint != null)
-                message.inputMint = String(object.inputMint);
+                if (typeof object.inputMint !== "string" || object.inputMint.length)
+                    message.inputMint = String(object.inputMint);
             if (object.inputAmount != null)
-                if ($util.Long)
-                    (message.inputAmount = $util.Long.fromValue(object.inputAmount)).unsigned = true;
-                else if (typeof object.inputAmount === "string")
-                    message.inputAmount = parseInt(object.inputAmount, 10);
-                else if (typeof object.inputAmount === "number")
-                    message.inputAmount = object.inputAmount;
-                else if (typeof object.inputAmount === "object")
-                    message.inputAmount = new $util.LongBits(object.inputAmount.low >>> 0, object.inputAmount.high >>> 0).toNumber(true);
+                if (typeof object.inputAmount === "object" ? object.inputAmount.low || object.inputAmount.high : Number(object.inputAmount) !== 0)
+                    if ($util.Long)
+                        (message.inputAmount = $util.Long.fromValue(object.inputAmount)).unsigned = true;
+                    else if (typeof object.inputAmount === "string")
+                        message.inputAmount = parseInt(object.inputAmount, 10);
+                    else if (typeof object.inputAmount === "number")
+                        message.inputAmount = object.inputAmount;
+                    else if (typeof object.inputAmount === "object")
+                        message.inputAmount = new $util.LongBits(object.inputAmount.low >>> 0, object.inputAmount.high >>> 0).toNumber(true);
             if (object.outputMint != null)
-                message.outputMint = String(object.outputMint);
+                if (typeof object.outputMint !== "string" || object.outputMint.length)
+                    message.outputMint = String(object.outputMint);
             if (object.expectedOutput != null)
-                if ($util.Long)
-                    (message.expectedOutput = $util.Long.fromValue(object.expectedOutput)).unsigned = true;
-                else if (typeof object.expectedOutput === "string")
-                    message.expectedOutput = parseInt(object.expectedOutput, 10);
-                else if (typeof object.expectedOutput === "number")
-                    message.expectedOutput = object.expectedOutput;
-                else if (typeof object.expectedOutput === "object")
-                    message.expectedOutput = new $util.LongBits(object.expectedOutput.low >>> 0, object.expectedOutput.high >>> 0).toNumber(true);
+                if (typeof object.expectedOutput === "object" ? object.expectedOutput.low || object.expectedOutput.high : Number(object.expectedOutput) !== 0)
+                    if ($util.Long)
+                        (message.expectedOutput = $util.Long.fromValue(object.expectedOutput)).unsigned = true;
+                    else if (typeof object.expectedOutput === "string")
+                        message.expectedOutput = parseInt(object.expectedOutput, 10);
+                    else if (typeof object.expectedOutput === "number")
+                        message.expectedOutput = object.expectedOutput;
+                    else if (typeof object.expectedOutput === "object")
+                        message.expectedOutput = new $util.LongBits(object.expectedOutput.low >>> 0, object.expectedOutput.high >>> 0).toNumber(true);
             if (object.slippageBps != null)
-                message.slippageBps = object.slippageBps >>> 0;
+                if (Number(object.slippageBps) !== 0)
+                    message.slippageBps = object.slippageBps >>> 0;
             return message;
         };
 
@@ -743,18 +856,17 @@ $root.streaming = (function() {
         };
 
         /**
-         * Gets the default type url for SwapSimulationRequest
+         * Gets the type url for SwapSimulationRequest
          * @function getTypeUrl
          * @memberof streaming.SwapSimulationRequest
          * @static
-         * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
-         * @returns {string} The default type url
+         * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns {string} The type url
          */
-        SwapSimulationRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
-            if (typeUrlPrefix === undefined) {
-                typeUrlPrefix = "type.googleapis.com";
-            }
-            return typeUrlPrefix + "/streaming.SwapSimulationRequest";
+        SwapSimulationRequest.getTypeUrl = function getTypeUrl(prefix) {
+            if (prefix === undefined)
+                prefix = "type.googleapis.com";
+            return prefix + "/streaming.SwapSimulationRequest";
         };
 
         return SwapSimulationRequest;
@@ -764,24 +876,37 @@ $root.streaming = (function() {
 
         /**
          * Properties of a UserBundleRequest.
-         * @memberof streaming
-         * @interface IUserBundleRequest
+         * @typedef {Object} streaming.UserBundleRequest.$Properties
          * @property {string|null} [userPk] UserBundleRequest userPk
          * @property {string|null} [bundleId] UserBundleRequest bundleId
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding
+         */
+
+        /**
+         * Properties of a UserBundleRequest.
+         * @memberof streaming
+         * @interface IUserBundleRequest
+         * @augments streaming.UserBundleRequest.$Properties
+         * @deprecated Use streaming.UserBundleRequest.$Properties instead.
+         */
+
+        /**
+         * Shape of a UserBundleRequest.
+         * @typedef {streaming.UserBundleRequest.$Properties} streaming.UserBundleRequest.$Shape
          */
 
         /**
          * Constructs a new UserBundleRequest.
          * @memberof streaming
          * @classdesc Represents a UserBundleRequest.
-         * @implements IUserBundleRequest
          * @constructor
-         * @param {streaming.IUserBundleRequest=} [properties] Properties to set
+         * @param {streaming.UserBundleRequest.$Properties=} [properties] Properties to set
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding
          */
         function UserBundleRequest(properties) {
             if (properties)
                 for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
-                    if (properties[keys[i]] != null)
+                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
                         this[keys[i]] = properties[keys[i]];
         }
 
@@ -815,8 +940,12 @@ $root.streaming = (function() {
          * @function create
          * @memberof streaming.UserBundleRequest
          * @static
-         * @param {streaming.IUserBundleRequest=} [properties] Properties to set
+         * @param {streaming.UserBundleRequest.$Properties=} [properties] Properties to set
          * @returns {streaming.UserBundleRequest} UserBundleRequest instance
+         * @type {{
+         *   (properties: streaming.UserBundleRequest.$Shape): streaming.UserBundleRequest & streaming.UserBundleRequest.$Shape;
+         *   (properties?: streaming.UserBundleRequest.$Properties): streaming.UserBundleRequest;
+         * }}
          */
         UserBundleRequest.create = function create(properties) {
             return new UserBundleRequest(properties);
@@ -827,7 +956,7 @@ $root.streaming = (function() {
          * @function encode
          * @memberof streaming.UserBundleRequest
          * @static
-         * @param {streaming.IUserBundleRequest} message UserBundleRequest message or plain object to encode
+         * @param {streaming.UserBundleRequest.$Properties} message UserBundleRequest message or plain object to encode
          * @param {$protobuf.Writer} [writer] Writer to encode to
          * @returns {$protobuf.Writer} Writer
          */
@@ -838,6 +967,9 @@ $root.streaming = (function() {
                 writer.uint32(/* id 1, wireType 2 =*/10).string(message.userPk);
             if (message.bundleId != null && Object.hasOwnProperty.call(message, "bundleId"))
                 writer.uint32(/* id 2, wireType 2 =*/18).string(message.bundleId);
+            if (message.$unknowns != null && Object.hasOwnProperty.call(message, "$unknowns"))
+                for (var i = 0; i < message.$unknowns.length; ++i)
+                    writer.raw(message.$unknowns[i]);
             return writer;
         };
 
@@ -846,7 +978,7 @@ $root.streaming = (function() {
          * @function encodeDelimited
          * @memberof streaming.UserBundleRequest
          * @static
-         * @param {streaming.IUserBundleRequest} message UserBundleRequest message or plain object to encode
+         * @param {streaming.UserBundleRequest.$Properties} message UserBundleRequest message or plain object to encode
          * @param {$protobuf.Writer} [writer] Writer to encode to
          * @returns {$protobuf.Writer} Writer
          */
@@ -861,32 +993,50 @@ $root.streaming = (function() {
          * @static
          * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
          * @param {number} [length] Message length if known beforehand
-         * @returns {streaming.UserBundleRequest} UserBundleRequest
+         * @returns {streaming.UserBundleRequest & streaming.UserBundleRequest.$Shape} UserBundleRequest
          * @throws {Error} If the payload is not a reader or valid buffer
          * @throws {$protobuf.util.ProtocolError} If required fields are missing
          */
-        UserBundleRequest.decode = function decode(reader, length, error) {
+        UserBundleRequest.decode = function decode(reader, length, _end, _depth, _target) {
             if (!(reader instanceof $Reader))
                 reader = $Reader.create(reader);
-            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.UserBundleRequest();
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $Reader.recursionLimit)
+                throw Error("max depth exceeded");
+            var end = length === undefined ? reader.len : reader.pos + length, message = _target || new $root.streaming.UserBundleRequest(), value;
             while (reader.pos < end) {
-                var tag = reader.uint32();
-                if (tag === error)
-                    break;
-                switch (tag >>> 3) {
-                case 1: {
-                        message.userPk = reader.string();
-                        break;
-                    }
-                case 2: {
-                        message.bundleId = reader.string();
-                        break;
-                    }
-                default:
-                    reader.skipType(tag & 7);
+                var start = reader.pos;
+                var tag = reader.tag();
+                if (tag === _end) {
+                    _end = undefined;
                     break;
                 }
+                var wireType = tag & 7;
+                switch (tag >>>= 3) {
+                case 1: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.string()).length)
+                            message.userPk = value;
+                        else
+                            delete message.userPk;
+                        continue;
+                    }
+                case 2: {
+                        if (wireType !== 2)
+                            break;
+                        message.bundleId = reader.string();
+                        message._bundleId = "bundleId";
+                        continue;
+                    }
+                }
+                reader.skipType(wireType, _depth, tag);
+                $util.makeProp(message, "$unknowns", false);
+                (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
             }
+            if (_end !== undefined)
+                throw Error("missing end group");
             return message;
         };
 
@@ -896,7 +1046,7 @@ $root.streaming = (function() {
          * @memberof streaming.UserBundleRequest
          * @static
          * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-         * @returns {streaming.UserBundleRequest} UserBundleRequest
+         * @returns {streaming.UserBundleRequest & streaming.UserBundleRequest.$Shape} UserBundleRequest
          * @throws {Error} If the payload is not a reader or valid buffer
          * @throws {$protobuf.util.ProtocolError} If required fields are missing
          */
@@ -914,9 +1064,13 @@ $root.streaming = (function() {
          * @param {Object.<string,*>} message Plain object to verify
          * @returns {string|null} `null` if valid, otherwise the reason why it is not
          */
-        UserBundleRequest.verify = function verify(message) {
+        UserBundleRequest.verify = function verify(message, _depth) {
             if (typeof message !== "object" || message === null)
                 return "object expected";
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                return "max depth exceeded";
             var properties = {};
             if (message.userPk != null && message.hasOwnProperty("userPk"))
                 if (!$util.isString(message.userPk))
@@ -937,12 +1091,17 @@ $root.streaming = (function() {
          * @param {Object.<string,*>} object Plain object
          * @returns {streaming.UserBundleRequest} UserBundleRequest
          */
-        UserBundleRequest.fromObject = function fromObject(object) {
+        UserBundleRequest.fromObject = function fromObject(object, _depth) {
             if (object instanceof $root.streaming.UserBundleRequest)
                 return object;
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw Error("max depth exceeded");
             var message = new $root.streaming.UserBundleRequest();
             if (object.userPk != null)
-                message.userPk = String(object.userPk);
+                if (typeof object.userPk !== "string" || object.userPk.length)
+                    message.userPk = String(object.userPk);
             if (object.bundleId != null)
                 message.bundleId = String(object.bundleId);
             return message;
@@ -985,18 +1144,17 @@ $root.streaming = (function() {
         };
 
         /**
-         * Gets the default type url for UserBundleRequest
+         * Gets the type url for UserBundleRequest
          * @function getTypeUrl
          * @memberof streaming.UserBundleRequest
          * @static
-         * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
-         * @returns {string} The default type url
+         * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns {string} The type url
          */
-        UserBundleRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
-            if (typeUrlPrefix === undefined) {
-                typeUrlPrefix = "type.googleapis.com";
-            }
-            return typeUrlPrefix + "/streaming.UserBundleRequest";
+        UserBundleRequest.getTypeUrl = function getTypeUrl(prefix) {
+            if (prefix === undefined)
+                prefix = "type.googleapis.com";
+            return prefix + "/streaming.UserBundleRequest";
         };
 
         return UserBundleRequest;
@@ -1006,25 +1164,38 @@ $root.streaming = (function() {
 
         /**
          * Properties of a SignedTransactions.
-         * @memberof streaming
-         * @interface ISignedTransactions
+         * @typedef {Object} streaming.SignedTransactions.$Properties
          * @property {Array.<string>|null} [transactions] SignedTransactions transactions
          * @property {string|null} [userPk] SignedTransactions userPk
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding
+         */
+
+        /**
+         * Properties of a SignedTransactions.
+         * @memberof streaming
+         * @interface ISignedTransactions
+         * @augments streaming.SignedTransactions.$Properties
+         * @deprecated Use streaming.SignedTransactions.$Properties instead.
+         */
+
+        /**
+         * Shape of a SignedTransactions.
+         * @typedef {streaming.SignedTransactions.$Properties} streaming.SignedTransactions.$Shape
          */
 
         /**
          * Constructs a new SignedTransactions.
          * @memberof streaming
          * @classdesc Represents a SignedTransactions.
-         * @implements ISignedTransactions
          * @constructor
-         * @param {streaming.ISignedTransactions=} [properties] Properties to set
+         * @param {streaming.SignedTransactions.$Properties=} [properties] Properties to set
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding
          */
         function SignedTransactions(properties) {
             this.transactions = [];
             if (properties)
                 for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
-                    if (properties[keys[i]] != null)
+                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
                         this[keys[i]] = properties[keys[i]];
         }
 
@@ -1049,8 +1220,12 @@ $root.streaming = (function() {
          * @function create
          * @memberof streaming.SignedTransactions
          * @static
-         * @param {streaming.ISignedTransactions=} [properties] Properties to set
+         * @param {streaming.SignedTransactions.$Properties=} [properties] Properties to set
          * @returns {streaming.SignedTransactions} SignedTransactions instance
+         * @type {{
+         *   (properties: streaming.SignedTransactions.$Shape): streaming.SignedTransactions & streaming.SignedTransactions.$Shape;
+         *   (properties?: streaming.SignedTransactions.$Properties): streaming.SignedTransactions;
+         * }}
          */
         SignedTransactions.create = function create(properties) {
             return new SignedTransactions(properties);
@@ -1061,7 +1236,7 @@ $root.streaming = (function() {
          * @function encode
          * @memberof streaming.SignedTransactions
          * @static
-         * @param {streaming.ISignedTransactions} message SignedTransactions message or plain object to encode
+         * @param {streaming.SignedTransactions.$Properties} message SignedTransactions message or plain object to encode
          * @param {$protobuf.Writer} [writer] Writer to encode to
          * @returns {$protobuf.Writer} Writer
          */
@@ -1073,6 +1248,9 @@ $root.streaming = (function() {
                     writer.uint32(/* id 1, wireType 2 =*/10).string(message.transactions[i]);
             if (message.userPk != null && Object.hasOwnProperty.call(message, "userPk"))
                 writer.uint32(/* id 2, wireType 2 =*/18).string(message.userPk);
+            if (message.$unknowns != null && Object.hasOwnProperty.call(message, "$unknowns"))
+                for (var i = 0; i < message.$unknowns.length; ++i)
+                    writer.raw(message.$unknowns[i]);
             return writer;
         };
 
@@ -1081,7 +1259,7 @@ $root.streaming = (function() {
          * @function encodeDelimited
          * @memberof streaming.SignedTransactions
          * @static
-         * @param {streaming.ISignedTransactions} message SignedTransactions message or plain object to encode
+         * @param {streaming.SignedTransactions.$Properties} message SignedTransactions message or plain object to encode
          * @param {$protobuf.Writer} [writer] Writer to encode to
          * @returns {$protobuf.Writer} Writer
          */
@@ -1096,34 +1274,51 @@ $root.streaming = (function() {
          * @static
          * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
          * @param {number} [length] Message length if known beforehand
-         * @returns {streaming.SignedTransactions} SignedTransactions
+         * @returns {streaming.SignedTransactions & streaming.SignedTransactions.$Shape} SignedTransactions
          * @throws {Error} If the payload is not a reader or valid buffer
          * @throws {$protobuf.util.ProtocolError} If required fields are missing
          */
-        SignedTransactions.decode = function decode(reader, length, error) {
+        SignedTransactions.decode = function decode(reader, length, _end, _depth, _target) {
             if (!(reader instanceof $Reader))
                 reader = $Reader.create(reader);
-            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.SignedTransactions();
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $Reader.recursionLimit)
+                throw Error("max depth exceeded");
+            var end = length === undefined ? reader.len : reader.pos + length, message = _target || new $root.streaming.SignedTransactions(), value;
             while (reader.pos < end) {
-                var tag = reader.uint32();
-                if (tag === error)
+                var start = reader.pos;
+                var tag = reader.tag();
+                if (tag === _end) {
+                    _end = undefined;
                     break;
-                switch (tag >>> 3) {
+                }
+                var wireType = tag & 7;
+                switch (tag >>>= 3) {
                 case 1: {
+                        if (wireType !== 2)
+                            break;
                         if (!(message.transactions && message.transactions.length))
                             message.transactions = [];
                         message.transactions.push(reader.string());
-                        break;
+                        continue;
                     }
                 case 2: {
-                        message.userPk = reader.string();
-                        break;
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.string()).length)
+                            message.userPk = value;
+                        else
+                            delete message.userPk;
+                        continue;
                     }
-                default:
-                    reader.skipType(tag & 7);
-                    break;
                 }
+                reader.skipType(wireType, _depth, tag);
+                $util.makeProp(message, "$unknowns", false);
+                (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
             }
+            if (_end !== undefined)
+                throw Error("missing end group");
             return message;
         };
 
@@ -1133,7 +1328,7 @@ $root.streaming = (function() {
          * @memberof streaming.SignedTransactions
          * @static
          * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-         * @returns {streaming.SignedTransactions} SignedTransactions
+         * @returns {streaming.SignedTransactions & streaming.SignedTransactions.$Shape} SignedTransactions
          * @throws {Error} If the payload is not a reader or valid buffer
          * @throws {$protobuf.util.ProtocolError} If required fields are missing
          */
@@ -1151,9 +1346,13 @@ $root.streaming = (function() {
          * @param {Object.<string,*>} message Plain object to verify
          * @returns {string|null} `null` if valid, otherwise the reason why it is not
          */
-        SignedTransactions.verify = function verify(message) {
+        SignedTransactions.verify = function verify(message, _depth) {
             if (typeof message !== "object" || message === null)
                 return "object expected";
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                return "max depth exceeded";
             if (message.transactions != null && message.hasOwnProperty("transactions")) {
                 if (!Array.isArray(message.transactions))
                     return "transactions: array expected";
@@ -1175,19 +1374,24 @@ $root.streaming = (function() {
          * @param {Object.<string,*>} object Plain object
          * @returns {streaming.SignedTransactions} SignedTransactions
          */
-        SignedTransactions.fromObject = function fromObject(object) {
+        SignedTransactions.fromObject = function fromObject(object, _depth) {
             if (object instanceof $root.streaming.SignedTransactions)
                 return object;
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw Error("max depth exceeded");
             var message = new $root.streaming.SignedTransactions();
             if (object.transactions) {
                 if (!Array.isArray(object.transactions))
                     throw TypeError(".streaming.SignedTransactions.transactions: array expected");
-                message.transactions = [];
+                message.transactions = Array(object.transactions.length);
                 for (var i = 0; i < object.transactions.length; ++i)
                     message.transactions[i] = String(object.transactions[i]);
             }
             if (object.userPk != null)
-                message.userPk = String(object.userPk);
+                if (typeof object.userPk !== "string" || object.userPk.length)
+                    message.userPk = String(object.userPk);
             return message;
         };
 
@@ -1209,7 +1413,7 @@ $root.streaming = (function() {
             if (options.defaults)
                 object.userPk = "";
             if (message.transactions && message.transactions.length) {
-                object.transactions = [];
+                object.transactions = Array(message.transactions.length);
                 for (var j = 0; j < message.transactions.length; ++j)
                     object.transactions[j] = message.transactions[j];
             }
@@ -1230,18 +1434,17 @@ $root.streaming = (function() {
         };
 
         /**
-         * Gets the default type url for SignedTransactions
+         * Gets the type url for SignedTransactions
          * @function getTypeUrl
          * @memberof streaming.SignedTransactions
          * @static
-         * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
-         * @returns {string} The default type url
+         * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns {string} The type url
          */
-        SignedTransactions.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
-            if (typeUrlPrefix === undefined) {
-                typeUrlPrefix = "type.googleapis.com";
-            }
-            return typeUrlPrefix + "/streaming.SignedTransactions";
+        SignedTransactions.getTypeUrl = function getTypeUrl(prefix) {
+            if (prefix === undefined)
+                prefix = "type.googleapis.com";
+            return prefix + "/streaming.SignedTransactions";
         };
 
         return SignedTransactions;
@@ -1251,24 +1454,37 @@ $root.streaming = (function() {
 
         /**
          * Properties of a BuiltTransaction.
-         * @memberof streaming
-         * @interface IBuiltTransaction
+         * @typedef {Object} streaming.BuiltTransaction.$Properties
          * @property {string|null} [id] BuiltTransaction id
          * @property {string|null} [transactionBase58] BuiltTransaction transactionBase58
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding
+         */
+
+        /**
+         * Properties of a BuiltTransaction.
+         * @memberof streaming
+         * @interface IBuiltTransaction
+         * @augments streaming.BuiltTransaction.$Properties
+         * @deprecated Use streaming.BuiltTransaction.$Properties instead.
+         */
+
+        /**
+         * Shape of a BuiltTransaction.
+         * @typedef {streaming.BuiltTransaction.$Properties} streaming.BuiltTransaction.$Shape
          */
 
         /**
          * Constructs a new BuiltTransaction.
          * @memberof streaming
          * @classdesc Represents a BuiltTransaction.
-         * @implements IBuiltTransaction
          * @constructor
-         * @param {streaming.IBuiltTransaction=} [properties] Properties to set
+         * @param {streaming.BuiltTransaction.$Properties=} [properties] Properties to set
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding
          */
         function BuiltTransaction(properties) {
             if (properties)
                 for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
-                    if (properties[keys[i]] != null)
+                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
                         this[keys[i]] = properties[keys[i]];
         }
 
@@ -1293,8 +1509,12 @@ $root.streaming = (function() {
          * @function create
          * @memberof streaming.BuiltTransaction
          * @static
-         * @param {streaming.IBuiltTransaction=} [properties] Properties to set
+         * @param {streaming.BuiltTransaction.$Properties=} [properties] Properties to set
          * @returns {streaming.BuiltTransaction} BuiltTransaction instance
+         * @type {{
+         *   (properties: streaming.BuiltTransaction.$Shape): streaming.BuiltTransaction & streaming.BuiltTransaction.$Shape;
+         *   (properties?: streaming.BuiltTransaction.$Properties): streaming.BuiltTransaction;
+         * }}
          */
         BuiltTransaction.create = function create(properties) {
             return new BuiltTransaction(properties);
@@ -1305,7 +1525,7 @@ $root.streaming = (function() {
          * @function encode
          * @memberof streaming.BuiltTransaction
          * @static
-         * @param {streaming.IBuiltTransaction} message BuiltTransaction message or plain object to encode
+         * @param {streaming.BuiltTransaction.$Properties} message BuiltTransaction message or plain object to encode
          * @param {$protobuf.Writer} [writer] Writer to encode to
          * @returns {$protobuf.Writer} Writer
          */
@@ -1316,6 +1536,9 @@ $root.streaming = (function() {
                 writer.uint32(/* id 1, wireType 2 =*/10).string(message.id);
             if (message.transactionBase58 != null && Object.hasOwnProperty.call(message, "transactionBase58"))
                 writer.uint32(/* id 2, wireType 2 =*/18).string(message.transactionBase58);
+            if (message.$unknowns != null && Object.hasOwnProperty.call(message, "$unknowns"))
+                for (var i = 0; i < message.$unknowns.length; ++i)
+                    writer.raw(message.$unknowns[i]);
             return writer;
         };
 
@@ -1324,7 +1547,7 @@ $root.streaming = (function() {
          * @function encodeDelimited
          * @memberof streaming.BuiltTransaction
          * @static
-         * @param {streaming.IBuiltTransaction} message BuiltTransaction message or plain object to encode
+         * @param {streaming.BuiltTransaction.$Properties} message BuiltTransaction message or plain object to encode
          * @param {$protobuf.Writer} [writer] Writer to encode to
          * @returns {$protobuf.Writer} Writer
          */
@@ -1339,32 +1562,52 @@ $root.streaming = (function() {
          * @static
          * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
          * @param {number} [length] Message length if known beforehand
-         * @returns {streaming.BuiltTransaction} BuiltTransaction
+         * @returns {streaming.BuiltTransaction & streaming.BuiltTransaction.$Shape} BuiltTransaction
          * @throws {Error} If the payload is not a reader or valid buffer
          * @throws {$protobuf.util.ProtocolError} If required fields are missing
          */
-        BuiltTransaction.decode = function decode(reader, length, error) {
+        BuiltTransaction.decode = function decode(reader, length, _end, _depth, _target) {
             if (!(reader instanceof $Reader))
                 reader = $Reader.create(reader);
-            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.BuiltTransaction();
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $Reader.recursionLimit)
+                throw Error("max depth exceeded");
+            var end = length === undefined ? reader.len : reader.pos + length, message = _target || new $root.streaming.BuiltTransaction(), value;
             while (reader.pos < end) {
-                var tag = reader.uint32();
-                if (tag === error)
-                    break;
-                switch (tag >>> 3) {
-                case 1: {
-                        message.id = reader.string();
-                        break;
-                    }
-                case 2: {
-                        message.transactionBase58 = reader.string();
-                        break;
-                    }
-                default:
-                    reader.skipType(tag & 7);
+                var start = reader.pos;
+                var tag = reader.tag();
+                if (tag === _end) {
+                    _end = undefined;
                     break;
                 }
+                var wireType = tag & 7;
+                switch (tag >>>= 3) {
+                case 1: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.string()).length)
+                            message.id = value;
+                        else
+                            delete message.id;
+                        continue;
+                    }
+                case 2: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.string()).length)
+                            message.transactionBase58 = value;
+                        else
+                            delete message.transactionBase58;
+                        continue;
+                    }
+                }
+                reader.skipType(wireType, _depth, tag);
+                $util.makeProp(message, "$unknowns", false);
+                (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
             }
+            if (_end !== undefined)
+                throw Error("missing end group");
             return message;
         };
 
@@ -1374,7 +1617,7 @@ $root.streaming = (function() {
          * @memberof streaming.BuiltTransaction
          * @static
          * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-         * @returns {streaming.BuiltTransaction} BuiltTransaction
+         * @returns {streaming.BuiltTransaction & streaming.BuiltTransaction.$Shape} BuiltTransaction
          * @throws {Error} If the payload is not a reader or valid buffer
          * @throws {$protobuf.util.ProtocolError} If required fields are missing
          */
@@ -1392,9 +1635,13 @@ $root.streaming = (function() {
          * @param {Object.<string,*>} message Plain object to verify
          * @returns {string|null} `null` if valid, otherwise the reason why it is not
          */
-        BuiltTransaction.verify = function verify(message) {
+        BuiltTransaction.verify = function verify(message, _depth) {
             if (typeof message !== "object" || message === null)
                 return "object expected";
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                return "max depth exceeded";
             if (message.id != null && message.hasOwnProperty("id"))
                 if (!$util.isString(message.id))
                     return "id: string expected";
@@ -1412,14 +1659,20 @@ $root.streaming = (function() {
          * @param {Object.<string,*>} object Plain object
          * @returns {streaming.BuiltTransaction} BuiltTransaction
          */
-        BuiltTransaction.fromObject = function fromObject(object) {
+        BuiltTransaction.fromObject = function fromObject(object, _depth) {
             if (object instanceof $root.streaming.BuiltTransaction)
                 return object;
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw Error("max depth exceeded");
             var message = new $root.streaming.BuiltTransaction();
             if (object.id != null)
-                message.id = String(object.id);
+                if (typeof object.id !== "string" || object.id.length)
+                    message.id = String(object.id);
             if (object.transactionBase58 != null)
-                message.transactionBase58 = String(object.transactionBase58);
+                if (typeof object.transactionBase58 !== "string" || object.transactionBase58.length)
+                    message.transactionBase58 = String(object.transactionBase58);
             return message;
         };
 
@@ -1459,18 +1712,17 @@ $root.streaming = (function() {
         };
 
         /**
-         * Gets the default type url for BuiltTransaction
+         * Gets the type url for BuiltTransaction
          * @function getTypeUrl
          * @memberof streaming.BuiltTransaction
          * @static
-         * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
-         * @returns {string} The default type url
+         * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns {string} The type url
          */
-        BuiltTransaction.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
-            if (typeUrlPrefix === undefined) {
-                typeUrlPrefix = "type.googleapis.com";
-            }
-            return typeUrlPrefix + "/streaming.BuiltTransaction";
+        BuiltTransaction.getTypeUrl = function getTypeUrl(prefix) {
+            if (prefix === undefined)
+                prefix = "type.googleapis.com";
+            return prefix + "/streaming.BuiltTransaction";
         };
 
         return BuiltTransaction;
@@ -1480,30 +1732,43 @@ $root.streaming = (function() {
 
         /**
          * Properties of a TransactionsToSign.
+         * @typedef {Object} streaming.TransactionsToSign.$Properties
+         * @property {Array.<streaming.BuiltTransaction.$Properties>|null} [transactions] TransactionsToSign transactions
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding
+         */
+
+        /**
+         * Properties of a TransactionsToSign.
          * @memberof streaming
          * @interface ITransactionsToSign
-         * @property {Array.<streaming.IBuiltTransaction>|null} [transactions] TransactionsToSign transactions
+         * @augments streaming.TransactionsToSign.$Properties
+         * @deprecated Use streaming.TransactionsToSign.$Properties instead.
+         */
+
+        /**
+         * Shape of a TransactionsToSign.
+         * @typedef {streaming.TransactionsToSign.$Properties} streaming.TransactionsToSign.$Shape
          */
 
         /**
          * Constructs a new TransactionsToSign.
          * @memberof streaming
          * @classdesc Represents a TransactionsToSign.
-         * @implements ITransactionsToSign
          * @constructor
-         * @param {streaming.ITransactionsToSign=} [properties] Properties to set
+         * @param {streaming.TransactionsToSign.$Properties=} [properties] Properties to set
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding
          */
         function TransactionsToSign(properties) {
             this.transactions = [];
             if (properties)
                 for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
-                    if (properties[keys[i]] != null)
+                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
                         this[keys[i]] = properties[keys[i]];
         }
 
         /**
          * TransactionsToSign transactions.
-         * @member {Array.<streaming.IBuiltTransaction>} transactions
+         * @member {Array.<streaming.BuiltTransaction.$Properties>} transactions
          * @memberof streaming.TransactionsToSign
          * @instance
          */
@@ -1514,8 +1779,12 @@ $root.streaming = (function() {
          * @function create
          * @memberof streaming.TransactionsToSign
          * @static
-         * @param {streaming.ITransactionsToSign=} [properties] Properties to set
+         * @param {streaming.TransactionsToSign.$Properties=} [properties] Properties to set
          * @returns {streaming.TransactionsToSign} TransactionsToSign instance
+         * @type {{
+         *   (properties: streaming.TransactionsToSign.$Shape): streaming.TransactionsToSign & streaming.TransactionsToSign.$Shape;
+         *   (properties?: streaming.TransactionsToSign.$Properties): streaming.TransactionsToSign;
+         * }}
          */
         TransactionsToSign.create = function create(properties) {
             return new TransactionsToSign(properties);
@@ -1526,7 +1795,7 @@ $root.streaming = (function() {
          * @function encode
          * @memberof streaming.TransactionsToSign
          * @static
-         * @param {streaming.ITransactionsToSign} message TransactionsToSign message or plain object to encode
+         * @param {streaming.TransactionsToSign.$Properties} message TransactionsToSign message or plain object to encode
          * @param {$protobuf.Writer} [writer] Writer to encode to
          * @returns {$protobuf.Writer} Writer
          */
@@ -1536,6 +1805,9 @@ $root.streaming = (function() {
             if (message.transactions != null && message.transactions.length)
                 for (var i = 0; i < message.transactions.length; ++i)
                     $root.streaming.BuiltTransaction.encode(message.transactions[i], writer.uint32(/* id 1, wireType 2 =*/10).fork()).ldelim();
+            if (message.$unknowns != null && Object.hasOwnProperty.call(message, "$unknowns"))
+                for (var i = 0; i < message.$unknowns.length; ++i)
+                    writer.raw(message.$unknowns[i]);
             return writer;
         };
 
@@ -1544,7 +1816,7 @@ $root.streaming = (function() {
          * @function encodeDelimited
          * @memberof streaming.TransactionsToSign
          * @static
-         * @param {streaming.ITransactionsToSign} message TransactionsToSign message or plain object to encode
+         * @param {streaming.TransactionsToSign.$Properties} message TransactionsToSign message or plain object to encode
          * @param {$protobuf.Writer} [writer] Writer to encode to
          * @returns {$protobuf.Writer} Writer
          */
@@ -1559,30 +1831,42 @@ $root.streaming = (function() {
          * @static
          * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
          * @param {number} [length] Message length if known beforehand
-         * @returns {streaming.TransactionsToSign} TransactionsToSign
+         * @returns {streaming.TransactionsToSign & streaming.TransactionsToSign.$Shape} TransactionsToSign
          * @throws {Error} If the payload is not a reader or valid buffer
          * @throws {$protobuf.util.ProtocolError} If required fields are missing
          */
-        TransactionsToSign.decode = function decode(reader, length, error) {
+        TransactionsToSign.decode = function decode(reader, length, _end, _depth, _target) {
             if (!(reader instanceof $Reader))
                 reader = $Reader.create(reader);
-            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.TransactionsToSign();
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $Reader.recursionLimit)
+                throw Error("max depth exceeded");
+            var end = length === undefined ? reader.len : reader.pos + length, message = _target || new $root.streaming.TransactionsToSign();
             while (reader.pos < end) {
-                var tag = reader.uint32();
-                if (tag === error)
-                    break;
-                switch (tag >>> 3) {
-                case 1: {
-                        if (!(message.transactions && message.transactions.length))
-                            message.transactions = [];
-                        message.transactions.push($root.streaming.BuiltTransaction.decode(reader, reader.uint32()));
-                        break;
-                    }
-                default:
-                    reader.skipType(tag & 7);
+                var start = reader.pos;
+                var tag = reader.tag();
+                if (tag === _end) {
+                    _end = undefined;
                     break;
                 }
+                var wireType = tag & 7;
+                switch (tag >>>= 3) {
+                case 1: {
+                        if (wireType !== 2)
+                            break;
+                        if (!(message.transactions && message.transactions.length))
+                            message.transactions = [];
+                        message.transactions.push($root.streaming.BuiltTransaction.decode(reader, reader.uint32(), undefined, _depth + 1));
+                        continue;
+                    }
+                }
+                reader.skipType(wireType, _depth, tag);
+                $util.makeProp(message, "$unknowns", false);
+                (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
             }
+            if (_end !== undefined)
+                throw Error("missing end group");
             return message;
         };
 
@@ -1592,7 +1876,7 @@ $root.streaming = (function() {
          * @memberof streaming.TransactionsToSign
          * @static
          * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-         * @returns {streaming.TransactionsToSign} TransactionsToSign
+         * @returns {streaming.TransactionsToSign & streaming.TransactionsToSign.$Shape} TransactionsToSign
          * @throws {Error} If the payload is not a reader or valid buffer
          * @throws {$protobuf.util.ProtocolError} If required fields are missing
          */
@@ -1610,14 +1894,18 @@ $root.streaming = (function() {
          * @param {Object.<string,*>} message Plain object to verify
          * @returns {string|null} `null` if valid, otherwise the reason why it is not
          */
-        TransactionsToSign.verify = function verify(message) {
+        TransactionsToSign.verify = function verify(message, _depth) {
             if (typeof message !== "object" || message === null)
                 return "object expected";
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                return "max depth exceeded";
             if (message.transactions != null && message.hasOwnProperty("transactions")) {
                 if (!Array.isArray(message.transactions))
                     return "transactions: array expected";
                 for (var i = 0; i < message.transactions.length; ++i) {
-                    var error = $root.streaming.BuiltTransaction.verify(message.transactions[i]);
+                    var error = $root.streaming.BuiltTransaction.verify(message.transactions[i], _depth + 1);
                     if (error)
                         return "transactions." + error;
                 }
@@ -1633,18 +1921,22 @@ $root.streaming = (function() {
          * @param {Object.<string,*>} object Plain object
          * @returns {streaming.TransactionsToSign} TransactionsToSign
          */
-        TransactionsToSign.fromObject = function fromObject(object) {
+        TransactionsToSign.fromObject = function fromObject(object, _depth) {
             if (object instanceof $root.streaming.TransactionsToSign)
                 return object;
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw Error("max depth exceeded");
             var message = new $root.streaming.TransactionsToSign();
             if (object.transactions) {
                 if (!Array.isArray(object.transactions))
                     throw TypeError(".streaming.TransactionsToSign.transactions: array expected");
-                message.transactions = [];
+                message.transactions = Array(object.transactions.length);
                 for (var i = 0; i < object.transactions.length; ++i) {
                     if (typeof object.transactions[i] !== "object")
                         throw TypeError(".streaming.TransactionsToSign.transactions: object expected");
-                    message.transactions[i] = $root.streaming.BuiltTransaction.fromObject(object.transactions[i]);
+                    message.transactions[i] = $root.streaming.BuiltTransaction.fromObject(object.transactions[i], _depth + 1);
                 }
             }
             return message;
@@ -1666,7 +1958,7 @@ $root.streaming = (function() {
             if (options.arrays || options.defaults)
                 object.transactions = [];
             if (message.transactions && message.transactions.length) {
-                object.transactions = [];
+                object.transactions = Array(message.transactions.length);
                 for (var j = 0; j < message.transactions.length; ++j)
                     object.transactions[j] = $root.streaming.BuiltTransaction.toObject(message.transactions[j], options);
             }
@@ -1685,18 +1977,17 @@ $root.streaming = (function() {
         };
 
         /**
-         * Gets the default type url for TransactionsToSign
+         * Gets the type url for TransactionsToSign
          * @function getTypeUrl
          * @memberof streaming.TransactionsToSign
          * @static
-         * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
-         * @returns {string} The default type url
+         * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns {string} The type url
          */
-        TransactionsToSign.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
-            if (typeUrlPrefix === undefined) {
-                typeUrlPrefix = "type.googleapis.com";
-            }
-            return typeUrlPrefix + "/streaming.TransactionsToSign";
+        TransactionsToSign.getTypeUrl = function getTypeUrl(prefix) {
+            if (prefix === undefined)
+                prefix = "type.googleapis.com";
+            return prefix + "/streaming.TransactionsToSign";
         };
 
         return TransactionsToSign;
@@ -1706,32 +1997,45 @@ $root.streaming = (function() {
 
         /**
          * Properties of a BundleDelta.
-         * @memberof streaming
-         * @interface IBundleDelta
-         * @property {Array.<streaming.ITransactionDelta>|null} [swaps] BundleDelta swaps
+         * @typedef {Object} streaming.BundleDelta.$Properties
+         * @property {Array.<streaming.TransactionDelta.$Properties>|null} [swaps] BundleDelta swaps
          * @property {number|Long|null} [jitoTipLamports] BundleDelta jitoTipLamports
          * @property {number|Long|null} [totalNetworkFeeLamports] BundleDelta totalNetworkFeeLamports
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding
+         */
+
+        /**
+         * Properties of a BundleDelta.
+         * @memberof streaming
+         * @interface IBundleDelta
+         * @augments streaming.BundleDelta.$Properties
+         * @deprecated Use streaming.BundleDelta.$Properties instead.
+         */
+
+        /**
+         * Shape of a BundleDelta.
+         * @typedef {streaming.BundleDelta.$Properties} streaming.BundleDelta.$Shape
          */
 
         /**
          * Constructs a new BundleDelta.
          * @memberof streaming
          * @classdesc Represents a BundleDelta.
-         * @implements IBundleDelta
          * @constructor
-         * @param {streaming.IBundleDelta=} [properties] Properties to set
+         * @param {streaming.BundleDelta.$Properties=} [properties] Properties to set
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding
          */
         function BundleDelta(properties) {
             this.swaps = [];
             if (properties)
                 for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
-                    if (properties[keys[i]] != null)
+                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
                         this[keys[i]] = properties[keys[i]];
         }
 
         /**
          * BundleDelta swaps.
-         * @member {Array.<streaming.ITransactionDelta>} swaps
+         * @member {Array.<streaming.TransactionDelta.$Properties>} swaps
          * @memberof streaming.BundleDelta
          * @instance
          */
@@ -1758,8 +2062,12 @@ $root.streaming = (function() {
          * @function create
          * @memberof streaming.BundleDelta
          * @static
-         * @param {streaming.IBundleDelta=} [properties] Properties to set
+         * @param {streaming.BundleDelta.$Properties=} [properties] Properties to set
          * @returns {streaming.BundleDelta} BundleDelta instance
+         * @type {{
+         *   (properties: streaming.BundleDelta.$Shape): streaming.BundleDelta & streaming.BundleDelta.$Shape;
+         *   (properties?: streaming.BundleDelta.$Properties): streaming.BundleDelta;
+         * }}
          */
         BundleDelta.create = function create(properties) {
             return new BundleDelta(properties);
@@ -1770,7 +2078,7 @@ $root.streaming = (function() {
          * @function encode
          * @memberof streaming.BundleDelta
          * @static
-         * @param {streaming.IBundleDelta} message BundleDelta message or plain object to encode
+         * @param {streaming.BundleDelta.$Properties} message BundleDelta message or plain object to encode
          * @param {$protobuf.Writer} [writer] Writer to encode to
          * @returns {$protobuf.Writer} Writer
          */
@@ -1784,6 +2092,9 @@ $root.streaming = (function() {
                 writer.uint32(/* id 2, wireType 0 =*/16).uint64(message.jitoTipLamports);
             if (message.totalNetworkFeeLamports != null && Object.hasOwnProperty.call(message, "totalNetworkFeeLamports"))
                 writer.uint32(/* id 3, wireType 0 =*/24).uint64(message.totalNetworkFeeLamports);
+            if (message.$unknowns != null && Object.hasOwnProperty.call(message, "$unknowns"))
+                for (var i = 0; i < message.$unknowns.length; ++i)
+                    writer.raw(message.$unknowns[i]);
             return writer;
         };
 
@@ -1792,7 +2103,7 @@ $root.streaming = (function() {
          * @function encodeDelimited
          * @memberof streaming.BundleDelta
          * @static
-         * @param {streaming.IBundleDelta} message BundleDelta message or plain object to encode
+         * @param {streaming.BundleDelta.$Properties} message BundleDelta message or plain object to encode
          * @param {$protobuf.Writer} [writer] Writer to encode to
          * @returns {$protobuf.Writer} Writer
          */
@@ -1807,38 +2118,60 @@ $root.streaming = (function() {
          * @static
          * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
          * @param {number} [length] Message length if known beforehand
-         * @returns {streaming.BundleDelta} BundleDelta
+         * @returns {streaming.BundleDelta & streaming.BundleDelta.$Shape} BundleDelta
          * @throws {Error} If the payload is not a reader or valid buffer
          * @throws {$protobuf.util.ProtocolError} If required fields are missing
          */
-        BundleDelta.decode = function decode(reader, length, error) {
+        BundleDelta.decode = function decode(reader, length, _end, _depth, _target) {
             if (!(reader instanceof $Reader))
                 reader = $Reader.create(reader);
-            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.BundleDelta();
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $Reader.recursionLimit)
+                throw Error("max depth exceeded");
+            var end = length === undefined ? reader.len : reader.pos + length, message = _target || new $root.streaming.BundleDelta(), value;
             while (reader.pos < end) {
-                var tag = reader.uint32();
-                if (tag === error)
-                    break;
-                switch (tag >>> 3) {
-                case 1: {
-                        if (!(message.swaps && message.swaps.length))
-                            message.swaps = [];
-                        message.swaps.push($root.streaming.TransactionDelta.decode(reader, reader.uint32()));
-                        break;
-                    }
-                case 2: {
-                        message.jitoTipLamports = reader.uint64();
-                        break;
-                    }
-                case 3: {
-                        message.totalNetworkFeeLamports = reader.uint64();
-                        break;
-                    }
-                default:
-                    reader.skipType(tag & 7);
+                var start = reader.pos;
+                var tag = reader.tag();
+                if (tag === _end) {
+                    _end = undefined;
                     break;
                 }
+                var wireType = tag & 7;
+                switch (tag >>>= 3) {
+                case 1: {
+                        if (wireType !== 2)
+                            break;
+                        if (!(message.swaps && message.swaps.length))
+                            message.swaps = [];
+                        message.swaps.push($root.streaming.TransactionDelta.decode(reader, reader.uint32(), undefined, _depth + 1));
+                        continue;
+                    }
+                case 2: {
+                        if (wireType !== 0)
+                            break;
+                        if (typeof (value = reader.uint64()) === "object" ? value.low || value.high : value !== 0)
+                            message.jitoTipLamports = value;
+                        else
+                            delete message.jitoTipLamports;
+                        continue;
+                    }
+                case 3: {
+                        if (wireType !== 0)
+                            break;
+                        if (typeof (value = reader.uint64()) === "object" ? value.low || value.high : value !== 0)
+                            message.totalNetworkFeeLamports = value;
+                        else
+                            delete message.totalNetworkFeeLamports;
+                        continue;
+                    }
+                }
+                reader.skipType(wireType, _depth, tag);
+                $util.makeProp(message, "$unknowns", false);
+                (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
             }
+            if (_end !== undefined)
+                throw Error("missing end group");
             return message;
         };
 
@@ -1848,7 +2181,7 @@ $root.streaming = (function() {
          * @memberof streaming.BundleDelta
          * @static
          * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-         * @returns {streaming.BundleDelta} BundleDelta
+         * @returns {streaming.BundleDelta & streaming.BundleDelta.$Shape} BundleDelta
          * @throws {Error} If the payload is not a reader or valid buffer
          * @throws {$protobuf.util.ProtocolError} If required fields are missing
          */
@@ -1866,14 +2199,18 @@ $root.streaming = (function() {
          * @param {Object.<string,*>} message Plain object to verify
          * @returns {string|null} `null` if valid, otherwise the reason why it is not
          */
-        BundleDelta.verify = function verify(message) {
+        BundleDelta.verify = function verify(message, _depth) {
             if (typeof message !== "object" || message === null)
                 return "object expected";
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                return "max depth exceeded";
             if (message.swaps != null && message.hasOwnProperty("swaps")) {
                 if (!Array.isArray(message.swaps))
                     return "swaps: array expected";
                 for (var i = 0; i < message.swaps.length; ++i) {
-                    var error = $root.streaming.TransactionDelta.verify(message.swaps[i]);
+                    var error = $root.streaming.TransactionDelta.verify(message.swaps[i], _depth + 1);
                     if (error)
                         return "swaps." + error;
                 }
@@ -1895,38 +2232,44 @@ $root.streaming = (function() {
          * @param {Object.<string,*>} object Plain object
          * @returns {streaming.BundleDelta} BundleDelta
          */
-        BundleDelta.fromObject = function fromObject(object) {
+        BundleDelta.fromObject = function fromObject(object, _depth) {
             if (object instanceof $root.streaming.BundleDelta)
                 return object;
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw Error("max depth exceeded");
             var message = new $root.streaming.BundleDelta();
             if (object.swaps) {
                 if (!Array.isArray(object.swaps))
                     throw TypeError(".streaming.BundleDelta.swaps: array expected");
-                message.swaps = [];
+                message.swaps = Array(object.swaps.length);
                 for (var i = 0; i < object.swaps.length; ++i) {
                     if (typeof object.swaps[i] !== "object")
                         throw TypeError(".streaming.BundleDelta.swaps: object expected");
-                    message.swaps[i] = $root.streaming.TransactionDelta.fromObject(object.swaps[i]);
+                    message.swaps[i] = $root.streaming.TransactionDelta.fromObject(object.swaps[i], _depth + 1);
                 }
             }
             if (object.jitoTipLamports != null)
-                if ($util.Long)
-                    (message.jitoTipLamports = $util.Long.fromValue(object.jitoTipLamports)).unsigned = true;
-                else if (typeof object.jitoTipLamports === "string")
-                    message.jitoTipLamports = parseInt(object.jitoTipLamports, 10);
-                else if (typeof object.jitoTipLamports === "number")
-                    message.jitoTipLamports = object.jitoTipLamports;
-                else if (typeof object.jitoTipLamports === "object")
-                    message.jitoTipLamports = new $util.LongBits(object.jitoTipLamports.low >>> 0, object.jitoTipLamports.high >>> 0).toNumber(true);
+                if (typeof object.jitoTipLamports === "object" ? object.jitoTipLamports.low || object.jitoTipLamports.high : Number(object.jitoTipLamports) !== 0)
+                    if ($util.Long)
+                        (message.jitoTipLamports = $util.Long.fromValue(object.jitoTipLamports)).unsigned = true;
+                    else if (typeof object.jitoTipLamports === "string")
+                        message.jitoTipLamports = parseInt(object.jitoTipLamports, 10);
+                    else if (typeof object.jitoTipLamports === "number")
+                        message.jitoTipLamports = object.jitoTipLamports;
+                    else if (typeof object.jitoTipLamports === "object")
+                        message.jitoTipLamports = new $util.LongBits(object.jitoTipLamports.low >>> 0, object.jitoTipLamports.high >>> 0).toNumber(true);
             if (object.totalNetworkFeeLamports != null)
-                if ($util.Long)
-                    (message.totalNetworkFeeLamports = $util.Long.fromValue(object.totalNetworkFeeLamports)).unsigned = true;
-                else if (typeof object.totalNetworkFeeLamports === "string")
-                    message.totalNetworkFeeLamports = parseInt(object.totalNetworkFeeLamports, 10);
-                else if (typeof object.totalNetworkFeeLamports === "number")
-                    message.totalNetworkFeeLamports = object.totalNetworkFeeLamports;
-                else if (typeof object.totalNetworkFeeLamports === "object")
-                    message.totalNetworkFeeLamports = new $util.LongBits(object.totalNetworkFeeLamports.low >>> 0, object.totalNetworkFeeLamports.high >>> 0).toNumber(true);
+                if (typeof object.totalNetworkFeeLamports === "object" ? object.totalNetworkFeeLamports.low || object.totalNetworkFeeLamports.high : Number(object.totalNetworkFeeLamports) !== 0)
+                    if ($util.Long)
+                        (message.totalNetworkFeeLamports = $util.Long.fromValue(object.totalNetworkFeeLamports)).unsigned = true;
+                    else if (typeof object.totalNetworkFeeLamports === "string")
+                        message.totalNetworkFeeLamports = parseInt(object.totalNetworkFeeLamports, 10);
+                    else if (typeof object.totalNetworkFeeLamports === "number")
+                        message.totalNetworkFeeLamports = object.totalNetworkFeeLamports;
+                    else if (typeof object.totalNetworkFeeLamports === "object")
+                        message.totalNetworkFeeLamports = new $util.LongBits(object.totalNetworkFeeLamports.low >>> 0, object.totalNetworkFeeLamports.high >>> 0).toNumber(true);
             return message;
         };
 
@@ -1958,7 +2301,7 @@ $root.streaming = (function() {
                     object.totalNetworkFeeLamports = options.longs === String ? "0" : 0;
             }
             if (message.swaps && message.swaps.length) {
-                object.swaps = [];
+                object.swaps = Array(message.swaps.length);
                 for (var j = 0; j < message.swaps.length; ++j)
                     object.swaps[j] = $root.streaming.TransactionDelta.toObject(message.swaps[j], options);
             }
@@ -1987,18 +2330,17 @@ $root.streaming = (function() {
         };
 
         /**
-         * Gets the default type url for BundleDelta
+         * Gets the type url for BundleDelta
          * @function getTypeUrl
          * @memberof streaming.BundleDelta
          * @static
-         * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
-         * @returns {string} The default type url
+         * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns {string} The type url
          */
-        BundleDelta.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
-            if (typeUrlPrefix === undefined) {
-                typeUrlPrefix = "type.googleapis.com";
-            }
-            return typeUrlPrefix + "/streaming.BundleDelta";
+        BundleDelta.getTypeUrl = function getTypeUrl(prefix) {
+            if (prefix === undefined)
+                prefix = "type.googleapis.com";
+            return prefix + "/streaming.BundleDelta";
         };
 
         return BundleDelta;
@@ -2008,8 +2350,7 @@ $root.streaming = (function() {
 
         /**
          * Properties of a TransactionDelta.
-         * @memberof streaming
-         * @interface ITransactionDelta
+         * @typedef {Object} streaming.TransactionDelta.$Properties
          * @property {string|null} [inputMint] TransactionDelta inputMint
          * @property {number|Long|null} [inputAmount] TransactionDelta inputAmount
          * @property {string|null} [outputMint] TransactionDelta outputMint
@@ -2019,20 +2360,34 @@ $root.streaming = (function() {
          * @property {number|Long|null} [networkFeeLamports] TransactionDelta networkFeeLamports
          * @property {number|null} [platformFeeBps] TransactionDelta platformFeeBps
          * @property {string|null} [id] TransactionDelta id
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding
+         */
+
+        /**
+         * Properties of a TransactionDelta.
+         * @memberof streaming
+         * @interface ITransactionDelta
+         * @augments streaming.TransactionDelta.$Properties
+         * @deprecated Use streaming.TransactionDelta.$Properties instead.
+         */
+
+        /**
+         * Shape of a TransactionDelta.
+         * @typedef {streaming.TransactionDelta.$Properties} streaming.TransactionDelta.$Shape
          */
 
         /**
          * Constructs a new TransactionDelta.
          * @memberof streaming
          * @classdesc Represents a TransactionDelta.
-         * @implements ITransactionDelta
          * @constructor
-         * @param {streaming.ITransactionDelta=} [properties] Properties to set
+         * @param {streaming.TransactionDelta.$Properties=} [properties] Properties to set
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding
          */
         function TransactionDelta(properties) {
             if (properties)
                 for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
-                    if (properties[keys[i]] != null)
+                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
                         this[keys[i]] = properties[keys[i]];
         }
 
@@ -2113,8 +2468,12 @@ $root.streaming = (function() {
          * @function create
          * @memberof streaming.TransactionDelta
          * @static
-         * @param {streaming.ITransactionDelta=} [properties] Properties to set
+         * @param {streaming.TransactionDelta.$Properties=} [properties] Properties to set
          * @returns {streaming.TransactionDelta} TransactionDelta instance
+         * @type {{
+         *   (properties: streaming.TransactionDelta.$Shape): streaming.TransactionDelta & streaming.TransactionDelta.$Shape;
+         *   (properties?: streaming.TransactionDelta.$Properties): streaming.TransactionDelta;
+         * }}
          */
         TransactionDelta.create = function create(properties) {
             return new TransactionDelta(properties);
@@ -2125,7 +2484,7 @@ $root.streaming = (function() {
          * @function encode
          * @memberof streaming.TransactionDelta
          * @static
-         * @param {streaming.ITransactionDelta} message TransactionDelta message or plain object to encode
+         * @param {streaming.TransactionDelta.$Properties} message TransactionDelta message or plain object to encode
          * @param {$protobuf.Writer} [writer] Writer to encode to
          * @returns {$protobuf.Writer} Writer
          */
@@ -2150,6 +2509,9 @@ $root.streaming = (function() {
                 writer.uint32(/* id 8, wireType 0 =*/64).uint32(message.platformFeeBps);
             if (message.id != null && Object.hasOwnProperty.call(message, "id"))
                 writer.uint32(/* id 9, wireType 2 =*/74).string(message.id);
+            if (message.$unknowns != null && Object.hasOwnProperty.call(message, "$unknowns"))
+                for (var i = 0; i < message.$unknowns.length; ++i)
+                    writer.raw(message.$unknowns[i]);
             return writer;
         };
 
@@ -2158,7 +2520,7 @@ $root.streaming = (function() {
          * @function encodeDelimited
          * @memberof streaming.TransactionDelta
          * @static
-         * @param {streaming.ITransactionDelta} message TransactionDelta message or plain object to encode
+         * @param {streaming.TransactionDelta.$Properties} message TransactionDelta message or plain object to encode
          * @param {$protobuf.Writer} [writer] Writer to encode to
          * @returns {$protobuf.Writer} Writer
          */
@@ -2173,60 +2535,115 @@ $root.streaming = (function() {
          * @static
          * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
          * @param {number} [length] Message length if known beforehand
-         * @returns {streaming.TransactionDelta} TransactionDelta
+         * @returns {streaming.TransactionDelta & streaming.TransactionDelta.$Shape} TransactionDelta
          * @throws {Error} If the payload is not a reader or valid buffer
          * @throws {$protobuf.util.ProtocolError} If required fields are missing
          */
-        TransactionDelta.decode = function decode(reader, length, error) {
+        TransactionDelta.decode = function decode(reader, length, _end, _depth, _target) {
             if (!(reader instanceof $Reader))
                 reader = $Reader.create(reader);
-            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.TransactionDelta();
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $Reader.recursionLimit)
+                throw Error("max depth exceeded");
+            var end = length === undefined ? reader.len : reader.pos + length, message = _target || new $root.streaming.TransactionDelta(), value;
             while (reader.pos < end) {
-                var tag = reader.uint32();
-                if (tag === error)
-                    break;
-                switch (tag >>> 3) {
-                case 1: {
-                        message.inputMint = reader.string();
-                        break;
-                    }
-                case 2: {
-                        message.inputAmount = reader.uint64();
-                        break;
-                    }
-                case 3: {
-                        message.outputMint = reader.string();
-                        break;
-                    }
-                case 4: {
-                        message.expectedOutput = reader.uint64();
-                        break;
-                    }
-                case 5: {
-                        message.minimumOutput = reader.uint64();
-                        break;
-                    }
-                case 6: {
-                        message.jitoTipLamports = reader.uint64();
-                        break;
-                    }
-                case 7: {
-                        message.networkFeeLamports = reader.uint64();
-                        break;
-                    }
-                case 8: {
-                        message.platformFeeBps = reader.uint32();
-                        break;
-                    }
-                case 9: {
-                        message.id = reader.string();
-                        break;
-                    }
-                default:
-                    reader.skipType(tag & 7);
+                var start = reader.pos;
+                var tag = reader.tag();
+                if (tag === _end) {
+                    _end = undefined;
                     break;
                 }
+                var wireType = tag & 7;
+                switch (tag >>>= 3) {
+                case 1: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.string()).length)
+                            message.inputMint = value;
+                        else
+                            delete message.inputMint;
+                        continue;
+                    }
+                case 2: {
+                        if (wireType !== 0)
+                            break;
+                        if (typeof (value = reader.uint64()) === "object" ? value.low || value.high : value !== 0)
+                            message.inputAmount = value;
+                        else
+                            delete message.inputAmount;
+                        continue;
+                    }
+                case 3: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.string()).length)
+                            message.outputMint = value;
+                        else
+                            delete message.outputMint;
+                        continue;
+                    }
+                case 4: {
+                        if (wireType !== 0)
+                            break;
+                        if (typeof (value = reader.uint64()) === "object" ? value.low || value.high : value !== 0)
+                            message.expectedOutput = value;
+                        else
+                            delete message.expectedOutput;
+                        continue;
+                    }
+                case 5: {
+                        if (wireType !== 0)
+                            break;
+                        if (typeof (value = reader.uint64()) === "object" ? value.low || value.high : value !== 0)
+                            message.minimumOutput = value;
+                        else
+                            delete message.minimumOutput;
+                        continue;
+                    }
+                case 6: {
+                        if (wireType !== 0)
+                            break;
+                        if (typeof (value = reader.uint64()) === "object" ? value.low || value.high : value !== 0)
+                            message.jitoTipLamports = value;
+                        else
+                            delete message.jitoTipLamports;
+                        continue;
+                    }
+                case 7: {
+                        if (wireType !== 0)
+                            break;
+                        if (typeof (value = reader.uint64()) === "object" ? value.low || value.high : value !== 0)
+                            message.networkFeeLamports = value;
+                        else
+                            delete message.networkFeeLamports;
+                        continue;
+                    }
+                case 8: {
+                        if (wireType !== 0)
+                            break;
+                        if (value = reader.uint32())
+                            message.platformFeeBps = value;
+                        else
+                            delete message.platformFeeBps;
+                        continue;
+                    }
+                case 9: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.string()).length)
+                            message.id = value;
+                        else
+                            delete message.id;
+                        continue;
+                    }
+                }
+                reader.skipType(wireType, _depth, tag);
+                $util.makeProp(message, "$unknowns", false);
+                (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
             }
+            if (_end !== undefined)
+                throw Error("missing end group");
             return message;
         };
 
@@ -2236,7 +2653,7 @@ $root.streaming = (function() {
          * @memberof streaming.TransactionDelta
          * @static
          * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-         * @returns {streaming.TransactionDelta} TransactionDelta
+         * @returns {streaming.TransactionDelta & streaming.TransactionDelta.$Shape} TransactionDelta
          * @throws {Error} If the payload is not a reader or valid buffer
          * @throws {$protobuf.util.ProtocolError} If required fields are missing
          */
@@ -2254,9 +2671,13 @@ $root.streaming = (function() {
          * @param {Object.<string,*>} message Plain object to verify
          * @returns {string|null} `null` if valid, otherwise the reason why it is not
          */
-        TransactionDelta.verify = function verify(message) {
+        TransactionDelta.verify = function verify(message, _depth) {
             if (typeof message !== "object" || message === null)
                 return "object expected";
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                return "max depth exceeded";
             if (message.inputMint != null && message.hasOwnProperty("inputMint"))
                 if (!$util.isString(message.inputMint))
                     return "inputMint: string expected";
@@ -2295,63 +2716,76 @@ $root.streaming = (function() {
          * @param {Object.<string,*>} object Plain object
          * @returns {streaming.TransactionDelta} TransactionDelta
          */
-        TransactionDelta.fromObject = function fromObject(object) {
+        TransactionDelta.fromObject = function fromObject(object, _depth) {
             if (object instanceof $root.streaming.TransactionDelta)
                 return object;
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw Error("max depth exceeded");
             var message = new $root.streaming.TransactionDelta();
             if (object.inputMint != null)
-                message.inputMint = String(object.inputMint);
+                if (typeof object.inputMint !== "string" || object.inputMint.length)
+                    message.inputMint = String(object.inputMint);
             if (object.inputAmount != null)
-                if ($util.Long)
-                    (message.inputAmount = $util.Long.fromValue(object.inputAmount)).unsigned = true;
-                else if (typeof object.inputAmount === "string")
-                    message.inputAmount = parseInt(object.inputAmount, 10);
-                else if (typeof object.inputAmount === "number")
-                    message.inputAmount = object.inputAmount;
-                else if (typeof object.inputAmount === "object")
-                    message.inputAmount = new $util.LongBits(object.inputAmount.low >>> 0, object.inputAmount.high >>> 0).toNumber(true);
+                if (typeof object.inputAmount === "object" ? object.inputAmount.low || object.inputAmount.high : Number(object.inputAmount) !== 0)
+                    if ($util.Long)
+                        (message.inputAmount = $util.Long.fromValue(object.inputAmount)).unsigned = true;
+                    else if (typeof object.inputAmount === "string")
+                        message.inputAmount = parseInt(object.inputAmount, 10);
+                    else if (typeof object.inputAmount === "number")
+                        message.inputAmount = object.inputAmount;
+                    else if (typeof object.inputAmount === "object")
+                        message.inputAmount = new $util.LongBits(object.inputAmount.low >>> 0, object.inputAmount.high >>> 0).toNumber(true);
             if (object.outputMint != null)
-                message.outputMint = String(object.outputMint);
+                if (typeof object.outputMint !== "string" || object.outputMint.length)
+                    message.outputMint = String(object.outputMint);
             if (object.expectedOutput != null)
-                if ($util.Long)
-                    (message.expectedOutput = $util.Long.fromValue(object.expectedOutput)).unsigned = true;
-                else if (typeof object.expectedOutput === "string")
-                    message.expectedOutput = parseInt(object.expectedOutput, 10);
-                else if (typeof object.expectedOutput === "number")
-                    message.expectedOutput = object.expectedOutput;
-                else if (typeof object.expectedOutput === "object")
-                    message.expectedOutput = new $util.LongBits(object.expectedOutput.low >>> 0, object.expectedOutput.high >>> 0).toNumber(true);
+                if (typeof object.expectedOutput === "object" ? object.expectedOutput.low || object.expectedOutput.high : Number(object.expectedOutput) !== 0)
+                    if ($util.Long)
+                        (message.expectedOutput = $util.Long.fromValue(object.expectedOutput)).unsigned = true;
+                    else if (typeof object.expectedOutput === "string")
+                        message.expectedOutput = parseInt(object.expectedOutput, 10);
+                    else if (typeof object.expectedOutput === "number")
+                        message.expectedOutput = object.expectedOutput;
+                    else if (typeof object.expectedOutput === "object")
+                        message.expectedOutput = new $util.LongBits(object.expectedOutput.low >>> 0, object.expectedOutput.high >>> 0).toNumber(true);
             if (object.minimumOutput != null)
-                if ($util.Long)
-                    (message.minimumOutput = $util.Long.fromValue(object.minimumOutput)).unsigned = true;
-                else if (typeof object.minimumOutput === "string")
-                    message.minimumOutput = parseInt(object.minimumOutput, 10);
-                else if (typeof object.minimumOutput === "number")
-                    message.minimumOutput = object.minimumOutput;
-                else if (typeof object.minimumOutput === "object")
-                    message.minimumOutput = new $util.LongBits(object.minimumOutput.low >>> 0, object.minimumOutput.high >>> 0).toNumber(true);
+                if (typeof object.minimumOutput === "object" ? object.minimumOutput.low || object.minimumOutput.high : Number(object.minimumOutput) !== 0)
+                    if ($util.Long)
+                        (message.minimumOutput = $util.Long.fromValue(object.minimumOutput)).unsigned = true;
+                    else if (typeof object.minimumOutput === "string")
+                        message.minimumOutput = parseInt(object.minimumOutput, 10);
+                    else if (typeof object.minimumOutput === "number")
+                        message.minimumOutput = object.minimumOutput;
+                    else if (typeof object.minimumOutput === "object")
+                        message.minimumOutput = new $util.LongBits(object.minimumOutput.low >>> 0, object.minimumOutput.high >>> 0).toNumber(true);
             if (object.jitoTipLamports != null)
-                if ($util.Long)
-                    (message.jitoTipLamports = $util.Long.fromValue(object.jitoTipLamports)).unsigned = true;
-                else if (typeof object.jitoTipLamports === "string")
-                    message.jitoTipLamports = parseInt(object.jitoTipLamports, 10);
-                else if (typeof object.jitoTipLamports === "number")
-                    message.jitoTipLamports = object.jitoTipLamports;
-                else if (typeof object.jitoTipLamports === "object")
-                    message.jitoTipLamports = new $util.LongBits(object.jitoTipLamports.low >>> 0, object.jitoTipLamports.high >>> 0).toNumber(true);
+                if (typeof object.jitoTipLamports === "object" ? object.jitoTipLamports.low || object.jitoTipLamports.high : Number(object.jitoTipLamports) !== 0)
+                    if ($util.Long)
+                        (message.jitoTipLamports = $util.Long.fromValue(object.jitoTipLamports)).unsigned = true;
+                    else if (typeof object.jitoTipLamports === "string")
+                        message.jitoTipLamports = parseInt(object.jitoTipLamports, 10);
+                    else if (typeof object.jitoTipLamports === "number")
+                        message.jitoTipLamports = object.jitoTipLamports;
+                    else if (typeof object.jitoTipLamports === "object")
+                        message.jitoTipLamports = new $util.LongBits(object.jitoTipLamports.low >>> 0, object.jitoTipLamports.high >>> 0).toNumber(true);
             if (object.networkFeeLamports != null)
-                if ($util.Long)
-                    (message.networkFeeLamports = $util.Long.fromValue(object.networkFeeLamports)).unsigned = true;
-                else if (typeof object.networkFeeLamports === "string")
-                    message.networkFeeLamports = parseInt(object.networkFeeLamports, 10);
-                else if (typeof object.networkFeeLamports === "number")
-                    message.networkFeeLamports = object.networkFeeLamports;
-                else if (typeof object.networkFeeLamports === "object")
-                    message.networkFeeLamports = new $util.LongBits(object.networkFeeLamports.low >>> 0, object.networkFeeLamports.high >>> 0).toNumber(true);
+                if (typeof object.networkFeeLamports === "object" ? object.networkFeeLamports.low || object.networkFeeLamports.high : Number(object.networkFeeLamports) !== 0)
+                    if ($util.Long)
+                        (message.networkFeeLamports = $util.Long.fromValue(object.networkFeeLamports)).unsigned = true;
+                    else if (typeof object.networkFeeLamports === "string")
+                        message.networkFeeLamports = parseInt(object.networkFeeLamports, 10);
+                    else if (typeof object.networkFeeLamports === "number")
+                        message.networkFeeLamports = object.networkFeeLamports;
+                    else if (typeof object.networkFeeLamports === "object")
+                        message.networkFeeLamports = new $util.LongBits(object.networkFeeLamports.low >>> 0, object.networkFeeLamports.high >>> 0).toNumber(true);
             if (object.platformFeeBps != null)
-                message.platformFeeBps = object.platformFeeBps >>> 0;
+                if (Number(object.platformFeeBps) !== 0)
+                    message.platformFeeBps = object.platformFeeBps >>> 0;
             if (object.id != null)
-                message.id = String(object.id);
+                if (typeof object.id !== "string" || object.id.length)
+                    message.id = String(object.id);
             return message;
         };
 
@@ -2447,18 +2881,17 @@ $root.streaming = (function() {
         };
 
         /**
-         * Gets the default type url for TransactionDelta
+         * Gets the type url for TransactionDelta
          * @function getTypeUrl
          * @memberof streaming.TransactionDelta
          * @static
-         * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
-         * @returns {string} The default type url
+         * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns {string} The type url
          */
-        TransactionDelta.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
-            if (typeUrlPrefix === undefined) {
-                typeUrlPrefix = "type.googleapis.com";
-            }
-            return typeUrlPrefix + "/streaming.TransactionDelta";
+        TransactionDelta.getTypeUrl = function getTypeUrl(prefix) {
+            if (prefix === undefined)
+                prefix = "type.googleapis.com";
+            return prefix + "/streaming.TransactionDelta";
         };
 
         return TransactionDelta;
@@ -2468,30 +2901,43 @@ $root.streaming = (function() {
 
         /**
          * Properties of a TransactionsBuld.
+         * @typedef {Object} streaming.TransactionsBuld.$Properties
+         * @property {Array.<streaming.TrasnactionInstruction.$Properties>|null} [transactions] TransactionsBuld transactions
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding
+         */
+
+        /**
+         * Properties of a TransactionsBuld.
          * @memberof streaming
          * @interface ITransactionsBuld
-         * @property {Array.<streaming.ITrasnactionInstruction>|null} [transactions] TransactionsBuld transactions
+         * @augments streaming.TransactionsBuld.$Properties
+         * @deprecated Use streaming.TransactionsBuld.$Properties instead.
+         */
+
+        /**
+         * Shape of a TransactionsBuld.
+         * @typedef {streaming.TransactionsBuld.$Properties} streaming.TransactionsBuld.$Shape
          */
 
         /**
          * Constructs a new TransactionsBuld.
          * @memberof streaming
          * @classdesc Represents a TransactionsBuld.
-         * @implements ITransactionsBuld
          * @constructor
-         * @param {streaming.ITransactionsBuld=} [properties] Properties to set
+         * @param {streaming.TransactionsBuld.$Properties=} [properties] Properties to set
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding
          */
         function TransactionsBuld(properties) {
             this.transactions = [];
             if (properties)
                 for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
-                    if (properties[keys[i]] != null)
+                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
                         this[keys[i]] = properties[keys[i]];
         }
 
         /**
          * TransactionsBuld transactions.
-         * @member {Array.<streaming.ITrasnactionInstruction>} transactions
+         * @member {Array.<streaming.TrasnactionInstruction.$Properties>} transactions
          * @memberof streaming.TransactionsBuld
          * @instance
          */
@@ -2502,8 +2948,12 @@ $root.streaming = (function() {
          * @function create
          * @memberof streaming.TransactionsBuld
          * @static
-         * @param {streaming.ITransactionsBuld=} [properties] Properties to set
+         * @param {streaming.TransactionsBuld.$Properties=} [properties] Properties to set
          * @returns {streaming.TransactionsBuld} TransactionsBuld instance
+         * @type {{
+         *   (properties: streaming.TransactionsBuld.$Shape): streaming.TransactionsBuld & streaming.TransactionsBuld.$Shape;
+         *   (properties?: streaming.TransactionsBuld.$Properties): streaming.TransactionsBuld;
+         * }}
          */
         TransactionsBuld.create = function create(properties) {
             return new TransactionsBuld(properties);
@@ -2514,7 +2964,7 @@ $root.streaming = (function() {
          * @function encode
          * @memberof streaming.TransactionsBuld
          * @static
-         * @param {streaming.ITransactionsBuld} message TransactionsBuld message or plain object to encode
+         * @param {streaming.TransactionsBuld.$Properties} message TransactionsBuld message or plain object to encode
          * @param {$protobuf.Writer} [writer] Writer to encode to
          * @returns {$protobuf.Writer} Writer
          */
@@ -2524,6 +2974,9 @@ $root.streaming = (function() {
             if (message.transactions != null && message.transactions.length)
                 for (var i = 0; i < message.transactions.length; ++i)
                     $root.streaming.TrasnactionInstruction.encode(message.transactions[i], writer.uint32(/* id 1, wireType 2 =*/10).fork()).ldelim();
+            if (message.$unknowns != null && Object.hasOwnProperty.call(message, "$unknowns"))
+                for (var i = 0; i < message.$unknowns.length; ++i)
+                    writer.raw(message.$unknowns[i]);
             return writer;
         };
 
@@ -2532,7 +2985,7 @@ $root.streaming = (function() {
          * @function encodeDelimited
          * @memberof streaming.TransactionsBuld
          * @static
-         * @param {streaming.ITransactionsBuld} message TransactionsBuld message or plain object to encode
+         * @param {streaming.TransactionsBuld.$Properties} message TransactionsBuld message or plain object to encode
          * @param {$protobuf.Writer} [writer] Writer to encode to
          * @returns {$protobuf.Writer} Writer
          */
@@ -2547,30 +3000,42 @@ $root.streaming = (function() {
          * @static
          * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
          * @param {number} [length] Message length if known beforehand
-         * @returns {streaming.TransactionsBuld} TransactionsBuld
+         * @returns {streaming.TransactionsBuld & streaming.TransactionsBuld.$Shape} TransactionsBuld
          * @throws {Error} If the payload is not a reader or valid buffer
          * @throws {$protobuf.util.ProtocolError} If required fields are missing
          */
-        TransactionsBuld.decode = function decode(reader, length, error) {
+        TransactionsBuld.decode = function decode(reader, length, _end, _depth, _target) {
             if (!(reader instanceof $Reader))
                 reader = $Reader.create(reader);
-            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.TransactionsBuld();
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $Reader.recursionLimit)
+                throw Error("max depth exceeded");
+            var end = length === undefined ? reader.len : reader.pos + length, message = _target || new $root.streaming.TransactionsBuld();
             while (reader.pos < end) {
-                var tag = reader.uint32();
-                if (tag === error)
-                    break;
-                switch (tag >>> 3) {
-                case 1: {
-                        if (!(message.transactions && message.transactions.length))
-                            message.transactions = [];
-                        message.transactions.push($root.streaming.TrasnactionInstruction.decode(reader, reader.uint32()));
-                        break;
-                    }
-                default:
-                    reader.skipType(tag & 7);
+                var start = reader.pos;
+                var tag = reader.tag();
+                if (tag === _end) {
+                    _end = undefined;
                     break;
                 }
+                var wireType = tag & 7;
+                switch (tag >>>= 3) {
+                case 1: {
+                        if (wireType !== 2)
+                            break;
+                        if (!(message.transactions && message.transactions.length))
+                            message.transactions = [];
+                        message.transactions.push($root.streaming.TrasnactionInstruction.decode(reader, reader.uint32(), undefined, _depth + 1));
+                        continue;
+                    }
+                }
+                reader.skipType(wireType, _depth, tag);
+                $util.makeProp(message, "$unknowns", false);
+                (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
             }
+            if (_end !== undefined)
+                throw Error("missing end group");
             return message;
         };
 
@@ -2580,7 +3045,7 @@ $root.streaming = (function() {
          * @memberof streaming.TransactionsBuld
          * @static
          * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-         * @returns {streaming.TransactionsBuld} TransactionsBuld
+         * @returns {streaming.TransactionsBuld & streaming.TransactionsBuld.$Shape} TransactionsBuld
          * @throws {Error} If the payload is not a reader or valid buffer
          * @throws {$protobuf.util.ProtocolError} If required fields are missing
          */
@@ -2598,14 +3063,18 @@ $root.streaming = (function() {
          * @param {Object.<string,*>} message Plain object to verify
          * @returns {string|null} `null` if valid, otherwise the reason why it is not
          */
-        TransactionsBuld.verify = function verify(message) {
+        TransactionsBuld.verify = function verify(message, _depth) {
             if (typeof message !== "object" || message === null)
                 return "object expected";
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                return "max depth exceeded";
             if (message.transactions != null && message.hasOwnProperty("transactions")) {
                 if (!Array.isArray(message.transactions))
                     return "transactions: array expected";
                 for (var i = 0; i < message.transactions.length; ++i) {
-                    var error = $root.streaming.TrasnactionInstruction.verify(message.transactions[i]);
+                    var error = $root.streaming.TrasnactionInstruction.verify(message.transactions[i], _depth + 1);
                     if (error)
                         return "transactions." + error;
                 }
@@ -2621,18 +3090,22 @@ $root.streaming = (function() {
          * @param {Object.<string,*>} object Plain object
          * @returns {streaming.TransactionsBuld} TransactionsBuld
          */
-        TransactionsBuld.fromObject = function fromObject(object) {
+        TransactionsBuld.fromObject = function fromObject(object, _depth) {
             if (object instanceof $root.streaming.TransactionsBuld)
                 return object;
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw Error("max depth exceeded");
             var message = new $root.streaming.TransactionsBuld();
             if (object.transactions) {
                 if (!Array.isArray(object.transactions))
                     throw TypeError(".streaming.TransactionsBuld.transactions: array expected");
-                message.transactions = [];
+                message.transactions = Array(object.transactions.length);
                 for (var i = 0; i < object.transactions.length; ++i) {
                     if (typeof object.transactions[i] !== "object")
                         throw TypeError(".streaming.TransactionsBuld.transactions: object expected");
-                    message.transactions[i] = $root.streaming.TrasnactionInstruction.fromObject(object.transactions[i]);
+                    message.transactions[i] = $root.streaming.TrasnactionInstruction.fromObject(object.transactions[i], _depth + 1);
                 }
             }
             return message;
@@ -2654,7 +3127,7 @@ $root.streaming = (function() {
             if (options.arrays || options.defaults)
                 object.transactions = [];
             if (message.transactions && message.transactions.length) {
-                object.transactions = [];
+                object.transactions = Array(message.transactions.length);
                 for (var j = 0; j < message.transactions.length; ++j)
                     object.transactions[j] = $root.streaming.TrasnactionInstruction.toObject(message.transactions[j], options);
             }
@@ -2673,18 +3146,17 @@ $root.streaming = (function() {
         };
 
         /**
-         * Gets the default type url for TransactionsBuld
+         * Gets the type url for TransactionsBuld
          * @function getTypeUrl
          * @memberof streaming.TransactionsBuld
          * @static
-         * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
-         * @returns {string} The default type url
+         * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns {string} The type url
          */
-        TransactionsBuld.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
-            if (typeUrlPrefix === undefined) {
-                typeUrlPrefix = "type.googleapis.com";
-            }
-            return typeUrlPrefix + "/streaming.TransactionsBuld";
+        TransactionsBuld.getTypeUrl = function getTypeUrl(prefix) {
+            if (prefix === undefined)
+                prefix = "type.googleapis.com";
+            return prefix + "/streaming.TransactionsBuld";
         };
 
         return TransactionsBuld;
@@ -2694,29 +3166,43 @@ $root.streaming = (function() {
 
         /**
          * Properties of a TrasnactionInstruction.
-         * @memberof streaming
-         * @interface ITrasnactionInstruction
+         * @typedef {Object} streaming.TrasnactionInstruction.$Properties
          * @property {string|null} [inputMint] TrasnactionInstruction inputMint
          * @property {string|null} [outputMint] TrasnactionInstruction outputMint
          * @property {number|Long|null} [amount] TrasnactionInstruction amount
          * @property {number|null} [slippageBps] TrasnactionInstruction slippageBps
-         * @property {streaming.IQuoteOptions|null} [options] TrasnactionInstruction options
+         * @property {streaming.QuoteOptions.$Properties|null} [options] TrasnactionInstruction options
          * @property {string|null} [userPk] TrasnactionInstruction userPk
+         * @property {string|null} [optionalDestination] TrasnactionInstruction optionalDestination
          * @property {string|null} [id] TrasnactionInstruction id
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding
+         */
+
+        /**
+         * Properties of a TrasnactionInstruction.
+         * @memberof streaming
+         * @interface ITrasnactionInstruction
+         * @augments streaming.TrasnactionInstruction.$Properties
+         * @deprecated Use streaming.TrasnactionInstruction.$Properties instead.
+         */
+
+        /**
+         * Shape of a TrasnactionInstruction.
+         * @typedef {streaming.TrasnactionInstruction.$Properties} streaming.TrasnactionInstruction.$Shape
          */
 
         /**
          * Constructs a new TrasnactionInstruction.
          * @memberof streaming
          * @classdesc Represents a TrasnactionInstruction.
-         * @implements ITrasnactionInstruction
          * @constructor
-         * @param {streaming.ITrasnactionInstruction=} [properties] Properties to set
+         * @param {streaming.TrasnactionInstruction.$Properties=} [properties] Properties to set
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding
          */
         function TrasnactionInstruction(properties) {
             if (properties)
                 for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
-                    if (properties[keys[i]] != null)
+                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
                         this[keys[i]] = properties[keys[i]];
         }
 
@@ -2754,7 +3240,7 @@ $root.streaming = (function() {
 
         /**
          * TrasnactionInstruction options.
-         * @member {streaming.IQuoteOptions|null|undefined} options
+         * @member {streaming.QuoteOptions.$Properties|null|undefined} options
          * @memberof streaming.TrasnactionInstruction
          * @instance
          */
@@ -2769,6 +3255,14 @@ $root.streaming = (function() {
         TrasnactionInstruction.prototype.userPk = "";
 
         /**
+         * TrasnactionInstruction optionalDestination.
+         * @member {string|null|undefined} optionalDestination
+         * @memberof streaming.TrasnactionInstruction
+         * @instance
+         */
+        TrasnactionInstruction.prototype.optionalDestination = null;
+
+        /**
          * TrasnactionInstruction id.
          * @member {string} id
          * @memberof streaming.TrasnactionInstruction
@@ -2776,13 +3270,26 @@ $root.streaming = (function() {
          */
         TrasnactionInstruction.prototype.id = "";
 
+        // OneOf field names bound to virtual getters and setters
+        var $oneOfFields;
+
+        // Virtual OneOf for proto3 optional field
+        Object.defineProperty(TrasnactionInstruction.prototype, "_optionalDestination", {
+            get: $util.oneOfGetter($oneOfFields = ["optionalDestination"]),
+            set: $util.oneOfSetter($oneOfFields)
+        });
+
         /**
          * Creates a new TrasnactionInstruction instance using the specified properties.
          * @function create
          * @memberof streaming.TrasnactionInstruction
          * @static
-         * @param {streaming.ITrasnactionInstruction=} [properties] Properties to set
+         * @param {streaming.TrasnactionInstruction.$Properties=} [properties] Properties to set
          * @returns {streaming.TrasnactionInstruction} TrasnactionInstruction instance
+         * @type {{
+         *   (properties: streaming.TrasnactionInstruction.$Shape): streaming.TrasnactionInstruction & streaming.TrasnactionInstruction.$Shape;
+         *   (properties?: streaming.TrasnactionInstruction.$Properties): streaming.TrasnactionInstruction;
+         * }}
          */
         TrasnactionInstruction.create = function create(properties) {
             return new TrasnactionInstruction(properties);
@@ -2793,7 +3300,7 @@ $root.streaming = (function() {
          * @function encode
          * @memberof streaming.TrasnactionInstruction
          * @static
-         * @param {streaming.ITrasnactionInstruction} message TrasnactionInstruction message or plain object to encode
+         * @param {streaming.TrasnactionInstruction.$Properties} message TrasnactionInstruction message or plain object to encode
          * @param {$protobuf.Writer} [writer] Writer to encode to
          * @returns {$protobuf.Writer} Writer
          */
@@ -2812,8 +3319,13 @@ $root.streaming = (function() {
                 $root.streaming.QuoteOptions.encode(message.options, writer.uint32(/* id 5, wireType 2 =*/42).fork()).ldelim();
             if (message.userPk != null && Object.hasOwnProperty.call(message, "userPk"))
                 writer.uint32(/* id 6, wireType 2 =*/50).string(message.userPk);
+            if (message.optionalDestination != null && Object.hasOwnProperty.call(message, "optionalDestination"))
+                writer.uint32(/* id 7, wireType 2 =*/58).string(message.optionalDestination);
             if (message.id != null && Object.hasOwnProperty.call(message, "id"))
-                writer.uint32(/* id 7, wireType 2 =*/58).string(message.id);
+                writer.uint32(/* id 8, wireType 2 =*/66).string(message.id);
+            if (message.$unknowns != null && Object.hasOwnProperty.call(message, "$unknowns"))
+                for (var i = 0; i < message.$unknowns.length; ++i)
+                    writer.raw(message.$unknowns[i]);
             return writer;
         };
 
@@ -2822,7 +3334,7 @@ $root.streaming = (function() {
          * @function encodeDelimited
          * @memberof streaming.TrasnactionInstruction
          * @static
-         * @param {streaming.ITrasnactionInstruction} message TrasnactionInstruction message or plain object to encode
+         * @param {streaming.TrasnactionInstruction.$Properties} message TrasnactionInstruction message or plain object to encode
          * @param {$protobuf.Writer} [writer] Writer to encode to
          * @returns {$protobuf.Writer} Writer
          */
@@ -2837,52 +3349,101 @@ $root.streaming = (function() {
          * @static
          * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
          * @param {number} [length] Message length if known beforehand
-         * @returns {streaming.TrasnactionInstruction} TrasnactionInstruction
+         * @returns {streaming.TrasnactionInstruction & streaming.TrasnactionInstruction.$Shape} TrasnactionInstruction
          * @throws {Error} If the payload is not a reader or valid buffer
          * @throws {$protobuf.util.ProtocolError} If required fields are missing
          */
-        TrasnactionInstruction.decode = function decode(reader, length, error) {
+        TrasnactionInstruction.decode = function decode(reader, length, _end, _depth, _target) {
             if (!(reader instanceof $Reader))
                 reader = $Reader.create(reader);
-            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.TrasnactionInstruction();
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $Reader.recursionLimit)
+                throw Error("max depth exceeded");
+            var end = length === undefined ? reader.len : reader.pos + length, message = _target || new $root.streaming.TrasnactionInstruction(), value;
             while (reader.pos < end) {
-                var tag = reader.uint32();
-                if (tag === error)
-                    break;
-                switch (tag >>> 3) {
-                case 1: {
-                        message.inputMint = reader.string();
-                        break;
-                    }
-                case 2: {
-                        message.outputMint = reader.string();
-                        break;
-                    }
-                case 3: {
-                        message.amount = reader.uint64();
-                        break;
-                    }
-                case 4: {
-                        message.slippageBps = reader.uint32();
-                        break;
-                    }
-                case 5: {
-                        message.options = $root.streaming.QuoteOptions.decode(reader, reader.uint32());
-                        break;
-                    }
-                case 6: {
-                        message.userPk = reader.string();
-                        break;
-                    }
-                case 7: {
-                        message.id = reader.string();
-                        break;
-                    }
-                default:
-                    reader.skipType(tag & 7);
+                var start = reader.pos;
+                var tag = reader.tag();
+                if (tag === _end) {
+                    _end = undefined;
                     break;
                 }
+                var wireType = tag & 7;
+                switch (tag >>>= 3) {
+                case 1: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.string()).length)
+                            message.inputMint = value;
+                        else
+                            delete message.inputMint;
+                        continue;
+                    }
+                case 2: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.string()).length)
+                            message.outputMint = value;
+                        else
+                            delete message.outputMint;
+                        continue;
+                    }
+                case 3: {
+                        if (wireType !== 0)
+                            break;
+                        if (typeof (value = reader.uint64()) === "object" ? value.low || value.high : value !== 0)
+                            message.amount = value;
+                        else
+                            delete message.amount;
+                        continue;
+                    }
+                case 4: {
+                        if (wireType !== 0)
+                            break;
+                        if (value = reader.uint32())
+                            message.slippageBps = value;
+                        else
+                            delete message.slippageBps;
+                        continue;
+                    }
+                case 5: {
+                        if (wireType !== 2)
+                            break;
+                        message.options = $root.streaming.QuoteOptions.decode(reader, reader.uint32(), undefined, _depth + 1, message.options);
+                        continue;
+                    }
+                case 6: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.string()).length)
+                            message.userPk = value;
+                        else
+                            delete message.userPk;
+                        continue;
+                    }
+                case 7: {
+                        if (wireType !== 2)
+                            break;
+                        message.optionalDestination = reader.string();
+                        message._optionalDestination = "optionalDestination";
+                        continue;
+                    }
+                case 8: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.string()).length)
+                            message.id = value;
+                        else
+                            delete message.id;
+                        continue;
+                    }
+                }
+                reader.skipType(wireType, _depth, tag);
+                $util.makeProp(message, "$unknowns", false);
+                (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
             }
+            if (_end !== undefined)
+                throw Error("missing end group");
             return message;
         };
 
@@ -2892,7 +3453,7 @@ $root.streaming = (function() {
          * @memberof streaming.TrasnactionInstruction
          * @static
          * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-         * @returns {streaming.TrasnactionInstruction} TrasnactionInstruction
+         * @returns {streaming.TrasnactionInstruction & streaming.TrasnactionInstruction.$Shape} TrasnactionInstruction
          * @throws {Error} If the payload is not a reader or valid buffer
          * @throws {$protobuf.util.ProtocolError} If required fields are missing
          */
@@ -2910,9 +3471,14 @@ $root.streaming = (function() {
          * @param {Object.<string,*>} message Plain object to verify
          * @returns {string|null} `null` if valid, otherwise the reason why it is not
          */
-        TrasnactionInstruction.verify = function verify(message) {
+        TrasnactionInstruction.verify = function verify(message, _depth) {
             if (typeof message !== "object" || message === null)
                 return "object expected";
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                return "max depth exceeded";
+            var properties = {};
             if (message.inputMint != null && message.hasOwnProperty("inputMint"))
                 if (!$util.isString(message.inputMint))
                     return "inputMint: string expected";
@@ -2926,13 +3492,18 @@ $root.streaming = (function() {
                 if (!$util.isInteger(message.slippageBps))
                     return "slippageBps: integer expected";
             if (message.options != null && message.hasOwnProperty("options")) {
-                var error = $root.streaming.QuoteOptions.verify(message.options);
+                var error = $root.streaming.QuoteOptions.verify(message.options, _depth + 1);
                 if (error)
                     return "options." + error;
             }
             if (message.userPk != null && message.hasOwnProperty("userPk"))
                 if (!$util.isString(message.userPk))
                     return "userPk: string expected";
+            if (message.optionalDestination != null && message.hasOwnProperty("optionalDestination")) {
+                properties._optionalDestination = 1;
+                if (!$util.isString(message.optionalDestination))
+                    return "optionalDestination: string expected";
+            }
             if (message.id != null && message.hasOwnProperty("id"))
                 if (!$util.isString(message.id))
                     return "id: string expected";
@@ -2947,34 +3518,46 @@ $root.streaming = (function() {
          * @param {Object.<string,*>} object Plain object
          * @returns {streaming.TrasnactionInstruction} TrasnactionInstruction
          */
-        TrasnactionInstruction.fromObject = function fromObject(object) {
+        TrasnactionInstruction.fromObject = function fromObject(object, _depth) {
             if (object instanceof $root.streaming.TrasnactionInstruction)
                 return object;
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw Error("max depth exceeded");
             var message = new $root.streaming.TrasnactionInstruction();
             if (object.inputMint != null)
-                message.inputMint = String(object.inputMint);
+                if (typeof object.inputMint !== "string" || object.inputMint.length)
+                    message.inputMint = String(object.inputMint);
             if (object.outputMint != null)
-                message.outputMint = String(object.outputMint);
+                if (typeof object.outputMint !== "string" || object.outputMint.length)
+                    message.outputMint = String(object.outputMint);
             if (object.amount != null)
-                if ($util.Long)
-                    (message.amount = $util.Long.fromValue(object.amount)).unsigned = true;
-                else if (typeof object.amount === "string")
-                    message.amount = parseInt(object.amount, 10);
-                else if (typeof object.amount === "number")
-                    message.amount = object.amount;
-                else if (typeof object.amount === "object")
-                    message.amount = new $util.LongBits(object.amount.low >>> 0, object.amount.high >>> 0).toNumber(true);
+                if (typeof object.amount === "object" ? object.amount.low || object.amount.high : Number(object.amount) !== 0)
+                    if ($util.Long)
+                        (message.amount = $util.Long.fromValue(object.amount)).unsigned = true;
+                    else if (typeof object.amount === "string")
+                        message.amount = parseInt(object.amount, 10);
+                    else if (typeof object.amount === "number")
+                        message.amount = object.amount;
+                    else if (typeof object.amount === "object")
+                        message.amount = new $util.LongBits(object.amount.low >>> 0, object.amount.high >>> 0).toNumber(true);
             if (object.slippageBps != null)
-                message.slippageBps = object.slippageBps >>> 0;
+                if (Number(object.slippageBps) !== 0)
+                    message.slippageBps = object.slippageBps >>> 0;
             if (object.options != null) {
                 if (typeof object.options !== "object")
                     throw TypeError(".streaming.TrasnactionInstruction.options: object expected");
-                message.options = $root.streaming.QuoteOptions.fromObject(object.options);
+                message.options = $root.streaming.QuoteOptions.fromObject(object.options, _depth + 1);
             }
             if (object.userPk != null)
-                message.userPk = String(object.userPk);
+                if (typeof object.userPk !== "string" || object.userPk.length)
+                    message.userPk = String(object.userPk);
+            if (object.optionalDestination != null)
+                message.optionalDestination = String(object.optionalDestination);
             if (object.id != null)
-                message.id = String(object.id);
+                if (typeof object.id !== "string" || object.id.length)
+                    message.id = String(object.id);
             return message;
         };
 
@@ -3019,6 +3602,11 @@ $root.streaming = (function() {
                 object.options = $root.streaming.QuoteOptions.toObject(message.options, options);
             if (message.userPk != null && message.hasOwnProperty("userPk"))
                 object.userPk = message.userPk;
+            if (message.optionalDestination != null && message.hasOwnProperty("optionalDestination")) {
+                object.optionalDestination = message.optionalDestination;
+                if (options.oneofs)
+                    object._optionalDestination = "optionalDestination";
+            }
             if (message.id != null && message.hasOwnProperty("id"))
                 object.id = message.id;
             return object;
@@ -3036,18 +3624,17 @@ $root.streaming = (function() {
         };
 
         /**
-         * Gets the default type url for TrasnactionInstruction
+         * Gets the type url for TrasnactionInstruction
          * @function getTypeUrl
          * @memberof streaming.TrasnactionInstruction
          * @static
-         * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
-         * @returns {string} The default type url
+         * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns {string} The type url
          */
-        TrasnactionInstruction.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
-            if (typeUrlPrefix === undefined) {
-                typeUrlPrefix = "type.googleapis.com";
-            }
-            return typeUrlPrefix + "/streaming.TrasnactionInstruction";
+        TrasnactionInstruction.getTypeUrl = function getTypeUrl(prefix) {
+            if (prefix === undefined)
+                prefix = "type.googleapis.com";
+            return prefix + "/streaming.TrasnactionInstruction";
         };
 
         return TrasnactionInstruction;
@@ -3057,8 +3644,7 @@ $root.streaming = (function() {
 
         /**
          * Properties of a QuoteOptions.
-         * @memberof streaming
-         * @interface IQuoteOptions
+         * @typedef {Object} streaming.QuoteOptions.$Properties
          * @property {number|null} [swapMode] QuoteOptions swapMode
          * @property {Array.<string>|null} [dexes] QuoteOptions dexes
          * @property {Array.<string>|null} [excludeDexes] QuoteOptions excludeDexes
@@ -3068,22 +3654,36 @@ $root.streaming = (function() {
          * @property {boolean|null} [asLegacyTransaction] QuoteOptions asLegacyTransaction
          * @property {number|null} [maxAccounts] QuoteOptions maxAccounts
          * @property {number|null} [blockhashSlotsToExpiry] QuoteOptions blockhashSlotsToExpiry
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding
+         */
+
+        /**
+         * Properties of a QuoteOptions.
+         * @memberof streaming
+         * @interface IQuoteOptions
+         * @augments streaming.QuoteOptions.$Properties
+         * @deprecated Use streaming.QuoteOptions.$Properties instead.
+         */
+
+        /**
+         * Shape of a QuoteOptions.
+         * @typedef {streaming.QuoteOptions.$Properties} streaming.QuoteOptions.$Shape
          */
 
         /**
          * Constructs a new QuoteOptions.
          * @memberof streaming
          * @classdesc Represents a QuoteOptions.
-         * @implements IQuoteOptions
          * @constructor
-         * @param {streaming.IQuoteOptions=} [properties] Properties to set
+         * @param {streaming.QuoteOptions.$Properties=} [properties] Properties to set
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding
          */
         function QuoteOptions(properties) {
             this.dexes = [];
             this.excludeDexes = [];
             if (properties)
                 for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
-                    if (properties[keys[i]] != null)
+                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
                         this[keys[i]] = properties[keys[i]];
         }
 
@@ -3209,8 +3809,12 @@ $root.streaming = (function() {
          * @function create
          * @memberof streaming.QuoteOptions
          * @static
-         * @param {streaming.IQuoteOptions=} [properties] Properties to set
+         * @param {streaming.QuoteOptions.$Properties=} [properties] Properties to set
          * @returns {streaming.QuoteOptions} QuoteOptions instance
+         * @type {{
+         *   (properties: streaming.QuoteOptions.$Shape): streaming.QuoteOptions & streaming.QuoteOptions.$Shape;
+         *   (properties?: streaming.QuoteOptions.$Properties): streaming.QuoteOptions;
+         * }}
          */
         QuoteOptions.create = function create(properties) {
             return new QuoteOptions(properties);
@@ -3221,7 +3825,7 @@ $root.streaming = (function() {
          * @function encode
          * @memberof streaming.QuoteOptions
          * @static
-         * @param {streaming.IQuoteOptions} message QuoteOptions message or plain object to encode
+         * @param {streaming.QuoteOptions.$Properties} message QuoteOptions message or plain object to encode
          * @param {$protobuf.Writer} [writer] Writer to encode to
          * @returns {$protobuf.Writer} Writer
          */
@@ -3248,6 +3852,9 @@ $root.streaming = (function() {
                 writer.uint32(/* id 8, wireType 0 =*/64).uint32(message.maxAccounts);
             if (message.blockhashSlotsToExpiry != null && Object.hasOwnProperty.call(message, "blockhashSlotsToExpiry"))
                 writer.uint32(/* id 9, wireType 0 =*/72).uint32(message.blockhashSlotsToExpiry);
+            if (message.$unknowns != null && Object.hasOwnProperty.call(message, "$unknowns"))
+                for (var i = 0; i < message.$unknowns.length; ++i)
+                    writer.raw(message.$unknowns[i]);
             return writer;
         };
 
@@ -3256,7 +3863,7 @@ $root.streaming = (function() {
          * @function encodeDelimited
          * @memberof streaming.QuoteOptions
          * @static
-         * @param {streaming.IQuoteOptions} message QuoteOptions message or plain object to encode
+         * @param {streaming.QuoteOptions.$Properties} message QuoteOptions message or plain object to encode
          * @param {$protobuf.Writer} [writer] Writer to encode to
          * @returns {$protobuf.Writer} Writer
          */
@@ -3271,64 +3878,99 @@ $root.streaming = (function() {
          * @static
          * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
          * @param {number} [length] Message length if known beforehand
-         * @returns {streaming.QuoteOptions} QuoteOptions
+         * @returns {streaming.QuoteOptions & streaming.QuoteOptions.$Shape} QuoteOptions
          * @throws {Error} If the payload is not a reader or valid buffer
          * @throws {$protobuf.util.ProtocolError} If required fields are missing
          */
-        QuoteOptions.decode = function decode(reader, length, error) {
+        QuoteOptions.decode = function decode(reader, length, _end, _depth, _target) {
             if (!(reader instanceof $Reader))
                 reader = $Reader.create(reader);
-            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.QuoteOptions();
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $Reader.recursionLimit)
+                throw Error("max depth exceeded");
+            var end = length === undefined ? reader.len : reader.pos + length, message = _target || new $root.streaming.QuoteOptions();
             while (reader.pos < end) {
-                var tag = reader.uint32();
-                if (tag === error)
+                var start = reader.pos;
+                var tag = reader.tag();
+                if (tag === _end) {
+                    _end = undefined;
                     break;
-                switch (tag >>> 3) {
+                }
+                var wireType = tag & 7;
+                switch (tag >>>= 3) {
                 case 1: {
+                        if (wireType !== 0)
+                            break;
                         message.swapMode = reader.uint32();
-                        break;
+                        message._swapMode = "swapMode";
+                        continue;
                     }
                 case 2: {
+                        if (wireType !== 2)
+                            break;
                         if (!(message.dexes && message.dexes.length))
                             message.dexes = [];
                         message.dexes.push(reader.string());
-                        break;
+                        continue;
                     }
                 case 3: {
+                        if (wireType !== 2)
+                            break;
                         if (!(message.excludeDexes && message.excludeDexes.length))
                             message.excludeDexes = [];
                         message.excludeDexes.push(reader.string());
-                        break;
+                        continue;
                     }
                 case 4: {
+                        if (wireType !== 0)
+                            break;
                         message.dynamicSlippage = reader.bool();
-                        break;
+                        message._dynamicSlippage = "dynamicSlippage";
+                        continue;
                     }
                 case 5: {
+                        if (wireType !== 0)
+                            break;
                         message.restrictIntermediateTokens = reader.bool();
-                        break;
+                        message._restrictIntermediateTokens = "restrictIntermediateTokens";
+                        continue;
                     }
                 case 6: {
+                        if (wireType !== 0)
+                            break;
                         message.onlyDirectRoutes = reader.bool();
-                        break;
+                        message._onlyDirectRoutes = "onlyDirectRoutes";
+                        continue;
                     }
                 case 7: {
+                        if (wireType !== 0)
+                            break;
                         message.asLegacyTransaction = reader.bool();
-                        break;
+                        message._asLegacyTransaction = "asLegacyTransaction";
+                        continue;
                     }
                 case 8: {
+                        if (wireType !== 0)
+                            break;
                         message.maxAccounts = reader.uint32();
-                        break;
+                        message._maxAccounts = "maxAccounts";
+                        continue;
                     }
                 case 9: {
+                        if (wireType !== 0)
+                            break;
                         message.blockhashSlotsToExpiry = reader.uint32();
-                        break;
+                        message._blockhashSlotsToExpiry = "blockhashSlotsToExpiry";
+                        continue;
                     }
-                default:
-                    reader.skipType(tag & 7);
-                    break;
                 }
+                reader.skipType(wireType, _depth, tag);
+                $util.makeProp(message, "$unknowns", false);
+                (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
             }
+            if (_end !== undefined)
+                throw Error("missing end group");
             return message;
         };
 
@@ -3338,7 +3980,7 @@ $root.streaming = (function() {
          * @memberof streaming.QuoteOptions
          * @static
          * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-         * @returns {streaming.QuoteOptions} QuoteOptions
+         * @returns {streaming.QuoteOptions & streaming.QuoteOptions.$Shape} QuoteOptions
          * @throws {Error} If the payload is not a reader or valid buffer
          * @throws {$protobuf.util.ProtocolError} If required fields are missing
          */
@@ -3356,9 +3998,13 @@ $root.streaming = (function() {
          * @param {Object.<string,*>} message Plain object to verify
          * @returns {string|null} `null` if valid, otherwise the reason why it is not
          */
-        QuoteOptions.verify = function verify(message) {
+        QuoteOptions.verify = function verify(message, _depth) {
             if (typeof message !== "object" || message === null)
                 return "object expected";
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                return "max depth exceeded";
             var properties = {};
             if (message.swapMode != null && message.hasOwnProperty("swapMode")) {
                 properties._swapMode = 1;
@@ -3420,23 +4066,27 @@ $root.streaming = (function() {
          * @param {Object.<string,*>} object Plain object
          * @returns {streaming.QuoteOptions} QuoteOptions
          */
-        QuoteOptions.fromObject = function fromObject(object) {
+        QuoteOptions.fromObject = function fromObject(object, _depth) {
             if (object instanceof $root.streaming.QuoteOptions)
                 return object;
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw Error("max depth exceeded");
             var message = new $root.streaming.QuoteOptions();
             if (object.swapMode != null)
                 message.swapMode = object.swapMode >>> 0;
             if (object.dexes) {
                 if (!Array.isArray(object.dexes))
                     throw TypeError(".streaming.QuoteOptions.dexes: array expected");
-                message.dexes = [];
+                message.dexes = Array(object.dexes.length);
                 for (var i = 0; i < object.dexes.length; ++i)
                     message.dexes[i] = String(object.dexes[i]);
             }
             if (object.excludeDexes) {
                 if (!Array.isArray(object.excludeDexes))
                     throw TypeError(".streaming.QuoteOptions.excludeDexes: array expected");
-                message.excludeDexes = [];
+                message.excludeDexes = Array(object.excludeDexes.length);
                 for (var i = 0; i < object.excludeDexes.length; ++i)
                     message.excludeDexes[i] = String(object.excludeDexes[i]);
             }
@@ -3478,12 +4128,12 @@ $root.streaming = (function() {
                     object._swapMode = "swapMode";
             }
             if (message.dexes && message.dexes.length) {
-                object.dexes = [];
+                object.dexes = Array(message.dexes.length);
                 for (var j = 0; j < message.dexes.length; ++j)
                     object.dexes[j] = message.dexes[j];
             }
             if (message.excludeDexes && message.excludeDexes.length) {
-                object.excludeDexes = [];
+                object.excludeDexes = Array(message.excludeDexes.length);
                 for (var j = 0; j < message.excludeDexes.length; ++j)
                     object.excludeDexes[j] = message.excludeDexes[j];
             }
@@ -3532,18 +4182,17 @@ $root.streaming = (function() {
         };
 
         /**
-         * Gets the default type url for QuoteOptions
+         * Gets the type url for QuoteOptions
          * @function getTypeUrl
          * @memberof streaming.QuoteOptions
          * @static
-         * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
-         * @returns {string} The default type url
+         * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns {string} The type url
          */
-        QuoteOptions.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
-            if (typeUrlPrefix === undefined) {
-                typeUrlPrefix = "type.googleapis.com";
-            }
-            return typeUrlPrefix + "/streaming.QuoteOptions";
+        QuoteOptions.getTypeUrl = function getTypeUrl(prefix) {
+            if (prefix === undefined)
+                prefix = "type.googleapis.com";
+            return prefix + "/streaming.QuoteOptions";
         };
 
         return QuoteOptions;
@@ -3553,22 +4202,35 @@ $root.streaming = (function() {
 
         /**
          * Properties of an Empty.
+         * @typedef {Object} streaming.Empty.$Properties
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding
+         */
+
+        /**
+         * Properties of an Empty.
          * @memberof streaming
          * @interface IEmpty
+         * @augments streaming.Empty.$Properties
+         * @deprecated Use streaming.Empty.$Properties instead.
+         */
+
+        /**
+         * Shape of an Empty.
+         * @typedef {streaming.Empty.$Properties} streaming.Empty.$Shape
          */
 
         /**
          * Constructs a new Empty.
          * @memberof streaming
          * @classdesc Represents an Empty.
-         * @implements IEmpty
          * @constructor
-         * @param {streaming.IEmpty=} [properties] Properties to set
+         * @param {streaming.Empty.$Properties=} [properties] Properties to set
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding
          */
         function Empty(properties) {
             if (properties)
                 for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
-                    if (properties[keys[i]] != null)
+                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
                         this[keys[i]] = properties[keys[i]];
         }
 
@@ -3577,8 +4239,12 @@ $root.streaming = (function() {
          * @function create
          * @memberof streaming.Empty
          * @static
-         * @param {streaming.IEmpty=} [properties] Properties to set
+         * @param {streaming.Empty.$Properties=} [properties] Properties to set
          * @returns {streaming.Empty} Empty instance
+         * @type {{
+         *   (properties: streaming.Empty.$Shape): streaming.Empty & streaming.Empty.$Shape;
+         *   (properties?: streaming.Empty.$Properties): streaming.Empty;
+         * }}
          */
         Empty.create = function create(properties) {
             return new Empty(properties);
@@ -3589,13 +4255,16 @@ $root.streaming = (function() {
          * @function encode
          * @memberof streaming.Empty
          * @static
-         * @param {streaming.IEmpty} message Empty message or plain object to encode
+         * @param {streaming.Empty.$Properties} message Empty message or plain object to encode
          * @param {$protobuf.Writer} [writer] Writer to encode to
          * @returns {$protobuf.Writer} Writer
          */
         Empty.encode = function encode(message, writer) {
             if (!writer)
                 writer = $Writer.create();
+            if (message.$unknowns != null && Object.hasOwnProperty.call(message, "$unknowns"))
+                for (var i = 0; i < message.$unknowns.length; ++i)
+                    writer.raw(message.$unknowns[i]);
             return writer;
         };
 
@@ -3604,7 +4273,7 @@ $root.streaming = (function() {
          * @function encodeDelimited
          * @memberof streaming.Empty
          * @static
-         * @param {streaming.IEmpty} message Empty message or plain object to encode
+         * @param {streaming.Empty.$Properties} message Empty message or plain object to encode
          * @param {$protobuf.Writer} [writer] Writer to encode to
          * @returns {$protobuf.Writer} Writer
          */
@@ -3619,24 +4288,31 @@ $root.streaming = (function() {
          * @static
          * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
          * @param {number} [length] Message length if known beforehand
-         * @returns {streaming.Empty} Empty
+         * @returns {streaming.Empty & streaming.Empty.$Shape} Empty
          * @throws {Error} If the payload is not a reader or valid buffer
          * @throws {$protobuf.util.ProtocolError} If required fields are missing
          */
-        Empty.decode = function decode(reader, length, error) {
+        Empty.decode = function decode(reader, length, _end, _depth, _target) {
             if (!(reader instanceof $Reader))
                 reader = $Reader.create(reader);
-            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.Empty();
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $Reader.recursionLimit)
+                throw Error("max depth exceeded");
+            var end = length === undefined ? reader.len : reader.pos + length, message = _target || new $root.streaming.Empty();
             while (reader.pos < end) {
-                var tag = reader.uint32();
-                if (tag === error)
-                    break;
-                switch (tag >>> 3) {
-                default:
-                    reader.skipType(tag & 7);
+                var start = reader.pos;
+                var tag = reader.tag();
+                if (tag === _end) {
+                    _end = undefined;
                     break;
                 }
+                reader.skipType(tag & 7, _depth, tag);
+                $util.makeProp(message, "$unknowns", false);
+                (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
             }
+            if (_end !== undefined)
+                throw Error("missing end group");
             return message;
         };
 
@@ -3646,7 +4322,7 @@ $root.streaming = (function() {
          * @memberof streaming.Empty
          * @static
          * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-         * @returns {streaming.Empty} Empty
+         * @returns {streaming.Empty & streaming.Empty.$Shape} Empty
          * @throws {Error} If the payload is not a reader or valid buffer
          * @throws {$protobuf.util.ProtocolError} If required fields are missing
          */
@@ -3664,9 +4340,13 @@ $root.streaming = (function() {
          * @param {Object.<string,*>} message Plain object to verify
          * @returns {string|null} `null` if valid, otherwise the reason why it is not
          */
-        Empty.verify = function verify(message) {
+        Empty.verify = function verify(message, _depth) {
             if (typeof message !== "object" || message === null)
                 return "object expected";
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                return "max depth exceeded";
             return null;
         };
 
@@ -3678,9 +4358,13 @@ $root.streaming = (function() {
          * @param {Object.<string,*>} object Plain object
          * @returns {streaming.Empty} Empty
          */
-        Empty.fromObject = function fromObject(object) {
+        Empty.fromObject = function fromObject(object, _depth) {
             if (object instanceof $root.streaming.Empty)
                 return object;
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw Error("max depth exceeded");
             return new $root.streaming.Empty();
         };
 
@@ -3709,18 +4393,17 @@ $root.streaming = (function() {
         };
 
         /**
-         * Gets the default type url for Empty
+         * Gets the type url for Empty
          * @function getTypeUrl
          * @memberof streaming.Empty
          * @static
-         * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
-         * @returns {string} The default type url
+         * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns {string} The type url
          */
-        Empty.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
-            if (typeUrlPrefix === undefined) {
-                typeUrlPrefix = "type.googleapis.com";
-            }
-            return typeUrlPrefix + "/streaming.Empty";
+        Empty.getTypeUrl = function getTypeUrl(prefix) {
+            if (prefix === undefined)
+                prefix = "type.googleapis.com";
+            return prefix + "/streaming.Empty";
         };
 
         return Empty;
@@ -3730,27 +4413,40 @@ $root.streaming = (function() {
 
         /**
          * Properties of a CoinsData.
-         * @memberof streaming
-         * @interface ICoinsData
+         * @typedef {Object} streaming.CoinsData.$Properties
          * @property {string|null} [price] CoinsData price
          * @property {string|null} [changePercent] CoinsData changePercent
          * @property {string|null} [imageUrl] CoinsData imageUrl
          * @property {number|null} [rank] CoinsData rank
          * @property {string|null} [coinName] CoinsData coinName
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding
+         */
+
+        /**
+         * Properties of a CoinsData.
+         * @memberof streaming
+         * @interface ICoinsData
+         * @augments streaming.CoinsData.$Properties
+         * @deprecated Use streaming.CoinsData.$Properties instead.
+         */
+
+        /**
+         * Shape of a CoinsData.
+         * @typedef {streaming.CoinsData.$Properties} streaming.CoinsData.$Shape
          */
 
         /**
          * Constructs a new CoinsData.
          * @memberof streaming
          * @classdesc Represents a CoinsData.
-         * @implements ICoinsData
          * @constructor
-         * @param {streaming.ICoinsData=} [properties] Properties to set
+         * @param {streaming.CoinsData.$Properties=} [properties] Properties to set
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding
          */
         function CoinsData(properties) {
             if (properties)
                 for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
-                    if (properties[keys[i]] != null)
+                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
                         this[keys[i]] = properties[keys[i]];
         }
 
@@ -3808,8 +4504,12 @@ $root.streaming = (function() {
          * @function create
          * @memberof streaming.CoinsData
          * @static
-         * @param {streaming.ICoinsData=} [properties] Properties to set
+         * @param {streaming.CoinsData.$Properties=} [properties] Properties to set
          * @returns {streaming.CoinsData} CoinsData instance
+         * @type {{
+         *   (properties: streaming.CoinsData.$Shape): streaming.CoinsData & streaming.CoinsData.$Shape;
+         *   (properties?: streaming.CoinsData.$Properties): streaming.CoinsData;
+         * }}
          */
         CoinsData.create = function create(properties) {
             return new CoinsData(properties);
@@ -3820,7 +4520,7 @@ $root.streaming = (function() {
          * @function encode
          * @memberof streaming.CoinsData
          * @static
-         * @param {streaming.ICoinsData} message CoinsData message or plain object to encode
+         * @param {streaming.CoinsData.$Properties} message CoinsData message or plain object to encode
          * @param {$protobuf.Writer} [writer] Writer to encode to
          * @returns {$protobuf.Writer} Writer
          */
@@ -3837,6 +4537,9 @@ $root.streaming = (function() {
                 writer.uint32(/* id 4, wireType 0 =*/32).uint32(message.rank);
             if (message.coinName != null && Object.hasOwnProperty.call(message, "coinName"))
                 writer.uint32(/* id 5, wireType 2 =*/42).string(message.coinName);
+            if (message.$unknowns != null && Object.hasOwnProperty.call(message, "$unknowns"))
+                for (var i = 0; i < message.$unknowns.length; ++i)
+                    writer.raw(message.$unknowns[i]);
             return writer;
         };
 
@@ -3845,7 +4548,7 @@ $root.streaming = (function() {
          * @function encodeDelimited
          * @memberof streaming.CoinsData
          * @static
-         * @param {streaming.ICoinsData} message CoinsData message or plain object to encode
+         * @param {streaming.CoinsData.$Properties} message CoinsData message or plain object to encode
          * @param {$protobuf.Writer} [writer] Writer to encode to
          * @returns {$protobuf.Writer} Writer
          */
@@ -3860,44 +4563,77 @@ $root.streaming = (function() {
          * @static
          * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
          * @param {number} [length] Message length if known beforehand
-         * @returns {streaming.CoinsData} CoinsData
+         * @returns {streaming.CoinsData & streaming.CoinsData.$Shape} CoinsData
          * @throws {Error} If the payload is not a reader or valid buffer
          * @throws {$protobuf.util.ProtocolError} If required fields are missing
          */
-        CoinsData.decode = function decode(reader, length, error) {
+        CoinsData.decode = function decode(reader, length, _end, _depth, _target) {
             if (!(reader instanceof $Reader))
                 reader = $Reader.create(reader);
-            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.CoinsData();
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $Reader.recursionLimit)
+                throw Error("max depth exceeded");
+            var end = length === undefined ? reader.len : reader.pos + length, message = _target || new $root.streaming.CoinsData(), value;
             while (reader.pos < end) {
-                var tag = reader.uint32();
-                if (tag === error)
-                    break;
-                switch (tag >>> 3) {
-                case 1: {
-                        message.price = reader.string();
-                        break;
-                    }
-                case 2: {
-                        message.changePercent = reader.string();
-                        break;
-                    }
-                case 3: {
-                        message.imageUrl = reader.string();
-                        break;
-                    }
-                case 4: {
-                        message.rank = reader.uint32();
-                        break;
-                    }
-                case 5: {
-                        message.coinName = reader.string();
-                        break;
-                    }
-                default:
-                    reader.skipType(tag & 7);
+                var start = reader.pos;
+                var tag = reader.tag();
+                if (tag === _end) {
+                    _end = undefined;
                     break;
                 }
+                var wireType = tag & 7;
+                switch (tag >>>= 3) {
+                case 1: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.string()).length)
+                            message.price = value;
+                        else
+                            delete message.price;
+                        continue;
+                    }
+                case 2: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.string()).length)
+                            message.changePercent = value;
+                        else
+                            delete message.changePercent;
+                        continue;
+                    }
+                case 3: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.string()).length)
+                            message.imageUrl = value;
+                        else
+                            delete message.imageUrl;
+                        continue;
+                    }
+                case 4: {
+                        if (wireType !== 0)
+                            break;
+                        message.rank = reader.uint32();
+                        message._rank = "rank";
+                        continue;
+                    }
+                case 5: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.string()).length)
+                            message.coinName = value;
+                        else
+                            delete message.coinName;
+                        continue;
+                    }
+                }
+                reader.skipType(wireType, _depth, tag);
+                $util.makeProp(message, "$unknowns", false);
+                (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
             }
+            if (_end !== undefined)
+                throw Error("missing end group");
             return message;
         };
 
@@ -3907,7 +4643,7 @@ $root.streaming = (function() {
          * @memberof streaming.CoinsData
          * @static
          * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-         * @returns {streaming.CoinsData} CoinsData
+         * @returns {streaming.CoinsData & streaming.CoinsData.$Shape} CoinsData
          * @throws {Error} If the payload is not a reader or valid buffer
          * @throws {$protobuf.util.ProtocolError} If required fields are missing
          */
@@ -3925,9 +4661,13 @@ $root.streaming = (function() {
          * @param {Object.<string,*>} message Plain object to verify
          * @returns {string|null} `null` if valid, otherwise the reason why it is not
          */
-        CoinsData.verify = function verify(message) {
+        CoinsData.verify = function verify(message, _depth) {
             if (typeof message !== "object" || message === null)
                 return "object expected";
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                return "max depth exceeded";
             var properties = {};
             if (message.price != null && message.hasOwnProperty("price"))
                 if (!$util.isString(message.price))
@@ -3957,20 +4697,28 @@ $root.streaming = (function() {
          * @param {Object.<string,*>} object Plain object
          * @returns {streaming.CoinsData} CoinsData
          */
-        CoinsData.fromObject = function fromObject(object) {
+        CoinsData.fromObject = function fromObject(object, _depth) {
             if (object instanceof $root.streaming.CoinsData)
                 return object;
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw Error("max depth exceeded");
             var message = new $root.streaming.CoinsData();
             if (object.price != null)
-                message.price = String(object.price);
+                if (typeof object.price !== "string" || object.price.length)
+                    message.price = String(object.price);
             if (object.changePercent != null)
-                message.changePercent = String(object.changePercent);
+                if (typeof object.changePercent !== "string" || object.changePercent.length)
+                    message.changePercent = String(object.changePercent);
             if (object.imageUrl != null)
-                message.imageUrl = String(object.imageUrl);
+                if (typeof object.imageUrl !== "string" || object.imageUrl.length)
+                    message.imageUrl = String(object.imageUrl);
             if (object.rank != null)
                 message.rank = object.rank >>> 0;
             if (object.coinName != null)
-                message.coinName = String(object.coinName);
+                if (typeof object.coinName !== "string" || object.coinName.length)
+                    message.coinName = String(object.coinName);
             return message;
         };
 
@@ -4021,18 +4769,17 @@ $root.streaming = (function() {
         };
 
         /**
-         * Gets the default type url for CoinsData
+         * Gets the type url for CoinsData
          * @function getTypeUrl
          * @memberof streaming.CoinsData
          * @static
-         * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
-         * @returns {string} The default type url
+         * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns {string} The type url
          */
-        CoinsData.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
-            if (typeUrlPrefix === undefined) {
-                typeUrlPrefix = "type.googleapis.com";
-            }
-            return typeUrlPrefix + "/streaming.CoinsData";
+        CoinsData.getTypeUrl = function getTypeUrl(prefix) {
+            if (prefix === undefined)
+                prefix = "type.googleapis.com";
+            return prefix + "/streaming.CoinsData";
         };
 
         return CoinsData;
@@ -4042,25 +4789,38 @@ $root.streaming = (function() {
 
         /**
          * Properties of an AddBundlesRequest.
-         * @memberof streaming
-         * @interface IAddBundlesRequest
+         * @typedef {Object} streaming.AddBundlesRequest.$Properties
          * @property {Array.<string>|null} [bundleIds] AddBundlesRequest bundleIds
          * @property {string|null} [userId] AddBundlesRequest userId
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding
+         */
+
+        /**
+         * Properties of an AddBundlesRequest.
+         * @memberof streaming
+         * @interface IAddBundlesRequest
+         * @augments streaming.AddBundlesRequest.$Properties
+         * @deprecated Use streaming.AddBundlesRequest.$Properties instead.
+         */
+
+        /**
+         * Shape of an AddBundlesRequest.
+         * @typedef {streaming.AddBundlesRequest.$Properties} streaming.AddBundlesRequest.$Shape
          */
 
         /**
          * Constructs a new AddBundlesRequest.
          * @memberof streaming
          * @classdesc Represents an AddBundlesRequest.
-         * @implements IAddBundlesRequest
          * @constructor
-         * @param {streaming.IAddBundlesRequest=} [properties] Properties to set
+         * @param {streaming.AddBundlesRequest.$Properties=} [properties] Properties to set
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding
          */
         function AddBundlesRequest(properties) {
             this.bundleIds = [];
             if (properties)
                 for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
-                    if (properties[keys[i]] != null)
+                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
                         this[keys[i]] = properties[keys[i]];
         }
 
@@ -4085,8 +4845,12 @@ $root.streaming = (function() {
          * @function create
          * @memberof streaming.AddBundlesRequest
          * @static
-         * @param {streaming.IAddBundlesRequest=} [properties] Properties to set
+         * @param {streaming.AddBundlesRequest.$Properties=} [properties] Properties to set
          * @returns {streaming.AddBundlesRequest} AddBundlesRequest instance
+         * @type {{
+         *   (properties: streaming.AddBundlesRequest.$Shape): streaming.AddBundlesRequest & streaming.AddBundlesRequest.$Shape;
+         *   (properties?: streaming.AddBundlesRequest.$Properties): streaming.AddBundlesRequest;
+         * }}
          */
         AddBundlesRequest.create = function create(properties) {
             return new AddBundlesRequest(properties);
@@ -4097,7 +4861,7 @@ $root.streaming = (function() {
          * @function encode
          * @memberof streaming.AddBundlesRequest
          * @static
-         * @param {streaming.IAddBundlesRequest} message AddBundlesRequest message or plain object to encode
+         * @param {streaming.AddBundlesRequest.$Properties} message AddBundlesRequest message or plain object to encode
          * @param {$protobuf.Writer} [writer] Writer to encode to
          * @returns {$protobuf.Writer} Writer
          */
@@ -4109,6 +4873,9 @@ $root.streaming = (function() {
                     writer.uint32(/* id 1, wireType 2 =*/10).string(message.bundleIds[i]);
             if (message.userId != null && Object.hasOwnProperty.call(message, "userId"))
                 writer.uint32(/* id 2, wireType 2 =*/18).string(message.userId);
+            if (message.$unknowns != null && Object.hasOwnProperty.call(message, "$unknowns"))
+                for (var i = 0; i < message.$unknowns.length; ++i)
+                    writer.raw(message.$unknowns[i]);
             return writer;
         };
 
@@ -4117,7 +4884,7 @@ $root.streaming = (function() {
          * @function encodeDelimited
          * @memberof streaming.AddBundlesRequest
          * @static
-         * @param {streaming.IAddBundlesRequest} message AddBundlesRequest message or plain object to encode
+         * @param {streaming.AddBundlesRequest.$Properties} message AddBundlesRequest message or plain object to encode
          * @param {$protobuf.Writer} [writer] Writer to encode to
          * @returns {$protobuf.Writer} Writer
          */
@@ -4132,34 +4899,51 @@ $root.streaming = (function() {
          * @static
          * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
          * @param {number} [length] Message length if known beforehand
-         * @returns {streaming.AddBundlesRequest} AddBundlesRequest
+         * @returns {streaming.AddBundlesRequest & streaming.AddBundlesRequest.$Shape} AddBundlesRequest
          * @throws {Error} If the payload is not a reader or valid buffer
          * @throws {$protobuf.util.ProtocolError} If required fields are missing
          */
-        AddBundlesRequest.decode = function decode(reader, length, error) {
+        AddBundlesRequest.decode = function decode(reader, length, _end, _depth, _target) {
             if (!(reader instanceof $Reader))
                 reader = $Reader.create(reader);
-            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.AddBundlesRequest();
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $Reader.recursionLimit)
+                throw Error("max depth exceeded");
+            var end = length === undefined ? reader.len : reader.pos + length, message = _target || new $root.streaming.AddBundlesRequest(), value;
             while (reader.pos < end) {
-                var tag = reader.uint32();
-                if (tag === error)
+                var start = reader.pos;
+                var tag = reader.tag();
+                if (tag === _end) {
+                    _end = undefined;
                     break;
-                switch (tag >>> 3) {
+                }
+                var wireType = tag & 7;
+                switch (tag >>>= 3) {
                 case 1: {
+                        if (wireType !== 2)
+                            break;
                         if (!(message.bundleIds && message.bundleIds.length))
                             message.bundleIds = [];
                         message.bundleIds.push(reader.string());
-                        break;
+                        continue;
                     }
                 case 2: {
-                        message.userId = reader.string();
-                        break;
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.string()).length)
+                            message.userId = value;
+                        else
+                            delete message.userId;
+                        continue;
                     }
-                default:
-                    reader.skipType(tag & 7);
-                    break;
                 }
+                reader.skipType(wireType, _depth, tag);
+                $util.makeProp(message, "$unknowns", false);
+                (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
             }
+            if (_end !== undefined)
+                throw Error("missing end group");
             return message;
         };
 
@@ -4169,7 +4953,7 @@ $root.streaming = (function() {
          * @memberof streaming.AddBundlesRequest
          * @static
          * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-         * @returns {streaming.AddBundlesRequest} AddBundlesRequest
+         * @returns {streaming.AddBundlesRequest & streaming.AddBundlesRequest.$Shape} AddBundlesRequest
          * @throws {Error} If the payload is not a reader or valid buffer
          * @throws {$protobuf.util.ProtocolError} If required fields are missing
          */
@@ -4187,9 +4971,13 @@ $root.streaming = (function() {
          * @param {Object.<string,*>} message Plain object to verify
          * @returns {string|null} `null` if valid, otherwise the reason why it is not
          */
-        AddBundlesRequest.verify = function verify(message) {
+        AddBundlesRequest.verify = function verify(message, _depth) {
             if (typeof message !== "object" || message === null)
                 return "object expected";
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                return "max depth exceeded";
             if (message.bundleIds != null && message.hasOwnProperty("bundleIds")) {
                 if (!Array.isArray(message.bundleIds))
                     return "bundleIds: array expected";
@@ -4211,19 +4999,24 @@ $root.streaming = (function() {
          * @param {Object.<string,*>} object Plain object
          * @returns {streaming.AddBundlesRequest} AddBundlesRequest
          */
-        AddBundlesRequest.fromObject = function fromObject(object) {
+        AddBundlesRequest.fromObject = function fromObject(object, _depth) {
             if (object instanceof $root.streaming.AddBundlesRequest)
                 return object;
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw Error("max depth exceeded");
             var message = new $root.streaming.AddBundlesRequest();
             if (object.bundleIds) {
                 if (!Array.isArray(object.bundleIds))
                     throw TypeError(".streaming.AddBundlesRequest.bundleIds: array expected");
-                message.bundleIds = [];
+                message.bundleIds = Array(object.bundleIds.length);
                 for (var i = 0; i < object.bundleIds.length; ++i)
                     message.bundleIds[i] = String(object.bundleIds[i]);
             }
             if (object.userId != null)
-                message.userId = String(object.userId);
+                if (typeof object.userId !== "string" || object.userId.length)
+                    message.userId = String(object.userId);
             return message;
         };
 
@@ -4245,7 +5038,7 @@ $root.streaming = (function() {
             if (options.defaults)
                 object.userId = "";
             if (message.bundleIds && message.bundleIds.length) {
-                object.bundleIds = [];
+                object.bundleIds = Array(message.bundleIds.length);
                 for (var j = 0; j < message.bundleIds.length; ++j)
                     object.bundleIds[j] = message.bundleIds[j];
             }
@@ -4266,18 +5059,17 @@ $root.streaming = (function() {
         };
 
         /**
-         * Gets the default type url for AddBundlesRequest
+         * Gets the type url for AddBundlesRequest
          * @function getTypeUrl
          * @memberof streaming.AddBundlesRequest
          * @static
-         * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
-         * @returns {string} The default type url
+         * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns {string} The type url
          */
-        AddBundlesRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
-            if (typeUrlPrefix === undefined) {
-                typeUrlPrefix = "type.googleapis.com";
-            }
-            return typeUrlPrefix + "/streaming.AddBundlesRequest";
+        AddBundlesRequest.getTypeUrl = function getTypeUrl(prefix) {
+            if (prefix === undefined)
+                prefix = "type.googleapis.com";
+            return prefix + "/streaming.AddBundlesRequest";
         };
 
         return AddBundlesRequest;
@@ -4287,27 +5079,40 @@ $root.streaming = (function() {
 
         /**
          * Properties of a UserBundleUpdate.
-         * @memberof streaming
-         * @interface IUserBundleUpdate
+         * @typedef {Object} streaming.UserBundleUpdate.$Properties
          * @property {string|null} [bundleId] UserBundleUpdate bundleId
          * @property {string|null} [oldStatus] UserBundleUpdate oldStatus
          * @property {streaming.BundleStage|null} [newStatus] UserBundleUpdate newStatus
          * @property {number|Long|null} [timestamp] UserBundleUpdate timestamp
          * @property {number|Long|null} [slot] UserBundleUpdate slot
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding
+         */
+
+        /**
+         * Properties of a UserBundleUpdate.
+         * @memberof streaming
+         * @interface IUserBundleUpdate
+         * @augments streaming.UserBundleUpdate.$Properties
+         * @deprecated Use streaming.UserBundleUpdate.$Properties instead.
+         */
+
+        /**
+         * Shape of a UserBundleUpdate.
+         * @typedef {streaming.UserBundleUpdate.$Properties} streaming.UserBundleUpdate.$Shape
          */
 
         /**
          * Constructs a new UserBundleUpdate.
          * @memberof streaming
          * @classdesc Represents a UserBundleUpdate.
-         * @implements IUserBundleUpdate
          * @constructor
-         * @param {streaming.IUserBundleUpdate=} [properties] Properties to set
+         * @param {streaming.UserBundleUpdate.$Properties=} [properties] Properties to set
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding
          */
         function UserBundleUpdate(properties) {
             if (properties)
                 for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
-                    if (properties[keys[i]] != null)
+                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
                         this[keys[i]] = properties[keys[i]];
         }
 
@@ -4365,8 +5170,12 @@ $root.streaming = (function() {
          * @function create
          * @memberof streaming.UserBundleUpdate
          * @static
-         * @param {streaming.IUserBundleUpdate=} [properties] Properties to set
+         * @param {streaming.UserBundleUpdate.$Properties=} [properties] Properties to set
          * @returns {streaming.UserBundleUpdate} UserBundleUpdate instance
+         * @type {{
+         *   (properties: streaming.UserBundleUpdate.$Shape): streaming.UserBundleUpdate & streaming.UserBundleUpdate.$Shape;
+         *   (properties?: streaming.UserBundleUpdate.$Properties): streaming.UserBundleUpdate;
+         * }}
          */
         UserBundleUpdate.create = function create(properties) {
             return new UserBundleUpdate(properties);
@@ -4377,7 +5186,7 @@ $root.streaming = (function() {
          * @function encode
          * @memberof streaming.UserBundleUpdate
          * @static
-         * @param {streaming.IUserBundleUpdate} message UserBundleUpdate message or plain object to encode
+         * @param {streaming.UserBundleUpdate.$Properties} message UserBundleUpdate message or plain object to encode
          * @param {$protobuf.Writer} [writer] Writer to encode to
          * @returns {$protobuf.Writer} Writer
          */
@@ -4394,6 +5203,9 @@ $root.streaming = (function() {
                 writer.uint32(/* id 4, wireType 0 =*/32).uint64(message.timestamp);
             if (message.slot != null && Object.hasOwnProperty.call(message, "slot"))
                 writer.uint32(/* id 5, wireType 0 =*/40).uint64(message.slot);
+            if (message.$unknowns != null && Object.hasOwnProperty.call(message, "$unknowns"))
+                for (var i = 0; i < message.$unknowns.length; ++i)
+                    writer.raw(message.$unknowns[i]);
             return writer;
         };
 
@@ -4402,7 +5214,7 @@ $root.streaming = (function() {
          * @function encodeDelimited
          * @memberof streaming.UserBundleUpdate
          * @static
-         * @param {streaming.IUserBundleUpdate} message UserBundleUpdate message or plain object to encode
+         * @param {streaming.UserBundleUpdate.$Properties} message UserBundleUpdate message or plain object to encode
          * @param {$protobuf.Writer} [writer] Writer to encode to
          * @returns {$protobuf.Writer} Writer
          */
@@ -4417,44 +5229,77 @@ $root.streaming = (function() {
          * @static
          * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
          * @param {number} [length] Message length if known beforehand
-         * @returns {streaming.UserBundleUpdate} UserBundleUpdate
+         * @returns {streaming.UserBundleUpdate & streaming.UserBundleUpdate.$Shape} UserBundleUpdate
          * @throws {Error} If the payload is not a reader or valid buffer
          * @throws {$protobuf.util.ProtocolError} If required fields are missing
          */
-        UserBundleUpdate.decode = function decode(reader, length, error) {
+        UserBundleUpdate.decode = function decode(reader, length, _end, _depth, _target) {
             if (!(reader instanceof $Reader))
                 reader = $Reader.create(reader);
-            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.streaming.UserBundleUpdate();
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $Reader.recursionLimit)
+                throw Error("max depth exceeded");
+            var end = length === undefined ? reader.len : reader.pos + length, message = _target || new $root.streaming.UserBundleUpdate(), value;
             while (reader.pos < end) {
-                var tag = reader.uint32();
-                if (tag === error)
-                    break;
-                switch (tag >>> 3) {
-                case 1: {
-                        message.bundleId = reader.string();
-                        break;
-                    }
-                case 2: {
-                        message.oldStatus = reader.string();
-                        break;
-                    }
-                case 3: {
-                        message.newStatus = reader.int32();
-                        break;
-                    }
-                case 4: {
-                        message.timestamp = reader.uint64();
-                        break;
-                    }
-                case 5: {
-                        message.slot = reader.uint64();
-                        break;
-                    }
-                default:
-                    reader.skipType(tag & 7);
+                var start = reader.pos;
+                var tag = reader.tag();
+                if (tag === _end) {
+                    _end = undefined;
                     break;
                 }
+                var wireType = tag & 7;
+                switch (tag >>>= 3) {
+                case 1: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.string()).length)
+                            message.bundleId = value;
+                        else
+                            delete message.bundleId;
+                        continue;
+                    }
+                case 2: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.string()).length)
+                            message.oldStatus = value;
+                        else
+                            delete message.oldStatus;
+                        continue;
+                    }
+                case 3: {
+                        if (wireType !== 0)
+                            break;
+                        if (value = reader.int32())
+                            message.newStatus = value;
+                        else
+                            delete message.newStatus;
+                        continue;
+                    }
+                case 4: {
+                        if (wireType !== 0)
+                            break;
+                        if (typeof (value = reader.uint64()) === "object" ? value.low || value.high : value !== 0)
+                            message.timestamp = value;
+                        else
+                            delete message.timestamp;
+                        continue;
+                    }
+                case 5: {
+                        if (wireType !== 0)
+                            break;
+                        message.slot = reader.uint64();
+                        message._slot = "slot";
+                        continue;
+                    }
+                }
+                reader.skipType(wireType, _depth, tag);
+                $util.makeProp(message, "$unknowns", false);
+                (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
             }
+            if (_end !== undefined)
+                throw Error("missing end group");
             return message;
         };
 
@@ -4464,7 +5309,7 @@ $root.streaming = (function() {
          * @memberof streaming.UserBundleUpdate
          * @static
          * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-         * @returns {streaming.UserBundleUpdate} UserBundleUpdate
+         * @returns {streaming.UserBundleUpdate & streaming.UserBundleUpdate.$Shape} UserBundleUpdate
          * @throws {Error} If the payload is not a reader or valid buffer
          * @throws {$protobuf.util.ProtocolError} If required fields are missing
          */
@@ -4482,9 +5327,13 @@ $root.streaming = (function() {
          * @param {Object.<string,*>} message Plain object to verify
          * @returns {string|null} `null` if valid, otherwise the reason why it is not
          */
-        UserBundleUpdate.verify = function verify(message) {
+        UserBundleUpdate.verify = function verify(message, _depth) {
             if (typeof message !== "object" || message === null)
                 return "object expected";
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                return "max depth exceeded";
             var properties = {};
             if (message.bundleId != null && message.hasOwnProperty("bundleId"))
                 if (!$util.isString(message.bundleId))
@@ -4524,59 +5373,67 @@ $root.streaming = (function() {
          * @param {Object.<string,*>} object Plain object
          * @returns {streaming.UserBundleUpdate} UserBundleUpdate
          */
-        UserBundleUpdate.fromObject = function fromObject(object) {
+        UserBundleUpdate.fromObject = function fromObject(object, _depth) {
             if (object instanceof $root.streaming.UserBundleUpdate)
                 return object;
+            if (_depth === undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw Error("max depth exceeded");
             var message = new $root.streaming.UserBundleUpdate();
             if (object.bundleId != null)
-                message.bundleId = String(object.bundleId);
+                if (typeof object.bundleId !== "string" || object.bundleId.length)
+                    message.bundleId = String(object.bundleId);
             if (object.oldStatus != null)
-                message.oldStatus = String(object.oldStatus);
-            switch (object.newStatus) {
-            default:
-                if (typeof object.newStatus === "number") {
-                    message.newStatus = object.newStatus;
+                if (typeof object.oldStatus !== "string" || object.oldStatus.length)
+                    message.oldStatus = String(object.oldStatus);
+            if (object.newStatus !== 0 && (typeof object.newStatus !== "string" || $root.streaming.BundleStage[object.newStatus] !== 0))
+                switch (object.newStatus) {
+                default:
+                    if (typeof object.newStatus === "number") {
+                        message.newStatus = object.newStatus;
+                        break;
+                    }
+                    break;
+                case "BUNDLE_STAGE_UNSPECIFIED":
+                case 0:
+                    message.newStatus = 0;
+                    break;
+                case "BUNDLE_STAGE_SUBMITTED":
+                case 1:
+                    message.newStatus = 1;
+                    break;
+                case "BUNDLE_STAGE_IN_FLIGHT":
+                case 2:
+                    message.newStatus = 2;
+                    break;
+                case "BUNDLE_STAGE_LANDED":
+                case 3:
+                    message.newStatus = 3;
+                    break;
+                case "BUNDLE_STAGE_CONFIRMED":
+                case 4:
+                    message.newStatus = 4;
+                    break;
+                case "BUNDLE_STAGE_FINALIZED":
+                case 5:
+                    message.newStatus = 5;
+                    break;
+                case "BUNDLE_STAGE_FAILED":
+                case 6:
+                    message.newStatus = 6;
                     break;
                 }
-                break;
-            case "BUNDLE_STAGE_UNSPECIFIED":
-            case 0:
-                message.newStatus = 0;
-                break;
-            case "BUNDLE_STAGE_SUBMITTED":
-            case 1:
-                message.newStatus = 1;
-                break;
-            case "BUNDLE_STAGE_IN_FLIGHT":
-            case 2:
-                message.newStatus = 2;
-                break;
-            case "BUNDLE_STAGE_LANDED":
-            case 3:
-                message.newStatus = 3;
-                break;
-            case "BUNDLE_STAGE_CONFIRMED":
-            case 4:
-                message.newStatus = 4;
-                break;
-            case "BUNDLE_STAGE_FINALIZED":
-            case 5:
-                message.newStatus = 5;
-                break;
-            case "BUNDLE_STAGE_FAILED":
-            case 6:
-                message.newStatus = 6;
-                break;
-            }
             if (object.timestamp != null)
-                if ($util.Long)
-                    (message.timestamp = $util.Long.fromValue(object.timestamp)).unsigned = true;
-                else if (typeof object.timestamp === "string")
-                    message.timestamp = parseInt(object.timestamp, 10);
-                else if (typeof object.timestamp === "number")
-                    message.timestamp = object.timestamp;
-                else if (typeof object.timestamp === "object")
-                    message.timestamp = new $util.LongBits(object.timestamp.low >>> 0, object.timestamp.high >>> 0).toNumber(true);
+                if (typeof object.timestamp === "object" ? object.timestamp.low || object.timestamp.high : Number(object.timestamp) !== 0)
+                    if ($util.Long)
+                        (message.timestamp = $util.Long.fromValue(object.timestamp)).unsigned = true;
+                    else if (typeof object.timestamp === "string")
+                        message.timestamp = parseInt(object.timestamp, 10);
+                    else if (typeof object.timestamp === "number")
+                        message.timestamp = object.timestamp;
+                    else if (typeof object.timestamp === "object")
+                        message.timestamp = new $util.LongBits(object.timestamp.low >>> 0, object.timestamp.high >>> 0).toNumber(true);
             if (object.slot != null)
                 if ($util.Long)
                     (message.slot = $util.Long.fromValue(object.slot)).unsigned = true;
@@ -4646,18 +5503,17 @@ $root.streaming = (function() {
         };
 
         /**
-         * Gets the default type url for UserBundleUpdate
+         * Gets the type url for UserBundleUpdate
          * @function getTypeUrl
          * @memberof streaming.UserBundleUpdate
          * @static
-         * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
-         * @returns {string} The default type url
+         * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns {string} The type url
          */
-        UserBundleUpdate.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
-            if (typeUrlPrefix === undefined) {
-                typeUrlPrefix = "type.googleapis.com";
-            }
-            return typeUrlPrefix + "/streaming.UserBundleUpdate";
+        UserBundleUpdate.getTypeUrl = function getTypeUrl(prefix) {
+            if (prefix === undefined)
+                prefix = "type.googleapis.com";
+            return prefix + "/streaming.UserBundleUpdate";
         };
 
         return UserBundleUpdate;

@@ -44,6 +44,7 @@ export interface TrasnactionInstruction {
   slippageBps: number;
   options?: QuoteOptions;
   userPk: string;
+  optionalDestination?: string;
   id: string;
 }
 

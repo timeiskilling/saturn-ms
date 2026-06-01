@@ -131,6 +131,43 @@ impl JupiterTrader {
             ))
         })?;
 
+        // Resolve ATA for optional_destination dynamically by checking the token program on-chain
+        let mut resolved_optional_destination = None;
+        if let Some(ref dest) = params.optional_destination {
+            if params.output_mint != "So11111111111111111111111111111111111111112" {
+                if let (Ok(wallet_pk), Ok(mint_pk)) =
+                    (Pubkey::from_str(dest), Pubkey::from_str(params.output_mint))
+                {
+                    let token_program = match self.client.get_account(&mint_pk).await {
+                        Ok(account) => account.owner,
+                        Err(e) => {
+                            tracing::warn!(
+                                "Failed to fetch output mint account to determine Token Program: {}. Defaulting to standard Token Program.",
+                                e
+                            );
+                            Pubkey::from_str("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA").unwrap()
+                        }
+                    };
+
+                    let ata_program =
+                        Pubkey::from_str("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL").unwrap();
+                    let (ata, _) = Pubkey::find_program_address(
+                        &[
+                            &wallet_pk.to_bytes(),
+                            &token_program.to_bytes(),
+                            &mint_pk.to_bytes(),
+                        ],
+                        &ata_program,
+                    );
+                    resolved_optional_destination = Some(ata.to_string());
+                } else {
+                    resolved_optional_destination = Some(dest.clone());
+                }
+            } else {
+                resolved_optional_destination = Some(dest.clone());
+            }
+        }
+
         let swap_instructions = self
             .http_client
             .create_swap_transaction(
@@ -140,6 +177,7 @@ impl JupiterTrader {
                 params.slippage_bps,
                 params.options,
                 &user_pubkey,
+                resolved_optional_destination,
             )
             .await?;
 
@@ -425,6 +463,7 @@ impl JupiterTrader {
                 params.slippage_bps,
                 params.options,
                 &user_pubkey,
+                params.optional_destination,
             )
             .await?;
 

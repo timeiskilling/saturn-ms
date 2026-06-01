@@ -213,6 +213,10 @@ export const TransactionItem = React.memo(function TransactionItem({
             onSlippageChange={(bps) =>
               handleUpdateTx(tx.id, "slippageBps", bps)
             }
+            optionalDestination={tx.optionalDestination}
+            onDestinationChange={(dest) =>
+              handleUpdateTx(tx.id, "optionalDestination", dest)
+            }
             // triggerRef={buttonRef}
           />
         )}

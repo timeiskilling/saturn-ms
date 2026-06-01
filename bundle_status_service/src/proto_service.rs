@@ -108,6 +108,7 @@ impl BundleService for TransactionService {
                             amount: transaction.amount,
                             slippage_bps: transaction.slippage_bps as u16,
                             options: options.into(),
+                            optional_destination: transaction.optional_destination.clone(),
                         },
                     )
                     .await

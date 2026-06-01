@@ -5,3 +5,4 @@
 // - Containerize app (Docker) and deploy multiple replicas behind the Load Balancer (K8s HPA).
 // - Consider Redis Cluster upgrade if Redis Sentinel memory becomes a bottleneck for sessions.
 ---
+--- remove async_trait entirely from the JupiterProvider trait

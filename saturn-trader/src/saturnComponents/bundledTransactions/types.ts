@@ -17,6 +17,7 @@ export interface TransactionInstruction {
   slippageBps: number;
   options?: QuoteOptions;
   userPk?: string;
+  optionalDestination?: string;
   calculatedOutput?: string;
 }
 

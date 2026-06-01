@@ -394,6 +394,7 @@ pub struct QuoteRequestParams {
     pub amount: String,
     pub slippage_bps: String,
     pub additional_params: Vec<(&'static str, String)>,
+    pub optional_destination: Option<String>,
 }
 
 pub struct SwapRequestParams<'a> {
@@ -402,6 +403,7 @@ pub struct SwapRequestParams<'a> {
     pub amount: u64,
     pub slippage_bps: u16,
     pub options: QuoteOptions,
+    pub optional_destination: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

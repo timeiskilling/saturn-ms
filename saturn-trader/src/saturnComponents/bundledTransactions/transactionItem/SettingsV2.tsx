@@ -218,6 +218,8 @@ interface AdvancedSettingsProps {
   onClose: () => void;
   slippageBps: number;
   onSlippageChange: (bps: number) => void;
+  optionalDestination?: string;
+  onDestinationChange?: (dest: string | undefined) => void;
 }
 
 export function AdvancedSettings({
@@ -226,6 +228,8 @@ export function AdvancedSettings({
   onClose,
   slippageBps,
   onSlippageChange,
+  optionalDestination,
+  onDestinationChange,
 }: AdvancedSettingsProps) {
   const slippageValue = slippageBps / 100;
   const [localSlippage, setLocalSlippage] = useState(
@@ -233,6 +237,9 @@ export function AdvancedSettings({
   );
   const [localMaxAccounts, setLocalMaxAccounts] = useState(
     options?.maxAccounts?.toString() ?? "64",
+  );
+  const [localDestination, setLocalDestination] = useState(
+    optionalDestination || "",
   );
   const [mounted, setMounted] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
@@ -261,6 +268,8 @@ export function AdvancedSettings({
     onSlippageChange(0);
     setLocalSlippage("");
     setLocalMaxAccounts("64");
+    if (onDestinationChange) onDestinationChange(undefined);
+    setLocalDestination("");
   };
 
   useEffect(() => {
@@ -445,6 +454,31 @@ export function AdvancedSettings({
               }
               disabled={isExcludeDisabled}
             />
+          </div>
+
+          {/* Optional Destination */}
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-zinc-400 uppercase tracking-wider">
+                Optional Destination
+              </span>
+              <Info className="w-3.5 h-3.5 text-zinc-600" />
+            </div>
+            <div className="flex items-center bg-zinc-900/50 px-4 py-3 rounded-xl border border-zinc-800 transition-colors focus-within:border-zinc-700">
+              <input
+                type="text"
+                value={localDestination}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setLocalDestination(val);
+                  if (onDestinationChange) {
+                    onDestinationChange(val.trim() === "" ? undefined : val);
+                  }
+                }}
+                className="w-full bg-transparent text-sm font-medium outline-none text-white placeholder:text-zinc-600"
+                placeholder="Destination wallet address (Optional)"
+              />
+            </div>
           </div>
 
           {/* Toggles & Numbers */}

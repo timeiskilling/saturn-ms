@@ -37,6 +37,7 @@ export function useBundleExecution(
           amount: Number(tx.amount) || 0,
           slippageBps: tx.slippageBps,
           userPk: tx.userPk || userPk,
+          optionalDestination: tx.optionalDestination || undefined,
           options: tx.options || {
             dexes: [],
             excludeDexes: [],

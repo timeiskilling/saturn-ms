@@ -66,6 +66,7 @@ export function useTemplateManager(initialTemplates: Template[] = []) {
         excludeDexes: [],
         dynamicSlippage: false,
       },
+      optionalDestination: undefined,
     };
 
     setTemplates((prev) =>
