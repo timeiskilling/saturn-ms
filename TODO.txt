@@ -6,3 +6,5 @@
 // - Consider Redis Cluster upgrade if Redis Sentinel memory becomes a bottleneck for sessions.
 ---
 --- remove async_trait entirely from the JupiterProvider trait
+
+implement history of bundles
