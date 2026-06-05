@@ -2,7 +2,8 @@ use deadpool_redis::Runtime;
 use deadpool_redis::sentinel::{Manager, Pool};
 use redis::{RedisError, RedisResult};
 use sqlx::PgPool;
-use sqlx::postgres::PgPoolOptions;
+use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
+use std::str::FromStr;
 
 pub struct AppState {
     // sentinel_client: Arc<Mutex<SentinelClient>>,
@@ -26,9 +27,13 @@ impl AppState {
             .build()
             .expect("Failed to create Redis Sentinel pool");
 
+        let opts = PgConnectOptions::from_str(&config.postgres_url())
+            .map_err(|e| RedisError::from((redis::ErrorKind::Io, "Config error", e.to_string())))?
+            .options([("lc_messages", "C"), ("client_encoding", "UTF8")]);
+
         let db_pool = PgPoolOptions::new()
             .max_connections(config.postgres_connection_pool)
-            .connect(&config.postgres_url())
+            .connect_with(opts)
             .await
             .map_err(|e| RedisError::from((redis::ErrorKind::Io, "Pool error", e.to_string())))?;
 

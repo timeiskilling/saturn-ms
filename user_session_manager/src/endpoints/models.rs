@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -35,9 +36,31 @@ pub struct SolVerifyRequest {
 pub struct PromoteWalletRequest {
     #[serde(flatten)]
     pub verify_data: VerifySignature,
-
     pub target_wallet: String,
     pub wallet_id: String,
     pub name: String,
     pub address_type: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct HistoryTransactionRequest {
+    pub tx_signature: String,
+    pub signer: String,
+    pub receiver: String,
+    pub input_mint: String,
+    pub output_mint: String,
+    pub amount: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, sqlx::prelude::FromRow)]
+pub struct TransactionHistoryRecord {
+    pub id: i64,
+    pub signer: String,
+    pub tx_signature: String,
+    pub owner_wallet: String,
+    pub receiver: String,
+    pub input_mint: String,
+    pub output_mint: String,
+    pub amount: String,
+    pub transaction_date: DateTime<Utc>,
 }

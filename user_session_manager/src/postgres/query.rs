@@ -1,3 +1,4 @@
+use crate::endpoints::models::{HistoryTransactionRequest, TransactionHistoryRecord};
 use crate::postgres::extractor::DbPool;
 use crate::postgres::models::{
     DeleteAccountResponse, LinkedWalletResponse, PromoteWalletResponse, SaveBundlesPayload,
@@ -7,11 +8,57 @@ use crate::{endpoints::errors::ApiError, middleware::session_token::Authenticate
 use axum::Json;
 use saturn_errors::error::UserServiceError;
 
+pub async fn history_transaction(
+    payload: HistoryTransactionRequest,
+    db: &sqlx::PgPool,
+    owner: String,
+) -> Result<TransactionHistoryRecord, ApiError> {
+    let record = sqlx::query_as!(
+        TransactionHistoryRecord,
+        r#"
+        WITH inserted AS (
+            INSERT INTO transaction_history (
+                tx_signature, owner_wallet, signer, receiver, input_mint, output_mint, amount
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            RETURNING
+                id, signer, tx_signature, owner_wallet, receiver,
+                input_mint, output_mint, amount, transaction_date
+        ),
+        deleted AS (
+            DELETE FROM transaction_history
+            WHERE id IN (
+                SELECT id FROM transaction_history
+                WHERE owner_wallet = $2
+                ORDER BY transaction_date DESC
+                OFFSET 7
+            )
+        )
+        SELECT
+            id, signer, tx_signature, owner_wallet, receiver,
+            input_mint, output_mint, amount, transaction_date
+        FROM inserted
+        "#,
+        payload.tx_signature,
+        owner,
+        payload.signer,
+        payload.receiver,
+        payload.input_mint,
+        payload.output_mint,
+        payload.amount
+    )
+    .fetch_one(db)
+    .await
+    .map_err(|e| ApiError(UserServiceError::PostgresError(e.to_string())))?;
+
+    Ok(record)
+}
+
 pub async fn save_user_bundles(
     user: AuthenticatedUser,
     db: DbPool,
     Json(payload): Json<SaveBundlesPayload>,
-) -> Result<&'static str, ApiError> {
+) -> Result<(), ApiError> {
     tracing::info!("Saving bundles for wallet: {}", user.wallet_address);
 
     sqlx::query!(
@@ -27,7 +74,7 @@ pub async fn save_user_bundles(
     .await
     .map_err(|e| UserServiceError::PostgresError(e.to_string()))?;
 
-    Ok("Success!")
+    Ok(())
 }
 
 pub async fn get_user_bundles(
