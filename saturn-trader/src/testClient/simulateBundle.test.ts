@@ -3,7 +3,7 @@ import { GrpcClient } from "@/protoTypes/grpcClient";
 import type { streaming } from "@/protoTypes/streaming_status";
 
 test("simulateBundle", async () => {
-  // 1. Create a specific test client pointed to your local testing server
+  // Create a specific test client pointed to your local testing server
   const testClient = new GrpcClient({
     baseUrl: "http://127.0.0.1:3000",
   });
@@ -24,12 +24,12 @@ test("simulateBundle", async () => {
   };
 
   try {
-    // 4. Call the gRPC method and await the response
+    // Call the gRPC method and await the response
     const response = await bundleService.simulateBundle(request);
 
     console.log("SimulateBundle Response:", JSON.stringify(response, null, 2));
 
-    // 5. Write Vitest assertions to verify the response
+    // Write Vitest assertions to verify the response
     expect(response).toBeDefined();
     expect(response.swaps).toBeDefined();
     expect(response.swaps?.length).toBe(1);

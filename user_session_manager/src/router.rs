@@ -1,6 +1,6 @@
 use crate::app_state::AppState;
 use crate::endpoints::auth_endpoints::disconnect_wallet_handler;
-use crate::endpoints::{auth_endpoints, device};
+use crate::endpoints::{auth_endpoints, device, history};
 use crate::postgres::query;
 use axum::http::{HeaderName, HeaderValue, Method};
 use axum::{
@@ -31,6 +31,8 @@ pub fn create_router(app_state: Arc<AppState>) -> Router {
         .route("/promote", post(auth_endpoints::promote_wallet))
         .route("/disconnect", post(disconnect_wallet_handler))
         .route("/unlink", delete(auth_endpoints::verify_unlink))
+        .route("/record", post(history::record_transaction))
+        .route("/history", get(history::get_transaction_history))
         .route("/linked", get(query::get_linked_wallets));
 
     // Connected device management

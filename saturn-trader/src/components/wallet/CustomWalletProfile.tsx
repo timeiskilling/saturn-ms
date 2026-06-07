@@ -12,6 +12,7 @@ import { ProfileButton } from "./profile/ProfileButton";
 import { WalletModal } from "./profile/WalletModal";
 import { DevicesModal } from "./DevicesModal";
 import { Monitor } from "lucide-react";
+import { useHistoryTransaction } from "../../hooks/useHistoryTransaction";
 
 export function CustomWalletProfile() {
   const { solana } = useSolana();
@@ -43,6 +44,14 @@ export function CustomWalletProfile() {
     user,
     accounts,
   } = useAllAccounts();
+
+  const {
+    history,
+    loading: loadingHistory,
+    refreshHistory,
+  } = useHistoryTransaction({
+    isAuthenticated: !!user?.walletId,
+  });
 
   const handleVerify = async (accountAddress: string, walletId: string) => {
     if (!solana) {
@@ -94,6 +103,7 @@ export function CustomWalletProfile() {
   };
 
   const handleOpen = () => {
+    refreshHistory();
     setShowModal(true);
     requestAnimationFrame(() => setIsOpen(true));
   };
@@ -227,6 +237,8 @@ export function CustomWalletProfile() {
           handleClose();
           setShowConnectModal(true);
         }}
+        history={history}
+        loadingHistory={loadingHistory}
       />
 
       <DevicesModal

@@ -7,10 +7,14 @@ import {
   Wallet,
   ShieldCheck,
   ExternalLink,
+  History,
+  Activity,
+  ArrowRight,
 } from "lucide-react";
 import { type AccountInfo } from "./types";
 import { WalletDropdown } from "./WalletDropdown";
 import { useAllWalletsBalances } from "../../../hooks/useAllWalletsBalances";
+import { type TransactionHistoryRecord } from "../../../api/history";
 
 interface WalletModalProps {
   showModal: boolean;
@@ -27,6 +31,8 @@ interface WalletModalProps {
   onRemove: (walletId: string) => void;
   onConnectAnother: () => void;
   onClearAll: () => void;
+  history: TransactionHistoryRecord[];
+  loadingHistory: boolean;
 }
 
 export function WalletModal({
@@ -44,6 +50,8 @@ export function WalletModal({
   onRemove,
   onConnectAnother,
   onClearAll,
+  history,
+  loadingHistory,
 }: WalletModalProps) {
   const { balances, loading, refetch } = useAllWalletsBalances();
 
@@ -138,6 +146,76 @@ export function WalletModal({
               onConnectAnother={onConnectAnother}
               onClearAll={onClearAll}
             />
+          </div>
+
+          <div className="flex flex-col gap-2 mt-2">
+            <div className="flex items-center gap-2 px-1">
+              <History className="w-3.5 h-3.5 text-zinc-500" />
+              <span className="text-[10px] uppercase tracking-widest font-bold text-zinc-500">
+                Transaction History
+              </span>
+            </div>
+            <div className="bg-zinc-900/50 rounded-2xl border border-zinc-800 p-2 overflow-hidden flex flex-col gap-2">
+              {loadingHistory ? (
+                <div className="flex items-center justify-center p-4">
+                  <Activity className="w-4 h-4 text-zinc-500 animate-spin" />
+                </div>
+              ) : history.length === 0 ? (
+                <div className="flex flex-col items-center justify-center p-6 text-center">
+                  <span className="text-xs text-zinc-500 font-medium">
+                    No recent transactions
+                  </span>
+                </div>
+              ) : (
+                history.map((tx) => (
+                  <div
+                    key={tx.id}
+                    className="flex flex-col p-3 bg-zinc-950/40 rounded-xl border border-zinc-800/50 gap-2"
+                  >
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-mono text-zinc-400">
+                        {new Date(tx.transaction_date).toLocaleString()}
+                      </span>
+                      <a
+                        href={`https://solscan.io/tx/${tx.tx_signature}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[10px] text-blue-400 hover:text-blue-300 font-bold uppercase tracking-wider flex items-center gap-1"
+                      >
+                        Solscan
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                    <div className="flex items-center justify-between mt-1 bg-zinc-900 rounded-lg px-3 py-2 border border-zinc-800/30">
+                      <div className="flex items-center gap-2 max-w-[40%]">
+                        <span
+                          className="text-sm font-bold text-zinc-200 truncate"
+                          title={tx.input_mint}
+                        >
+                          {tx.input_mint.slice(0, 4)}...
+                          {tx.input_mint.slice(-4)}
+                        </span>
+                      </div>
+                      <div className="flex flex-col items-center gap-0.5 shrink-0 text-zinc-500 px-2">
+                        <span className="text-[10px] font-bold">
+                          {tx.amount}
+                        </span>
+                        <ArrowRight className="w-3 h-3" />
+                      </div>
+                      <div className="flex items-center gap-2 max-w-[40%] justify-end">
+                        <span
+                          className="text-sm font-bold text-zinc-200 truncate"
+                          title={tx.output_mint}
+                        >
+                          {tx.output_mint.slice(0, 4)}...
+                          {tx.output_mint.slice(-4)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       </div>

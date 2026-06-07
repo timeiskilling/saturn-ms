@@ -54,6 +54,29 @@ pub async fn history_transaction(
     Ok(record)
 }
 
+pub async fn get_transaction_history(
+    db: &sqlx::PgPool,
+    owner: String,
+) -> Result<Vec<TransactionHistoryRecord>, ApiError> {
+    let records = sqlx::query_as!(
+        TransactionHistoryRecord,
+        r#"
+        SELECT
+            id, signer, tx_signature, owner_wallet, receiver,
+            input_mint, output_mint, amount, transaction_date
+        FROM transaction_history
+        WHERE owner_wallet = $1
+        ORDER BY transaction_date DESC
+        "#,
+        owner
+    )
+    .fetch_all(db)
+    .await
+    .map_err(|e| ApiError(UserServiceError::PostgresError(e.to_string())))?;
+
+    Ok(records)
+}
+
 pub async fn save_user_bundles(
     user: AuthenticatedUser,
     db: DbPool,

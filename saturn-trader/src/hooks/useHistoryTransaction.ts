@@ -1,37 +1,66 @@
-interface UseBundleSubscriptionProps {
-  userPk?: string;
+import { useState, useEffect, useCallback } from "react";
+import {
+  fetchTransactionHistory,
+  recordTransaction,
+  type TransactionHistoryRecord,
+  type HistoryTransactionRequest,
+} from "../api/history";
+
+interface UseHistoryTransactionProps {
   isAuthenticated: boolean;
-  onUpdate: (update: streaming.UserBundleUpdate) => void;
 }
 
-export function useBundleSubscription({
-  userPk,
+export function useHistoryTransaction({
   isAuthenticated,
-  onUpdate,
-}: UseBundleSubscriptionProps) {
+}: UseHistoryTransactionProps) {
+  const [history, setHistory] = useState<TransactionHistoryRecord[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadHistory = useCallback(async () => {
+    if (!isAuthenticated) {
+      setHistory([]);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await fetchTransactionHistory();
+      setHistory(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLoading(false);
+    }
+  }, [isAuthenticated]);
+
   useEffect(() => {
-    if (!isAuthenticated || !userPk) return;
+    loadHistory();
+  }, [loadHistory]);
 
-    const abortController = new AbortController();
+  const addTransaction = async (payload: HistoryTransactionRequest) => {
+    if (!isAuthenticated) return null;
 
-    const startSubscription = async () => {
-      try {
-        await subscribeToBundles(
-          { userPk },
-          onUpdate,
-          (error) => console.error("Subscription stream failed:", error),
-          () => console.log("Subscription stream completed"),
-          abortController.signal,
-        );
-      } catch (err) {
-        console.error("Failed to initialize subscription:", err);
-      }
-    };
+    const newRecord = await recordTransaction(payload);
+    if (newRecord) {
+      setHistory((prev) => {
+        // Optimistically add to front, removing oldest if > 7 based on backend limits
+        const updated = [newRecord, ...prev];
+        if (updated.length > 7) {
+          updated.pop();
+        }
+        return updated;
+      });
+    }
+    return newRecord;
+  };
 
-    startSubscription();
-
-    return () => {
-      abortController.abort();
-    };
-  }, [isAuthenticated, userPk, onUpdate]);
+  return {
+    history,
+    loading,
+    error,
+    refreshHistory: loadHistory,
+    addTransaction,
+  };
 }

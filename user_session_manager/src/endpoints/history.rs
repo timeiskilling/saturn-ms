@@ -22,3 +22,11 @@ pub async fn record_transaction(
         query::history_transaction(payload, &db.0, existing_session.wallet_address).await?;
     Ok(Json(respone))
 }
+
+pub async fn get_transaction_history(
+    existing_session: AuthenticatedUser,
+    db: DbPool,
+) -> Result<Json<Vec<TransactionHistoryRecord>>, ApiError> {
+    let records = query::get_transaction_history(&db.0, existing_session.wallet_address).await?;
+    Ok(Json(records))
+}
