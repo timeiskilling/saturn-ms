@@ -127,7 +127,7 @@ export function AdvancedSettings({
   return (
     <div
       ref={modalRef}
-      className="absolute top-12 left-1/2 -translate-x-1/2 w-[360px] max-h-[80vh] flex flex-col bg-[#1E1E1E] border border-zinc-800 rounded-2xl shadow-2xl z-50"
+      className="absolute top-12 left-1/2 -translate-x-1/2 w-90 max-h-[80vh] flex flex-col bg-[#1E1E1E] border border-zinc-800 rounded-2xl shadow-2xl z-50"
     >
       <div className="flex items-center justify-between p-5 pb-4 border-b border-zinc-800/50 shrink-0">
         <h3 className="text-lg font-bold text-white">Advanced Settings</h3>

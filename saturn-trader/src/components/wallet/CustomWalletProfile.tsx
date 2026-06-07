@@ -13,6 +13,7 @@ import { WalletModal } from "./profile/WalletModal";
 import { DevicesModal } from "./DevicesModal";
 import { Monitor } from "lucide-react";
 import { useHistoryTransaction } from "../../hooks/useHistoryTransaction";
+import { appConfig } from "../../config/appConfig";
 
 export function CustomWalletProfile() {
   const { solana } = useSolana();
@@ -192,6 +193,21 @@ export function CustomWalletProfile() {
     return foundWallet?.icon;
   };
 
+  const handleToggleNetwork = () => {
+    // This flips a localStorage flag and reloads the page to force the UI
+    // to connect to the new phantom network bindings immediately
+    const currentNetwork =
+      localStorage.getItem("saturn_network") ||
+      (appConfig.useDevnet ? "devnet" : "mainnet");
+    const nextNetwork = currentNetwork === "mainnet" ? "devnet" : "mainnet";
+    localStorage.setItem("saturn_network", nextNetwork);
+    window.location.reload();
+  };
+
+  const activeNetwork =
+    localStorage.getItem("saturn_network") ||
+    (appConfig.useDevnet ? "devnet" : "mainnet");
+
   // If there are no saved wallets and we are not connected, we have nothing to show.
   if (
     (!isConnected || !accounts || accounts.length === 0) &&
@@ -202,6 +218,20 @@ export function CustomWalletProfile() {
 
   return (
     <div className="flex items-center gap-3">
+      <button
+        onClick={handleToggleNetwork}
+        className="flex items-center gap-2 py-1.5 px-3 bg-zinc-900 border border-zinc-800 rounded-full shadow-sm hover:bg-zinc-800 hover:border-zinc-700 transition-colors"
+      >
+        <span
+          className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+            activeNetwork === "devnet" ? "bg-purple-400" : "bg-emerald-400"
+          }`}
+        />
+        <span className="text-[13px] text-zinc-100 font-medium">
+          {activeNetwork}
+        </span>
+      </button>
+
       <button
         onClick={handleOpenDevices}
         className="flex items-center gap-2 py-1.5 px-3 bg-zinc-900 border border-zinc-800 rounded-full shadow-sm hover:bg-zinc-800 hover:border-zinc-700 transition-colors"

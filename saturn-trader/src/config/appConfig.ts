@@ -4,7 +4,14 @@ export interface AppConfig {
   sessionBaseUrl: string;
   grpcBaseUrl: string;
   heliuspUrl: string;
+  useDevnet: boolean;
 }
+
+// Global flag to toggle between Devnet and Mainnet for testing
+const USE_DEVNET =
+  typeof window !== "undefined"
+    ? localStorage.getItem("saturn_network") === "devnet"
+    : false;
 
 export const appConfig: AppConfig = {
   priceServiceBaseUrl:
@@ -18,7 +25,11 @@ export const appConfig: AppConfig = {
 
   grpcBaseUrl: process.env.VITE_GRPC_URL || "https://sutrn.com",
 
-  heliuspUrl: process.env.VITE_HELIUS_API_KEY
-    ? `https://mainnet.helius-rpc.com/?api-key=${process.env.VITE_HELIUS_API_KEY}`
-    : "https://api.devnet.solana.com",
+  heliuspUrl: USE_DEVNET
+    ? "https://api.devnet.solana.com"
+    : process.env.VITE_HELIUS_API_KEY
+      ? `https://mainnet.helius-rpc.com/?api-key=${process.env.VITE_HELIUS_API_KEY}`
+      : "https://api.mainnet-beta.solana.com",
+
+  useDevnet: USE_DEVNET,
 };
