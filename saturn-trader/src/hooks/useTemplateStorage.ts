@@ -10,6 +10,23 @@ interface UseTemplateStorageProps {
   setActiveTemplateId: (id: string | null) => void;
 }
 
+const getCleanTemplates = (templates: Template[]): Template[] => {
+  return templates.map((t) => ({
+    id: t.id,
+    name: t.name,
+    transactions: t.transactions.map((tx) => ({
+      id: tx.id,
+      inputMint: tx.inputMint,
+      outputMint: tx.outputMint,
+      amount: tx.amount,
+      slippageBps: tx.slippageBps,
+      options: tx.options,
+      userPk: tx.userPk,
+      optionalDestination: tx.optionalDestination,
+    })),
+  }));
+};
+
 export function useTemplateStorage({
   isAuthenticated,
   setIsAuthenticated,
@@ -19,11 +36,12 @@ export function useTemplateStorage({
 }: UseTemplateStorageProps) {
   const [isFetchingBundles, setIsFetchingBundles] = useState(true);
   const [isSavingBundles, setIsSavingBundles] = useState(false);
-
-  const lastSavedTemplatesRef = useRef<Template[]>([]);
+  const lastSavedStringRef = useRef<string>("[]");
   const latestTemplatesRef = useRef<Template[]>([]);
 
-  const templatesStringified = JSON.stringify(templates);
+  const cleanTemplatesStringified = JSON.stringify(
+    getCleanTemplates(templates),
+  );
 
   useEffect(() => {
     latestTemplatesRef.current = templates;
@@ -34,7 +52,7 @@ export function useTemplateStorage({
       if (!isAuthenticated) {
         setTemplates([]);
         setActiveTemplateId(null);
-        lastSavedTemplatesRef.current = [];
+        lastSavedStringRef.current = "[]";
         setIsFetchingBundles(false);
         return;
       }
@@ -48,17 +66,20 @@ export function useTemplateStorage({
           const loadedTemplates = data as unknown as Template[];
           setTemplates(loadedTemplates);
           setActiveTemplateId(loadedTemplates[0]?.id ?? null);
-          lastSavedTemplatesRef.current = loadedTemplates;
+
+          lastSavedStringRef.current = JSON.stringify(
+            getCleanTemplates(loadedTemplates),
+          );
         } else {
           setTemplates([]);
           setActiveTemplateId(null);
-          lastSavedTemplatesRef.current = [];
+          lastSavedStringRef.current = "[]";
         }
       } catch (err) {
         console.error("Failed to load bundles:", err);
         setTemplates([]);
         setActiveTemplateId(null);
-        lastSavedTemplatesRef.current = [];
+        lastSavedStringRef.current = "[]";
       } finally {
         setIsFetchingBundles(false);
       }
@@ -76,7 +97,7 @@ export function useTemplateStorage({
       setIsAuthenticated(false);
       setTemplates([]);
       setActiveTemplateId(null);
-      lastSavedTemplatesRef.current = [];
+      lastSavedStringRef.current = "[]";
     };
 
     window.addEventListener("saturn_wallet_verified", handleLogin);
@@ -91,14 +112,14 @@ export function useTemplateStorage({
   const handleSaveBundles = useCallback(
     async (templatesToSave: Template[] = latestTemplatesRef.current) => {
       if (!isAuthenticated) return;
+      const cleanData = getCleanTemplates(templatesToSave);
+      const currentSaveString = JSON.stringify(cleanData);
 
       setIsSavingBundles(true);
 
       try {
-        await saveBundle(templatesToSave as any);
-        lastSavedTemplatesRef.current = JSON.parse(
-          JSON.stringify(templatesToSave),
-        );
+        await saveBundle(cleanData as any);
+        lastSavedStringRef.current = currentSaveString;
       } catch (err) {
         console.error("Save bundles failed:", err);
       } finally {
@@ -107,15 +128,11 @@ export function useTemplateStorage({
     },
     [isAuthenticated],
   );
-
   const hasUnsavedChanges =
-    isAuthenticated &&
-    templatesStringified !== JSON.stringify(lastSavedTemplatesRef.current);
+    isAuthenticated && cleanTemplatesStringified !== lastSavedStringRef.current;
 
   useEffect(() => {
-    if (!isAuthenticated || isFetchingBundles) return;
-
-    if (!hasUnsavedChanges) return;
+    if (!isAuthenticated || isFetchingBundles || !hasUnsavedChanges) return;
 
     const timerId = setTimeout(() => {
       handleSaveBundles();
@@ -123,7 +140,7 @@ export function useTemplateStorage({
 
     return () => clearTimeout(timerId);
   }, [
-    templatesStringified,
+    cleanTemplatesStringified,
     isAuthenticated,
     isFetchingBundles,
     hasUnsavedChanges,
