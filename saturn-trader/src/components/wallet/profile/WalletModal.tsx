@@ -1,20 +1,19 @@
 import React, { useMemo } from "react";
 import { createPortal } from "react-dom";
 import {
-  RefreshCw,
   X,
-  Info,
   Wallet,
-  ShieldCheck,
-  ExternalLink,
   History,
   Activity,
   ArrowRight,
+  ExternalLink,
+  TrendingUp,
 } from "lucide-react";
 import { type AccountInfo } from "./types";
 import { WalletDropdown } from "./WalletDropdown";
 import { useAllWalletsBalances } from "../../../hooks/useAllWalletsBalances";
 import { type TransactionHistoryRecord } from "../../../api/history";
+import { TokenIcon } from "@/saturnComponents/TokenIcon";
 
 interface WalletModalProps {
   showModal: boolean;
@@ -35,6 +34,12 @@ interface WalletModalProps {
   loadingHistory: boolean;
 }
 
+// Helper to shorten mint addresses for display
+function shortMint(mint: string) {
+  if (!mint || mint.length < 8) return mint;
+  return `${mint.slice(0, 4)}…${mint.slice(-4)}`;
+}
+
 export function WalletModal({
   showModal,
   isOpen,
@@ -53,83 +58,110 @@ export function WalletModal({
   history,
   loadingHistory,
 }: WalletModalProps) {
-  const { balances, loading, refetch } = useAllWalletsBalances();
+  const { balances } = useAllWalletsBalances();
 
-  const totalSol = useMemo(() => {
-    return Object.values(balances).reduce(
-      (acc, curr) => acc + (curr.solBalance || 0),
-      0,
-    );
-  }, [balances]);
+  const verifiedCount = useMemo(
+    () =>
+      allAccounts.filter(
+        (a) => a.isVerified || verificationStatus[a.address] === "Verified!",
+      ).length,
+    [allAccounts, verificationStatus],
+  );
 
   if (!showModal) return null;
 
   return createPortal(
     <div
-      className={`fixed inset-0 z-100 flex justify-end p-4 transition-all duration-300 ease-out ${
+      className={`fixed inset-0 z-100 flex justify-end p-3 sm:p-4 transition-all duration-300 ease-out ${
         isOpen && !isClosing
-          ? "bg-black/60 backdrop-blur-sm"
-          : "bg-transparent backdrop-blur-none"
+          ? "bg-black/70 backdrop-blur-md"
+          : "bg-transparent backdrop-blur-none pointer-events-none"
       }`}
       onClick={onClose}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className={`w-full max-w-100 h-[calc(100vh-2rem)] flex flex-col bg-[#1A1A1A] border border-zinc-800 rounded-3xl shadow-[0_0_80px_-15px_rgba(0,0,0,0.8)] overflow-hidden transition-transform duration-300 ease-out ${
-          isOpen && !isClosing ? "translate-x-0" : "translate-x-[110%]"
+        className={`w-full max-w-104 h-full flex flex-col rounded-2xl overflow-hidden transition-all duration-300 ease-out ${
+          isOpen && !isClosing
+            ? "translate-x-0 opacity-100"
+            : "translate-x-[110%] opacity-0"
         }`}
+        style={{
+          background:
+            "linear-gradient(160deg, #141414 0%, #111111 60%, #0e0e0e 100%)",
+          border: "1px solid rgba(255,255,255,0.06)",
+          boxShadow:
+            "0 0 0 1px rgba(255,255,255,0.03) inset, 0 32px 80px -12px rgba(0,0,0,0.9), 0 0 40px -10px rgba(0,0,0,0.6)",
+        }}
       >
-        <div className="p-6 pb-4 flex justify-between items-center shrink-0">
-          <div className="flex flex-col">
-            <h3 className="text-xl font-bold text-zinc-100">My Wallets</h3>
-            <span className="text-xs text-zinc-500 font-medium tracking-tight">
+        {/* ── Header ── */}
+        <div className="flex items-center justify-between px-5 pt-5 pb-4 shrink-0 border-b border-white/4">
+          <div>
+            <h3 className="text-[17px] font-semibold text-zinc-100 tracking-tight">
+              My Wallets
+            </h3>
+            <p className="text-[11px] text-zinc-500 mt-0.5">
               Manage your connected accounts
-            </span>
+            </p>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-zinc-800 rounded-full text-zinc-500 hover:text-zinc-300 transition-all"
+            className="w-8 h-8 flex items-center justify-center rounded-full text-zinc-500 hover:text-zinc-200 hover:bg-white/6 transition-all"
           >
-            <X className="w-6 h-6" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="px-6 flex flex-col gap-6 flex-1 overflow-y-auto scrollbar-hide py-2">
-          {/* Portfolio Summary Card */}
-          <div className="bg-zinc-900/50 rounded-2xl border border-zinc-800 p-5 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-              <Wallet className="w-24 h-24 rotate-12" />
-            </div>
+        {/* ── Scrollable body ── */}
+        <div className="flex-1 overflow-y-auto scrollbar-hide px-4 py-4 space-y-4">
+          {/* Portfolio summary */}
+          <div
+            className="rounded-xl p-4 relative overflow-hidden"
+            style={{
+              background:
+                "linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.015) 100%)",
+              border: "1px solid rgba(255,255,255,0.06)",
+            }}
+          >
+            {/* decorative bg icon */}
+            <Wallet className="absolute right-3 top-3 w-16 h-16 text-white/2.5 rotate-12 pointer-events-none" />
 
-            <div className="grid grid-cols-2 gap-3 relative z-10">
-              <div className="bg-zinc-950/40 rounded-xl p-3 border border-zinc-800/50">
-                <span className="block text-[9px] text-zinc-500 uppercase font-bold mb-1">
+            <div className="grid grid-cols-2 gap-2.5 relative z-10">
+              <div
+                className="rounded-lg px-3 py-2.5"
+                style={{
+                  background: "rgba(255,255,255,0.03)",
+                  border: "1px solid rgba(255,255,255,0.05)",
+                }}
+              >
+                <span className="block text-[9px] text-zinc-500 uppercase font-semibold tracking-widest mb-1">
                   Active Wallets
                 </span>
-                <span className="text-sm font-bold text-zinc-200">
+                <span className="text-base font-bold text-zinc-200">
                   {allAccounts.length}
                 </span>
               </div>
-              <div className="bg-zinc-950/40 rounded-xl p-3 border border-zinc-800/50">
-                <span className="block text-[9px] text-zinc-500 uppercase font-bold mb-1">
+              <div
+                className="rounded-lg px-3 py-2.5"
+                style={{
+                  background: "rgba(52, 211, 153, 0.04)",
+                  border: "1px solid rgba(52, 211, 153, 0.1)",
+                }}
+              >
+                <span className="block text-[9px] text-emerald-600 uppercase font-semibold tracking-widest mb-1">
                   Verified
                 </span>
-                <span className="text-sm font-bold text-emerald-500">
-                  {
-                    allAccounts.filter(
-                      (a) =>
-                        a.isVerified ||
-                        verificationStatus[a.address] === "Verified!",
-                    ).length
-                  }
+                <span className="text-base font-bold text-emerald-400">
+                  {verifiedCount}
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between px-1">
-              <span className="text-[10px] uppercase tracking-widest font-bold text-zinc-500">
+          {/* Connected wallets */}
+          <section>
+            <div className="flex items-center gap-2 mb-2 px-0.5">
+              <span className="text-[9px] uppercase tracking-[0.12em] font-bold text-zinc-600">
                 Connected Wallets
               </span>
             </div>
@@ -146,80 +178,154 @@ export function WalletModal({
               onConnectAnother={onConnectAnother}
               onClearAll={onClearAll}
             />
-          </div>
+          </section>
 
-          <div className="flex flex-col gap-2 mt-2">
-            <div className="flex items-center gap-2 px-1">
-              <History className="w-3.5 h-3.5 text-zinc-500" />
-              <span className="text-[10px] uppercase tracking-widest font-bold text-zinc-500">
+          {/* Transaction history */}
+          <section>
+            <div className="flex items-center gap-2 mb-2 px-0.5">
+              <History className="w-3 h-3 text-zinc-600" />
+              <span className="text-[9px] uppercase tracking-[0.12em] font-bold text-zinc-600">
                 Transaction History
               </span>
+              {history.length > 0 && (
+                <span
+                  className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                  style={{
+                    background: "rgba(255,255,255,0.05)",
+                    color: "rgba(255,255,255,0.3)",
+                  }}
+                >
+                  {history.length}
+                </span>
+              )}
             </div>
-            <div className="bg-zinc-900/50 rounded-2xl border border-zinc-800 p-2 overflow-hidden flex flex-col gap-2">
+
+            <div
+              className="rounded-xl overflow-hidden"
+              style={{
+                background: "rgba(255,255,255,0.02)",
+                border: "1px solid rgba(255,255,255,0.05)",
+              }}
+            >
               {loadingHistory ? (
-                <div className="flex items-center justify-center p-4">
-                  <Activity className="w-4 h-4 text-zinc-500 animate-spin" />
+                <div className="flex flex-col items-center justify-center py-10 gap-2">
+                  <Activity className="w-5 h-5 text-zinc-600 animate-spin" />
+                  <span className="text-[11px] text-zinc-600">
+                    Loading history…
+                  </span>
                 </div>
               ) : history.length === 0 ? (
-                <div className="flex flex-col items-center justify-center p-6 text-center">
-                  <span className="text-xs text-zinc-500 font-medium">
-                    No recent transactions
+                <div className="flex flex-col items-center justify-center py-10 gap-2">
+                  <TrendingUp className="w-5 h-5 text-zinc-700" />
+                  <span className="text-[11px] text-zinc-600">
+                    No transactions yet
                   </span>
                 </div>
               ) : (
-                history.map((tx) => (
-                  <div
-                    key={tx.id}
-                    className="flex flex-col p-3 bg-zinc-950/40 rounded-xl border border-zinc-800/50 gap-2"
-                  >
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs font-mono text-zinc-400">
-                        {new Date(tx.transaction_date).toLocaleString()}
-                      </span>
-                      <a
-                        href={`https://solscan.io/tx/${tx.tx_signature}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-[10px] text-blue-400 hover:text-blue-300 font-bold uppercase tracking-wider flex items-center gap-1"
-                      >
-                        Solscan
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
-                    </div>
-                    <div className="flex items-center justify-between mt-1 bg-zinc-900 rounded-lg px-3 py-2 border border-zinc-800/30">
-                      <div className="flex items-center gap-2 max-w-[40%]">
-                        <span
-                          className="text-sm font-bold text-zinc-200 truncate"
-                          title={tx.input_mint}
-                        >
-                          {tx.input_mint.slice(0, 4)}...
-                          {tx.input_mint.slice(-4)}
-                        </span>
-                      </div>
-                      <div className="flex flex-col items-center gap-0.5 shrink-0 text-zinc-500 px-2">
-                        <span className="text-[10px] font-bold">
-                          {tx.amount}
-                        </span>
-                        <ArrowRight className="w-3 h-3" />
-                      </div>
-                      <div className="flex items-center gap-2 max-w-[40%] justify-end">
-                        <span
-                          className="text-sm font-bold text-zinc-200 truncate"
-                          title={tx.output_mint}
-                        >
-                          {tx.output_mint.slice(0, 4)}...
-                          {tx.output_mint.slice(-4)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))
+                <div className="divide-y divide-white/3">
+                  {history.map((tx) => (
+                    <TxRow key={tx.id} tx={tx} />
+                  ))}
+                </div>
               )}
             </div>
-          </div>
+          </section>
         </div>
       </div>
     </div>,
     document.body,
+  );
+}
+function TxRow({ tx }: { tx: TransactionHistoryRecord }) {
+  const date = new Date(tx.transaction_date);
+  const dateStr = date.toLocaleDateString("uk-UA", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+  const timeStr = date.toLocaleTimeString("uk-UA", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+
+  return (
+    <div className="px-3 py-3 flex flex-col gap-2.5 hover:bg-white/2 transition-colors group">
+      {/* top row: date + solscan */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-[11px] text-zinc-400 font-medium tabular-nums">
+            {dateStr}
+          </span>
+          <span className="text-[10px] text-zinc-600 tabular-nums">
+            {timeStr}
+          </span>
+        </div>
+        <a
+          href={`https://solscan.io/tx/${tx.tx_signature}`}
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center gap-1 text-[10px] font-semibold text-zinc-600 hover:text-blue-400 transition-colors uppercase tracking-wider"
+        >
+          Solscan
+          <ExternalLink className="w-2.5 h-2.5" />
+        </a>
+      </div>
+
+      <div
+        className="flex items-center gap-2 rounded-lg px-3 py-2"
+        style={{
+          background: "rgba(255,255,255,0.025)",
+          border: "1px solid rgba(255,255,255,0.04)",
+        }}
+      >
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <TokenIcon
+            token={{
+              mint: tx.input_mint,
+              symbol: `${tx.input_mint.slice(0, 4)}`,
+            }}
+            className="w-7 h-7 rounded-full shrink-0 ring-1 ring-white/10"
+          />
+          <div className="flex flex-col min-w-0">
+            <span
+              className="text-[11px] font-bold text-zinc-300 truncate"
+              title={tx.input_mint}
+            >
+              {tx.input_mint.slice(0, 4)}…{tx.input_mint.slice(-4)}
+            </span>
+            {tx.amount && (
+              <span className="text-[10px] text-zinc-600 tabular-nums">
+                {Number(tx.amount).toLocaleString()}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* arrow */}
+        <div className="shrink-0 flex flex-col items-center gap-0.5">
+          <ArrowRight className="w-3.5 h-3.5 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
+        </div>
+
+        {/* to token */}
+        <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
+          <div className="flex flex-col items-end min-w-0">
+            <span
+              className="text-[11px] font-bold text-zinc-300 truncate"
+              title={tx.output_mint}
+            >
+              {tx.output_mint.slice(0, 4)}…{tx.output_mint.slice(-4)}
+            </span>
+          </div>
+          <TokenIcon
+            token={{
+              mint: tx.output_mint,
+              symbol: `${tx.output_mint.slice(0, 4)}`,
+            }}
+            className="w-7 h-7 rounded-full shrink-0 ring-1 ring-white/10"
+          />
+        </div>
+      </div>
+    </div>
   );
 }

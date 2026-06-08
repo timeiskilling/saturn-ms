@@ -97,15 +97,23 @@ export function BundledTransactions() {
 
   const handleBundleUpdate = useCallback(
     (update: any) => {
-      setTemplateStatuses((prev) => ({
-        ...prev,
-        [update.bundleId]: {
-          isLoading:
-            update.newStatus !== 3 && // BUNDLE_STAGE_FINALIZED
-            update.newStatus !== 4, // BUNDLE_STAGE_FAILED
-          stage: update.newStatus,
-        },
-      }));
+      setTemplateStatuses((prev) => {
+        const bundleId = update.bundleId;
+        const currentStatus = prev[bundleId];
+        if (currentStatus?.stage === 3) {
+          return prev;
+        }
+        return {
+          ...prev,
+          [bundleId]: {
+            isLoading:
+              update.newStatus !== 3 && // BUNDLE_STAGE_FINALIZED
+              update.newStatus !== 4, // BUNDLE_STAGE_FAILED
+            stage: update.newStatus,
+            error: update.error || currentStatus?.error,
+          },
+        };
+      });
     },
     [setTemplateStatuses],
   );

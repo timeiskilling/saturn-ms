@@ -16,12 +16,14 @@ export function useTemplateStatus(
   const notifiedError = useRef<string | null>(null);
 
   const isExecuting = status?.isLoading ?? false;
-  const isFailed =
-    status?.stage === streaming.BundleStage.BUNDLE_STAGE_FAILED ||
-    !!status?.error;
+
   const isSuccessRaw =
     status?.stage === streaming.BundleStage.BUNDLE_STAGE_FINALIZED ||
     status?.stage === streaming.BundleStage.BUNDLE_STAGE_CONFIRMED;
+
+  const isFailed =
+    status?.stage === streaming.BundleStage.BUNDLE_STAGE_FAILED ||
+    (!!status?.error && !isSuccessRaw);
 
   useEffect(() => {
     if (isSuccessRaw && !isSuccessExpired) {
@@ -54,6 +56,8 @@ export function useTemplateStatus(
     }
 
     if (isFailed) {
+      if (isSuccessRaw) return;
+
       const errorMark = status?.error || "rejected";
 
       if (notifiedError.current !== errorMark) {
