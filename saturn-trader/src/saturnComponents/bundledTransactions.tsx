@@ -16,6 +16,7 @@ import { useTemplateStorage } from "@/hooks/useTemplateStorage";
 import { useBundleExecution } from "@/hooks/useBundleExecution";
 import { useBundleSubscription } from "@/hooks/useBundleSubscription";
 import { useSmoothScrollbar } from "@/hooks/useSmoothScrollbar";
+import { useHistoryTransaction } from "@/hooks/useHistoryTransaction";
 
 export function BundledTransactions() {
   const { handleSignOnly } = useSignTransaction();
@@ -59,13 +60,39 @@ export function BundledTransactions() {
   const isSaveDisabled =
     !isAuthenticated || templates.length === 0 || !hasUnsavedChanges;
 
+  const { addTransaction } = useHistoryTransaction({
+    isAuthenticated: isAuthenticated && !!globalActiveAddress,
+  });
+
   const {
     templateStatuses,
     setTemplateStatuses,
     handleExecuteSelected,
     handleExecuteTemplate,
-  } = useBundleExecution(addresses, handleSignOnly, () =>
-    setSelectedTemplateIds(new Set()),
+  } = useBundleExecution(
+    addresses,
+    handleSignOnly,
+    () => setSelectedTemplateIds(new Set()),
+    (templateId) => {
+      // Find the template that succeeded
+      const template = templates.find((t) => t.id === templateId);
+      if (template && globalActiveAddress) {
+        // Record each transaction in the bundle
+        template.transactions.forEach((tx) => {
+          if (tx.calculatedOutput && tx.amount) {
+            addTransaction({
+              signer: tx.userPk || globalActiveAddress,
+              tx_signature: `bundle_${Date.now()}_${tx.id}`, // Placeholder or extract real sig if available
+              receiver:
+                tx.optionalDestination || tx.userPk || globalActiveAddress,
+              input_mint: tx.inputMint,
+              output_mint: tx.outputMint,
+              amount: tx.amount.toString(),
+            }).catch((err) => console.error("Failed to record history", err));
+          }
+        });
+      }
+    },
   );
 
   const handleBundleUpdate = useCallback(

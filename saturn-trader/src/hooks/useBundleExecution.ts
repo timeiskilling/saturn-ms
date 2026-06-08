@@ -9,6 +9,7 @@ export function useBundleExecution(
   addresses: any[],
   handleSignOnly: any,
   clearSelection: () => void,
+  onTransactionSuccess?: (txId: string) => void,
 ) {
   const [templateStatuses, setTemplateStatuses] = useState<
     Record<string, TemplateStatus>
@@ -78,6 +79,15 @@ export function useBundleExecution(
                       streaming.BundleStage.BUNDLE_STAGE_FAILED,
                   stage: update.newStatus,
                 };
+
+                // Add logic here: if we have finalized/success, notify caller to record history
+                if (
+                  update.newStatus ===
+                    streaming.BundleStage.BUNDLE_STAGE_FINALIZED &&
+                  onTransactionSuccess
+                ) {
+                  onTransactionSuccess(t.id);
+                }
               });
               return updates;
             });

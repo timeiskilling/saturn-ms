@@ -143,17 +143,34 @@ export const TransactionItem = React.memo(function TransactionItem({
   let inputTokenBalance = actualInputTokenBalance;
 
   if (actualInputTokenBalance !== null && transactions) {
-    let simulatedBalance = parseFloat(actualInputTokenBalance);
+    const parseAmount = (val: string | number | undefined | null) => {
+      if (!val) return 0;
+      if (typeof val === "number") return val;
+      const cleaned = val.replace(/,/g, "");
+      const parsed = parseFloat(cleaned);
+      return isNaN(parsed) ? 0 : parsed;
+    };
+
+    let simulatedBalance = parseAmount(actualInputTokenBalance);
     for (let i = 0; i < index; i++) {
       const prevTx = transactions[i];
       if (!prevTx) continue;
       const prevTxWallet = prevTx.userPk || Object.values(balances)[0]?.address;
       if (prevTxWallet === activeWalletAddress) {
         if (prevTx.inputMint === tx.inputMint) {
-          simulatedBalance -= parseFloat(prevTx.amount || "0");
+          simulatedBalance -= parseAmount(
+            prevTx.amount ??
+              (prevTx as any).inputAmount ??
+              (prevTx as any).inputValue,
+          );
         }
-        if (prevTx.outputMint === tx.inputMint && prevTx.calculatedOutput) {
-          simulatedBalance += parseFloat(prevTx.calculatedOutput || "0");
+        if (
+          prevTx.outputMint === tx.inputMint &&
+          (prevTx.calculatedOutput ?? (prevTx as any).outputAmount)
+        ) {
+          simulatedBalance += parseAmount(
+            prevTx.calculatedOutput ?? (prevTx as any).outputAmount,
+          );
         }
       }
     }
