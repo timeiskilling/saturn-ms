@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { type Template } from "@/saturnComponents/bundledTransactions/types";
 import { fetchBundles, saveBundle } from "../api/saveBundle";
 
@@ -20,9 +20,12 @@ export function useTemplateStorage({
   const [isFetchingBundles, setIsFetchingBundles] = useState(true);
   const [isSavingBundles, setIsSavingBundles] = useState(false);
 
+  // last persisted server state
   const lastSavedTemplatesRef = useRef<Template[]>([]);
+  // always keep latest templates for autosave
   const latestTemplatesRef = useRef<Template[]>([]);
-  const templatesStringified = JSON.stringify(templates);
+  // autosave timer ref to properly reset debounce
+  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     latestTemplatesRef.current = templates;
@@ -39,10 +42,8 @@ export function useTemplateStorage({
       }
 
       setIsFetchingBundles(true);
-
       try {
         const data = await fetchBundles();
-
         if (data && data.length > 0) {
           const loadedTemplates = data as unknown as Template[];
           setTemplates(loadedTemplates);
@@ -87,45 +88,74 @@ export function useTemplateStorage({
     };
   }, [isAuthenticated, setTemplates, setActiveTemplateId, setIsAuthenticated]);
 
-  const handleSaveBundles = useCallback(
-    async (templatesToSave: Template[] = latestTemplatesRef.current) => {
-      if (!isAuthenticated) return;
+  // Manual save — called by the Save button
+  const handleSaveBundles = async (
+    templatesToSave: Template[] = latestTemplatesRef.current,
+  ) => {
+    if (!isAuthenticated) return;
 
-      setIsSavingBundles(true);
+    // Cancel any pending autosave since we're saving now
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current);
+      autosaveTimerRef.current = null;
+    }
 
-      try {
-        await saveBundle(templatesToSave as any);
-        lastSavedTemplatesRef.current = templatesToSave;
-      } catch (err) {
-        console.error("Save bundles failed:", err);
-      } finally {
-        setIsSavingBundles(false);
-      }
-    },
-    [isAuthenticated],
-  );
+    setIsSavingBundles(true);
+    try {
+      await saveBundle(templatesToSave as any);
+      lastSavedTemplatesRef.current = templatesToSave;
+    } catch (err) {
+      console.error("Save bundles failed:", err);
+    } finally {
+      setIsSavingBundles(false);
+    }
+  };
 
-  const hasUnsavedChanges =
-    isAuthenticated &&
-    templatesStringified !== JSON.stringify(lastSavedTemplatesRef.current);
-
+  // Autosave with proper debounce — fires 10s after last change, skips if no diff
   useEffect(() => {
     if (!isAuthenticated || isFetchingBundles) return;
 
-    if (!hasUnsavedChanges) return;
+    const hasChanges =
+      JSON.stringify(latestTemplatesRef.current) !==
+      JSON.stringify(lastSavedTemplatesRef.current);
 
-    const timerId = setTimeout(() => {
-      handleSaveBundles();
-    }, 2500);
+    if (!hasChanges) return;
 
-    return () => clearTimeout(timerId);
-  }, [
-    templatesStringified,
-    isAuthenticated,
-    isFetchingBundles,
-    hasUnsavedChanges,
-    handleSaveBundles,
-  ]);
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current);
+    }
+
+    autosaveTimerRef.current = setTimeout(async () => {
+      const toSave = latestTemplatesRef.current;
+
+      // Final guard: user might have reverted changes within the 10s window
+      if (
+        JSON.stringify(toSave) === JSON.stringify(lastSavedTemplatesRef.current)
+      ) {
+        return;
+      }
+
+      setIsSavingBundles(true);
+      try {
+        await saveBundle(toSave as any);
+        lastSavedTemplatesRef.current = toSave;
+      } catch (err) {
+        console.error("Autosave failed:", err);
+      } finally {
+        setIsSavingBundles(false);
+      }
+    }, 10_000);
+
+    return () => {
+      if (autosaveTimerRef.current) {
+        clearTimeout(autosaveTimerRef.current);
+      }
+    };
+  }, [templates, isAuthenticated, isFetchingBundles]);
+
+  const hasUnsavedChanges =
+    isAuthenticated &&
+    JSON.stringify(templates) !== JSON.stringify(lastSavedTemplatesRef.current);
 
   return {
     isFetchingBundles,
