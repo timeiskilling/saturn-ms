@@ -61,7 +61,9 @@ export function useTemplateStatus(
           React.createElement(
             "span",
             null,
-            "Error: " + (status?.error || "Transaction failed for ") + " ",
+            "Saturn Error: " +
+              (status?.error || "Transaction failed for ") +
+              " ",
             React.createElement(
               "span",
               { className: "font-bold text-zinc-100" },
