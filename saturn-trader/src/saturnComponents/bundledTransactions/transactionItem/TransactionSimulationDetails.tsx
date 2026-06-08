@@ -42,7 +42,10 @@ export function TransactionSimulationDetails({
     let isActive = true;
 
     const runSimulation = async () => {
-      setIsSimulating(true);
+      // Only show the loading skeleton on the initial fetch
+      if (!simulation) {
+        setIsSimulating(true);
+      }
 
       try {
         const inputAmountInt = new BigNumber(amount)
@@ -110,7 +113,9 @@ export function TransactionSimulationDetails({
         }
       }
     };
-    const debounce = setTimeout(runSimulation, 1000);
+
+    // Use a longer debounce to reduce network spam on constant price updates
+    const debounce = setTimeout(runSimulation, 600);
 
     return () => {
       isActive = false;

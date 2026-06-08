@@ -66,6 +66,14 @@ export function TokenSelect({
   const solMint = "So11111111111111111111111111111111111111112";
 
   const allOwnedTokensByWallet = useMemo(() => {
+    const parseAmount = (val: string | number | undefined | null) => {
+      if (!val) return 0;
+      if (typeof val === "number") return val;
+      const cleaned = val.replace(/,/g, "");
+      const parsed = parseFloat(cleaned);
+      return isNaN(parsed) ? 0 : parsed;
+    };
+
     return Object.values(balances).map((wallet) => {
       let initialWalletTokens: Array<{
         mint: string;
@@ -120,8 +128,8 @@ export function TokenSelect({
 
         if (
           isCurrentWallet &&
-          tx.calculatedOutput &&
-          parseFloat(tx.calculatedOutput) > 0
+          (tx.calculatedOutput ?? (tx as any).outputAmount) &&
+          parseAmount(tx.calculatedOutput ?? (tx as any).outputAmount) > 0
         ) {
           if (!tokenMap.has(tx.outputMint)) {
             const popularMatch = POPULAR_TOKENS.find(
@@ -157,16 +165,20 @@ export function TokenSelect({
           // Deduct input amounts
           if (tx.inputMint && tokenMap.has(tx.inputMint)) {
             const t = tokenMap.get(tx.inputMint);
-            t.simulatedBalance -= parseFloat(tx.amount || "0");
+            t.simulatedBalance -= parseAmount(
+              tx.amount ?? (tx as any).inputAmount ?? (tx as any).inputValue,
+            );
           }
           // Add output amounts
           if (
             tx.outputMint &&
             tokenMap.has(tx.outputMint) &&
-            tx.calculatedOutput
+            (tx.calculatedOutput ?? (tx as any).outputAmount)
           ) {
             const t = tokenMap.get(tx.outputMint);
-            t.simulatedBalance += parseFloat(tx.calculatedOutput || "0");
+            t.simulatedBalance += parseAmount(
+              tx.calculatedOutput ?? (tx as any).outputAmount,
+            );
           }
         }
       }
