@@ -88,13 +88,11 @@ export function useTemplateStorage({
     };
   }, [isAuthenticated, setTemplates, setActiveTemplateId, setIsAuthenticated]);
 
-  // Manual save — called by the Save button
   const handleSaveBundles = async (
     templatesToSave: Template[] = latestTemplatesRef.current,
   ) => {
     if (!isAuthenticated) return;
 
-    // Cancel any pending autosave since we're saving now
     if (autosaveTimerRef.current) {
       clearTimeout(autosaveTimerRef.current);
       autosaveTimerRef.current = null;
@@ -111,47 +109,57 @@ export function useTemplateStorage({
     }
   };
 
-  // Autosave with proper debounce — fires 10s after last change, skips if no diff
   useEffect(() => {
     if (!isAuthenticated || isFetchingBundles) return;
 
     const hasChanges =
-      JSON.stringify(latestTemplatesRef.current) !==
+      JSON.stringify(templates) !==
       JSON.stringify(lastSavedTemplatesRef.current);
 
-    if (!hasChanges) return;
-
-    if (autosaveTimerRef.current) {
-      clearTimeout(autosaveTimerRef.current);
+    if (!hasChanges) {
+      if (autosaveTimerRef.current) {
+        clearTimeout(autosaveTimerRef.current);
+        autosaveTimerRef.current = null;
+      }
+      return;
     }
 
-    autosaveTimerRef.current = setTimeout(async () => {
-      const toSave = latestTemplatesRef.current;
+    // Only set a new timer if one isn't already running
+    // This prevents the 10s timer from resetting to 0 every time you type a letter
+    if (!autosaveTimerRef.current) {
+      autosaveTimerRef.current = setTimeout(async () => {
+        const toSave = latestTemplatesRef.current;
 
-      // Final guard: user might have reverted changes within the 10s window
-      if (
-        JSON.stringify(toSave) === JSON.stringify(lastSavedTemplatesRef.current)
-      ) {
-        return;
-      }
+        if (
+          JSON.stringify(toSave) ===
+          JSON.stringify(lastSavedTemplatesRef.current)
+        ) {
+          autosaveTimerRef.current = null;
+          return;
+        }
 
-      setIsSavingBundles(true);
-      try {
-        await saveBundle(toSave as any);
-        lastSavedTemplatesRef.current = toSave;
-      } catch (err) {
-        console.error("Autosave failed:", err);
-      } finally {
-        setIsSavingBundles(false);
-      }
-    }, 10_000);
+        setIsSavingBundles(true);
+        try {
+          await saveBundle(toSave as any);
+          lastSavedTemplatesRef.current = toSave;
+        } catch (err) {
+          console.error("Autosave failed:", err);
+        } finally {
+          setIsSavingBundles(false);
+          autosaveTimerRef.current = null;
+        }
+      }, 10_000);
+    }
+  }, [templates, isAuthenticated, isFetchingBundles]);
 
+  // Clean up timer on unmount
+  useEffect(() => {
     return () => {
       if (autosaveTimerRef.current) {
         clearTimeout(autosaveTimerRef.current);
       }
     };
-  }, [templates, isAuthenticated, isFetchingBundles]);
+  }, []);
 
   const hasUnsavedChanges =
     isAuthenticated &&
