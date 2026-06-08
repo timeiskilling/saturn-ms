@@ -98,73 +98,84 @@ export function TokenSelect({
         }),
       ];
 
-      // Optimistic Balance Simulation
-      let walletTokens: Array<{
-        mint: string;
-        symbol: string;
-        balance: string;
-        decimals: number;
-        icon: string | undefined;
-        realBalance?: string;
-      }> = initialWalletTokens.map((token) => {
-        let simulatedBalance = parseFloat(token.balance);
-        for (let i = 0; i < index; i++) {
-          const tx = transactions[i] as TransactionInstruction;
-          if (!tx) continue;
-          if (
-            (tx.userPk && tx.userPk === wallet.address) ||
-            (!tx.userPk && walletAddress === wallet.address) ||
-            (!tx.userPk && !walletAddress)
-          ) {
-            if (tx.inputMint === token.mint) {
-              simulatedBalance -= parseFloat(tx.amount || "0");
-            }
-            if (tx.outputMint === token.mint && tx.calculatedOutput) {
-              simulatedBalance += parseFloat(tx.calculatedOutput || "0");
-            }
-          }
-        }
-
-        return {
+      // 1. Initialize a map with all existing tokens
+      const tokenMap = new Map<string, any>();
+      initialWalletTokens.forEach((token) => {
+        tokenMap.set(token.mint, {
           ...token,
           realBalance: token.balance,
-          balance: Math.max(0, simulatedBalance).toString(),
-        };
+          simulatedBalance: parseFloat(token.balance),
+        });
       });
 
-      // Add tokens that we didn't have but received in previous steps
+      // 2. Discover tokens from previous steps that might not be in the wallet yet
       for (let i = 0; i < index; i++) {
         const tx = transactions[i] as TransactionInstruction;
         if (!tx) continue;
-        if (
+
+        const isCurrentWallet =
           (tx.userPk && tx.userPk === wallet.address) ||
           (!tx.userPk && walletAddress === wallet.address) ||
-          (!tx.userPk && !walletAddress)
+          (!tx.userPk && !walletAddress);
+
+        if (
+          isCurrentWallet &&
+          tx.calculatedOutput &&
+          parseFloat(tx.calculatedOutput) > 0
         ) {
-          if (tx.calculatedOutput && parseFloat(tx.calculatedOutput) > 0) {
-            const existingToken = walletTokens.find(
-              (t) => t.mint === tx.outputMint,
+          if (!tokenMap.has(tx.outputMint)) {
+            const popularMatch = POPULAR_TOKENS.find(
+              (p) => p.mint === tx.outputMint,
             );
-            if (!existingToken) {
-              const popularMatch = POPULAR_TOKENS.find(
-                (p) => p.mint === tx.outputMint,
-              );
-              const allListMatch = allTokens.find(
-                (p) => p.mint === tx.outputMint,
-              );
-              walletTokens.push({
-                mint: tx.outputMint,
-                symbol:
-                  popularMatch?.symbol || allListMatch?.symbol || "Unknown",
-                balance: tx.calculatedOutput,
-                realBalance: "0",
-                decimals: popularMatch?.decimals || 9,
-                icon: allListMatch?.icon,
-              } as any);
-            }
+            const allListMatch = allTokens.find(
+              (p) => p.mint === tx.outputMint,
+            );
+            tokenMap.set(tx.outputMint, {
+              mint: tx.outputMint,
+              symbol: popularMatch?.symbol || allListMatch?.symbol || "Unknown",
+              balance: "0",
+              realBalance: "0",
+              simulatedBalance: 0, // Will be incremented in the next loop
+              decimals: popularMatch?.decimals || allListMatch?.decimals || 9,
+              icon: allListMatch?.icon,
+            });
           }
         }
       }
+
+      // 3. Simulate balances chronologically for ALL tokens
+      for (let i = 0; i < index; i++) {
+        const tx = transactions[i] as TransactionInstruction;
+        if (!tx) continue;
+
+        const isCurrentWallet =
+          (tx.userPk && tx.userPk === wallet.address) ||
+          (!tx.userPk && walletAddress === wallet.address) ||
+          (!tx.userPk && !walletAddress);
+
+        if (isCurrentWallet) {
+          // Deduct input amounts
+          if (tx.inputMint && tokenMap.has(tx.inputMint)) {
+            const t = tokenMap.get(tx.inputMint);
+            t.simulatedBalance -= parseFloat(tx.amount || "0");
+          }
+          // Add output amounts
+          if (
+            tx.outputMint &&
+            tokenMap.has(tx.outputMint) &&
+            tx.calculatedOutput
+          ) {
+            const t = tokenMap.get(tx.outputMint);
+            t.simulatedBalance += parseFloat(tx.calculatedOutput || "0");
+          }
+        }
+      }
+
+      // 4. Format the map back to the expected array
+      const walletTokens = Array.from(tokenMap.values()).map((t) => ({
+        ...t,
+        balance: Math.max(0, t.simulatedBalance).toString(),
+      }));
 
       return {
         ...wallet,

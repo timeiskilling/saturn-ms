@@ -39,16 +39,16 @@ export function TransactionSimulationDetails({
       return;
     }
 
-    setIsSimulating(true);
-    let isActive = true; // Прапорець для захисту від Race Condition
+    let isActive = true;
 
     const runSimulation = async () => {
+      setIsSimulating(true);
+
       try {
-        // Безпечна математика через BigNumber
         const inputAmountInt = new BigNumber(amount)
           .shiftedBy(maxDecimals)
           .integerValue(BigNumber.ROUND_DOWN)
-          .toNumber(); // Або .toString(), якщо simulateBundle очікує рядок
+          .toNumber();
 
         const expectedOutputInt = new BigNumber(calculatedOutputAmount)
           .shiftedBy(outputMaxDecimals)
@@ -110,8 +110,7 @@ export function TransactionSimulationDetails({
         }
       }
     };
-
-    const debounce = setTimeout(runSimulation, 1500);
+    const debounce = setTimeout(runSimulation, 1000);
 
     return () => {
       isActive = false;
