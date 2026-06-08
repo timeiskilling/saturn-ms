@@ -218,7 +218,6 @@ export function TokenSelect({
   }, [isInput, allOwnedTokensByWallet, search]);
 
   const displaySourceTokens = useMemo(() => {
-    // ВАЖЛИВО: Прибрано логіку return [], щоб популярні токени завжди були доступні
     return sourceTokens
       .filter(
         (t) =>
@@ -227,7 +226,6 @@ export function TokenSelect({
       )
       .filter(
         (token) =>
-          // Відфільтровуємо дублікати (якщо токен вже є у гаманці, не показуємо його знову знизу)
           !displayTokensByWallet.some((wallet) =>
             wallet.tokens.some((t) => t.mint === token.mint),
           ),
@@ -364,7 +362,6 @@ export function TokenSelect({
                           </span>
                         </div>
 
-                        {/* ВІДНОВЛЕНА ТАБЛИЦЯ */}
                         <table className="w-full text-left text-sm">
                           <thead className="bg-zinc-900 text-zinc-500 text-xs uppercase shadow-sm">
                             <tr>
@@ -509,7 +506,6 @@ export function TokenSelect({
                     )}
                 </div>
               ) : (
-                /* ВИГЛЯД, КОЛИ ЦЕ НЕ INPUT (наприклад Output токен) */
                 <div className="p-1 min-w-max">
                   <div className="px-2 py-1.5 text-xs font-semibold text-zinc-500 uppercase tracking-wider sticky top-0 bg-zinc-900 z-10">
                     Popular Tokens
@@ -541,8 +537,6 @@ export function TokenSelect({
                   ))}
                 </div>
               )}
-
-              {/* 4. CUSTOM ADDRESS OPTION */}
               {showCustomOption && (
                 <div
                   onClick={() => {

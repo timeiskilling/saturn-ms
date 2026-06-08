@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { streaming } from "@/protoTypes/streaming_status";
-import type { TemplateStatus } from "@/saturnComponents/bundledTransactions";
+import type { TemplateStatus } from "@/saturnComponents/bundledTransactions/TemplateSidebar";
 
 const SUCCESS_DISMISS_MS = 5_000;
 
@@ -61,7 +61,7 @@ export function useTemplateStatus(
           React.createElement(
             "span",
             null,
-            "You rejected template: ",
+            "Error: " + (status?.error || "Transaction failed for ") + " ",
             React.createElement(
               "span",
               { className: "font-bold text-zinc-100" },
