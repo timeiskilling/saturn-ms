@@ -11,11 +11,21 @@ import { Toaster, toast } from "sonner";
 import { PhantomProvider, darkTheme, usePhantom } from "@phantom/react-sdk";
 import { AddressType } from "@phantom/browser-sdk";
 import { CustomWalletProfile } from "./components/wallet/CustomWalletProfile";
+import Support from "./saturnComponents/Support";
 
 function AppContent() {
   const [activeTab, setActiveTab] = useState<
-    "trading" | "bundles" | "roadmap" | "forceUnlink"
+    "trading" | "bundles" | "roadmap" | "forceUnlink" | "support"
   >("trading");
+
+  // Словник для оптимізації рендерингу класів Tailwind
+  const tabTransforms: Record<typeof activeTab, string> = {
+    trading: "translate-x-0",
+    bundles: "-translate-x-full",
+    roadmap: "translate-x-[-200%]",
+    forceUnlink: "translate-x-[-300%]",
+    support: "translate-x-[-400%]",
+  };
 
   return (
     <div className="select-none flex flex-col h-screen w-full overflow-hidden bg-zinc-950">
@@ -52,62 +62,30 @@ function AppContent() {
               </div>
             </div>
 
+            {/* Desktop Navigation */}
             <div className="hidden lg:flex gap-1 bg-zinc-900 p-1 rounded-lg border border-zinc-800">
-              <button
-                onClick={() => setActiveTab("trading")}
-                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                  activeTab === "trading"
-                    ? "bg-zinc-800 text-white shadow-sm"
-                    : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
-                }`}
-              >
-                Terminal
-              </button>
-              <button
-                onClick={() => setActiveTab("bundles")}
-                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                  activeTab === "bundles"
-                    ? "bg-zinc-800 text-white shadow-sm"
-                    : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
-                }`}
-              >
-                Bundles
-              </button>
-              <button
-                onClick={() => setActiveTab("roadmap")}
-                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                  activeTab === "roadmap"
-                    ? "bg-zinc-800 text-white shadow-sm"
-                    : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
-                }`}
-              >
-                Roadmap
-              </button>
-              <button
-                onClick={() => setActiveTab("forceUnlink")}
-                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                  activeTab === "forceUnlink"
-                    ? "bg-zinc-800 text-white shadow-sm"
-                    : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
-                }`}
-              >
-                Force Unlink
-              </button>
+              {["trading", "bundles", "roadmap", "forceUnlink", "support"].map(
+                (tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab as any)}
+                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors capitalize ${
+                      activeTab === tab
+                        ? "bg-zinc-800 text-white shadow-sm"
+                        : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+                    }`}
+                  >
+                    {tab === "forceUnlink" ? "Force Unlink" : tab}
+                  </button>
+                ),
+              )}
             </div>
           </div>
         </div>
 
         <div className="flex flex-1 overflow-hidden relative w-full">
           <div
-            className={`flex w-full h-full transition-transform duration-300 ease-in-out ${
-              activeTab === "trading"
-                ? "translate-x-0"
-                : activeTab === "bundles"
-                  ? "-translate-x-full"
-                  : activeTab === "roadmap"
-                    ? "translate-x-[-200%]"
-                    : "translate-x-[-300%]"
-            }`}
+            className={`flex w-full h-full transition-transform duration-300 ease-in-out ${tabTransforms[activeTab]}`}
           >
             {/* Terminal Page */}
             <div className="flex flex-col lg:flex-row w-full h-full shrink-0 overflow-hidden">
@@ -139,6 +117,13 @@ function AppContent() {
             <div className="flex w-full h-full shrink-0">
               <div className="flex flex-1 flex-col overflow-hidden w-full bg-zinc-950">
                 <ForceUnlink />
+              </div>
+            </div>
+
+            {/* Support Page */}
+            <div className="flex w-full h-full shrink-0">
+              <div className="flex flex-1 flex-col overflow-hidden w-full bg-zinc-950">
+                <Support />
               </div>
             </div>
           </div>
@@ -173,6 +158,7 @@ function AppContent() {
             Terminal
           </span>
         </button>
+
         <button
           onClick={() => setActiveTab("bundles")}
           className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-all ${
@@ -199,6 +185,7 @@ function AppContent() {
             Bundles
           </span>
         </button>
+
         <button
           onClick={() => setActiveTab("roadmap")}
           className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-all ${
@@ -225,6 +212,7 @@ function AppContent() {
             Roadmap
           </span>
         </button>
+
         <button
           onClick={() => setActiveTab("forceUnlink")}
           className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-all ${
@@ -249,6 +237,33 @@ function AppContent() {
           </svg>
           <span className="text-[10px] font-bold uppercase tracking-wider">
             Unlink
+          </span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("support")}
+          className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-all ${
+            activeTab === "support"
+              ? "text-blue-500 scale-110"
+              : "text-zinc-500 hover:text-zinc-300"
+          }`}
+        >
+          <svg
+            className="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"
+            ></path>
+          </svg>
+          <span className="text-[10px] font-bold uppercase tracking-wider">
+            Support
           </span>
         </button>
       </div>
