@@ -13,31 +13,21 @@ pub async fn history_transaction(
     db: &sqlx::PgPool,
     owner: String,
 ) -> Result<TransactionHistoryRecord, ApiError> {
+    let mut tx = db
+        .begin()
+        .await
+        .map_err(|e| ApiError(UserServiceError::PostgresError(e.to_string())))?;
+
     let record = sqlx::query_as!(
         TransactionHistoryRecord,
         r#"
-        WITH inserted AS (
-            INSERT INTO transaction_history (
-                tx_signature, owner_wallet, signer, receiver, input_mint, output_mint, amount
-            )
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
-            RETURNING
-                id, signer, tx_signature, owner_wallet, receiver,
-                input_mint, output_mint, amount, transaction_date
-        ),
-        deleted AS (
-            DELETE FROM transaction_history
-            WHERE id IN (
-                SELECT id FROM transaction_history
-                WHERE owner_wallet = $2
-                ORDER BY transaction_date DESC
-                OFFSET 7
-            )
+        INSERT INTO transaction_history (
+            tx_signature, owner_wallet, signer, receiver, input_mint, output_mint, amount
         )
-        SELECT
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING
             id, signer, tx_signature, owner_wallet, receiver,
             input_mint, output_mint, amount, transaction_date
-        FROM inserted
         "#,
         payload.tx_signature,
         owner,
@@ -47,9 +37,29 @@ pub async fn history_transaction(
         payload.output_mint,
         payload.amount
     )
-    .fetch_one(db)
+    .fetch_one(&mut *tx)
     .await
     .map_err(|e| ApiError(UserServiceError::PostgresError(e.to_string())))?;
+
+    sqlx::query!(
+        r#"
+        DELETE FROM transaction_history
+        WHERE id IN (
+            SELECT id FROM transaction_history
+            WHERE owner_wallet = $1
+            ORDER BY transaction_date DESC
+            OFFSET 8
+        )
+        "#,
+        owner
+    )
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| ApiError(UserServiceError::PostgresError(e.to_string())))?;
+
+    tx.commit()
+        .await
+        .map_err(|e| ApiError(UserServiceError::PostgresError(e.to_string())))?;
 
     Ok(record)
 }
@@ -67,6 +77,7 @@ pub async fn get_transaction_history(
         FROM transaction_history
         WHERE owner_wallet = $1
         ORDER BY transaction_date DESC
+        LIMIT 8
         "#,
         owner
     )

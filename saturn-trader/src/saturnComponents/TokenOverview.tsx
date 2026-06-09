@@ -100,7 +100,8 @@ function TokenRow({ symbol }: { symbol: string }) {
               className={`inline-flex items-center gap-1 text-xs font-medium w-15 justify-end tabular-nums ${pctColor}`}
             >
               <ChangeTriangle dir={currentDir} />
-              {Math.abs(priceData.percentChange).toFixed(2)}%
+              {priceData.percentChange > 0 ? "+" : ""}
+              {priceData.percentChange.toFixed(2)}%
             </span>
           </>
         ) : (
