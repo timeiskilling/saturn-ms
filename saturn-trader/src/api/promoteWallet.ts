@@ -70,6 +70,14 @@ export async function promoteWallet(
     }
 
     window.dispatchEvent(new Event("saturn_wallet_promoted"));
+
+    await fetch(`${appConfig.sessionBaseUrl}/auth/logout`, {
+      method: "POST",
+      credentials: "include",
+    });
+
+    window.location.href = "/";
+
     return true;
   } catch (error) {
     console.error("Wallet promotion error:", error);

@@ -10,9 +10,13 @@
       }
     ],
     "parameters": {
-      "Left": ["Text"]
+      "Left": [
+        "Text"
+      ]
     },
-    "nullable": [false]
+    "nullable": [
+      false
+    ]
   },
   "hash": "a7b099337f7242a55735837b855462a3905fe0d351b5696259ca672c632b243e"
 }

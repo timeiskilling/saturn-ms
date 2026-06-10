@@ -18,7 +18,7 @@ use crate::{
         extractor::DbPool,
         models::UnlinkedWalletResponse,
         query::{
-            LoginEligibility, acquire_login_lock_and_check, check_if_is_linked_wallet,
+            LoginEligibility, acquire_login_lock_and_check, ensure_that_user_exists,
             get_wallet_status, insert_wallets, unlink_wallet,
         },
     },
@@ -98,10 +98,10 @@ pub async fn verify_signature(
                     tracing::warn!("Rejected login for linked wallet. Belongs to primary.");
                     Err(ApiError(UserServiceError::Unauthorized))
                 }
-                LoginEligibility::NewWallet
-                | LoginEligibility::FreeWallet
-                | LoginEligibility::IsPrimary => {
+                LoginEligibility::FreeWallet | LoginEligibility::IsPrimary => {
                     tracing::info!("Login approved for wallet");
+
+                    ensure_that_user_exists(hashed_public_key.clone(), &db.0).await?;
 
                     let mut cleanup_conn = redis.get_connection().await?;
                     let response =
@@ -122,25 +122,15 @@ pub async fn verify_unlink(
     let mut conn = redis.get_connection().await?;
     let hashed_public_key = crate::hash::hash_wallet_address(&payload.verify_data.public_key);
 
-    let (expected_nonce, is_linked_to_primary) = tokio::try_join!(
-        redis::command::fetch_nonce_from_redis(&mut conn, &payload.verify_data.request_id),
-        check_if_is_linked_wallet(&db.0, &hashed_public_key)
-    )?;
-
-    if !is_linked_to_primary {
-        tracing::warn!("Rejected unlink: Wallet is not linked to primary wallet.",);
-
-        return Err(ApiError(UserServiceError::InternalError(
-            "Target wallet is not linked to this primary account".to_string(),
-        )));
-    }
-    let expected_message = format!("Unlink from any primary account. Nonce: {}", expected_nonce);
+    let expected_nonce =
+        redis::command::fetch_nonce_from_redis(&mut conn, &payload.verify_data.request_id).await?;
 
     drop(conn);
+
+    let expected_message = format!("Unlink from any primary account. Nonce: {}", expected_nonce);
     verify_payload_signature(payload.verify_data, expected_message, None).await?;
 
-    let response = unlink_wallet(&db.0, hashed_public_key).await?;
-    Ok((axum::http::StatusCode::OK, Json(response)).into_response())
+    unlink_wallet(db, hashed_public_key).await
 }
 
 pub async fn logout(

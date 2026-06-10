@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO user_bundles (wallet_address, bundles_data)\n        VALUES ($1, '[]'::jsonb)\n        ON CONFLICT (wallet_address) DO NOTHING\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4c7a192c52dc6b32a7839e56cf6e133269cb6e612a65f82f8962573542590ca5"
+}

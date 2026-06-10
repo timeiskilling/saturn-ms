@@ -6,6 +6,7 @@ use crate::postgres::models::{
 };
 use crate::{endpoints::errors::ApiError, middleware::session_token::AuthenticatedUser};
 use axum::Json;
+use axum::response::IntoResponse;
 use saturn_errors::error::UserServiceError;
 
 pub async fn history_transaction(
@@ -88,6 +89,25 @@ pub async fn get_transaction_history(
     Ok(records)
 }
 
+pub async fn ensure_that_user_exists(
+    hashed_public_key: String,
+    db: &sqlx::PgPool,
+) -> Result<(), ApiError> {
+    sqlx::query!(
+        r#"
+        INSERT INTO user_bundles (wallet_address, bundles_data)
+        VALUES ($1, '[]'::jsonb)
+        ON CONFLICT (wallet_address) DO NOTHING
+        "#,
+        hashed_public_key
+    )
+    .execute(db)
+    .await
+    .map_err(|e| ApiError(UserServiceError::PostgresError(e.to_string())))?;
+
+    Ok(())
+}
+
 pub async fn save_user_bundles(
     user: AuthenticatedUser,
     db: DbPool,
@@ -106,7 +126,7 @@ pub async fn save_user_bundles(
     )
     .execute(&db.0)
     .await
-    .map_err(|e| UserServiceError::PostgresError(e.to_string()))?;
+    .map_err(|e| ApiError(UserServiceError::PostgresError(e.to_string())))?;
 
     Ok(())
 }
@@ -148,7 +168,7 @@ pub async fn get_linked_wallets(
     )
     .fetch_all(&db.0)
     .await
-    .map_err(|e| UserServiceError::PostgresError(e.to_string()))?;
+    .map_err(|e| ApiError(UserServiceError::PostgresError(e.to_string())))?;
 
     let wallets: Vec<serde_json::Value> = result
         .into_iter()
@@ -283,7 +303,7 @@ pub async fn disconnect_wallet(
     db: &sqlx::PgPool,
     Json(payload): Json<crate::endpoints::models::TargetPayload>,
 ) -> Result<UnlinkedWalletResponse, ApiError> {
-    sqlx::query!(
+    let result = sqlx::query!(
         "DELETE FROM linked_wallets WHERE address = $1 AND primary_wallet = $2",
         payload.target_wallet,
         user.wallet_address
@@ -292,13 +312,18 @@ pub async fn disconnect_wallet(
     .await
     .map_err(|e| UserServiceError::PostgresError(e.to_string()))?;
 
+    if result.rows_affected() == 0 {
+        return Err(ApiError(UserServiceError::InternalError(
+            "Wallet not found".to_string(),
+        )));
+    }
+
     Ok(UnlinkedWalletResponse {
         status: "unlinked".to_string(),
     })
 }
 
 pub enum LoginEligibility {
-    NewWallet,
     FreeWallet,
     IsPrimary,
     IsLinked,
@@ -465,27 +490,28 @@ pub async fn promote_wallet(
 }
 
 pub async fn unlink_wallet(
-    db: &sqlx::PgPool,
-    target_wallet: String,
-) -> Result<UnlinkWalletResponse, ApiError> {
+    db: DbPool,
+    hashed_public_key: String,
+) -> Result<impl IntoResponse, ApiError> {
     let result = sqlx::query!(
-        r#"
-        DELETE FROM linked_wallets
-        WHERE address = $1
-        "#,
-        target_wallet
+        "DELETE FROM linked_wallets WHERE address = $1 RETURNING address",
+        hashed_public_key
     )
-    .fetch_optional(db)
+    .fetch_optional(&db.0)
     .await
-    .map_err(|e| UserServiceError::PostgresError(e.to_string()))?;
+    .map_err(|e| ApiError(UserServiceError::PostgresError(e.to_string())))?;
 
     match result {
-        Some(_) => Ok(UnlinkWalletResponse {
-            status: "unlinked".to_string(),
-        }),
         None => Err(ApiError(UserServiceError::InternalError(
-            "Target wallet is not a linked wallet".to_string(),
+            "Target wallet is not linked to this primary account".to_string(),
         ))),
+        Some(_) => Ok((
+            axum::http::StatusCode::OK,
+            Json(UnlinkWalletResponse {
+                status: "unlinked".to_string(),
+            }),
+        )
+            .into_response()),
     }
 }
 
