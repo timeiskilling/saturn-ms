@@ -15,11 +15,11 @@ const server = serve({
   routes: {
     "/": index,
 
-    // "/get/list_of_tokens": {
-    //   GET() {
-    //     return fetch(`${appConfig.grpcServiceBase}/get/list_of_tokens`);
-    //   },
-    // },
+    "/get/list_of_tokens": {
+      GET() {
+        return fetch(`${appConfig.grpcServiceBase}/get/list_of_tokens`);
+      },
+    },
 
     "/ws": {
       GET(req) {
@@ -30,16 +30,16 @@ const server = serve({
       },
     },
 
-    // "/*": {
-    //   GET(req) {
-    //     console.log("BLOCKED GET:", req.url);
-    //     return new Response("Bad Request", { status: 400 });
-    //   },
-    //   POST(req) {
-    //     console.log("BLOCKED GET:", req.url);
-    //     return new Response("Bad Request", { status: 400 });
-    //   },
-    // },
+    "/*": {
+      GET(req) {
+        console.log("BLOCKED GET:", req.url);
+        return new Response("Bad Request", { status: 400 });
+      },
+      POST(req) {
+        console.log("BLOCKED GET:", req.url);
+        return new Response("Bad Request", { status: 400 });
+      },
+    },
   },
 
   development: process.env.NODE_ENV !== "production" && {
