@@ -215,9 +215,6 @@ export function Support() {
                     <span
                       className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono tracking-wider uppercase ${colors.bg} ${colors.text}`}
                     >
-                      <span
-                        className={`w-1.5 h-1.5 rounded-full ${colors.dot}`}
-                      />
                       {wallet.network}
                     </span>
                   </div>

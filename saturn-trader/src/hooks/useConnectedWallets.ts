@@ -159,6 +159,9 @@ export function useConnectedWallets() {
         );
         let next;
         let isChanged = false;
+
+        const incomingTypes = accounts.map((a) => a.addressType as string);
+
         if (existingIndex >= 0) {
           const existing = prev[existingIndex]!;
           const updatedWallet: SavedWallet = {
@@ -167,15 +170,16 @@ export function useConnectedWallets() {
             icon: user.wallet?.icon || existing.icon,
             accounts: [
               ...(existing.accounts || []).filter(
-                (ea) => !accounts.some((a) => a.address === ea.address),
+                (ea) => !incomingTypes.includes(ea.addressType),
               ),
               ...accounts.map((a) => ({
                 address: a.address,
-                addressType: a.addressType,
+                addressType: a.addressType as string,
               })),
             ],
             isVerified: existing.isVerified,
           };
+
           if (JSON.stringify(existing) !== JSON.stringify(updatedWallet)) {
             next = [...prev];
             next[existingIndex] = updatedWallet;
@@ -188,9 +192,10 @@ export function useConnectedWallets() {
             walletId: user.walletId!,
             name: user.wallet?.name || "Wallet",
             icon: user.wallet?.icon,
+            // Також приводимо до string тут
             accounts: accounts.map((a) => ({
               address: a.address,
-              addressType: a.addressType,
+              addressType: a.addressType as string,
             })),
           };
           next = [...prev, newWallet];
@@ -204,9 +209,6 @@ export function useConnectedWallets() {
       });
     } else if (!isConnected && prevWalletIdRef.current) {
       prevWalletIdRef.current = null;
-      // We no longer clear saturn_saved_wallets on disconnect.
-      // We want to keep them visible as 'Linked' or 'Saved' wallets.
-      // Also stopped clearing internal phantom keys here to prevent state flickering.
     }
   }, [user, accounts, isConnected]);
 
