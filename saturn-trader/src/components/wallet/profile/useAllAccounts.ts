@@ -15,18 +15,21 @@ export function useAllAccounts() {
 
   const allAccounts = useMemo(() => {
     const accs: AccountInfo[] = [];
-    savedWallets.forEach((w) => {
-      w.accounts.forEach((a) => {
-        accs.push({
-          address: a.address,
-          addressType: a.addressType,
-          walletId: w.walletId,
-          icon: w.icon,
-          name: w.name,
-          isVerified: w.isVerified,
+    savedWallets.forEach(
+      (w) => {
+        w.accounts.forEach((a) => {
+          accs.push({
+            address: a.address,
+            addressType: a.addressType,
+            walletId: w.walletId,
+            icon: w.icon,
+            name: w.name,
+            isVerified: w.isVerified,
+          });
         });
-      });
-    });
+      },
+      [savedWallets, accounts, user, isConnected],
+    );
 
     // Add current accounts if not already in savedWallets (to prevent flicker)
     if (accounts && isConnected) {
@@ -47,8 +50,18 @@ export function useAllAccounts() {
     return accs;
   }, [savedWallets, accounts, user, isConnected]);
 
-  const primaryAccount =
-    allAccounts.find((a) => a.addressType === "Solana") || allAccounts[0];
+  const primaryAccount = useMemo(() => {
+    const activeAddress = accounts?.[0]?.address;
+
+    if (activeAddress) {
+      const found = allAccounts.find((a) => a.address === activeAddress);
+      if (found) return found;
+    }
+
+    return (
+      allAccounts.find((a) => a.addressType === "Solana") || allAccounts[0]
+    );
+  }, [allAccounts, accounts]);
 
   return {
     allAccounts,

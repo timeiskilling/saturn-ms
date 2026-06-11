@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { Trash2, Settings } from "lucide-react";
 import { BasicCard } from "../card";
 import { SwapButton } from "../../components/ui/swap-button";
@@ -13,6 +13,7 @@ import { useTokenPrice } from "@/hooks/useTokenPrice";
 import { TokenInputBlock } from "./transactionItem/TokenInputBlock";
 import { AdvancedSettings as AdvancedSettingsV2 } from "./transactionItem/SettingsV2";
 import { TransactionSimulationDetails } from "./transactionItem/TransactionSimulationDetails";
+import { useAllAccounts } from "@/components/wallet/profile/useAllAccounts";
 
 interface TransactionItemProps {
   tx: TransactionInstruction;
@@ -45,6 +46,7 @@ export const TransactionItem = React.memo(function TransactionItem({
 }: TransactionItemProps) {
   const { balances, loading } = useAllWalletsBalances();
   const { tokens: allTokens } = useTokenList();
+  const { primaryAccount } = useAllAccounts();
 
   const inputTokenSymbol =
     allTokens.find((t) => t.mint === tx.inputMint)?.symbol ||
@@ -84,10 +86,18 @@ export const TransactionItem = React.memo(function TransactionItem({
     [balances],
   );
 
-  const activeWalletAddress =
-    tx.userPk && connectedAddresses.includes(tx.userPk)
-      ? tx.userPk
-      : connectedAddresses[0];
+  const activeWalletAddress = useMemo(() => {
+    if (tx.userPk && connectedAddresses.includes(tx.userPk)) {
+      return tx.userPk;
+    }
+    if (
+      primaryAccount?.address &&
+      connectedAddresses.includes(primaryAccount.address)
+    ) {
+      return primaryAccount.address;
+    }
+    return connectedAddresses[0];
+  }, [tx.userPk, connectedAddresses, primaryAccount]);
 
   React.useEffect(() => {
     if (
