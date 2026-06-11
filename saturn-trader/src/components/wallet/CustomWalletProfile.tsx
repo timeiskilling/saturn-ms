@@ -135,6 +135,17 @@ export function CustomWalletProfile() {
   const hasCheckedSession = useRef<Record<string, boolean>>({});
 
   useEffect(() => {
+    const clearSessionCache = () => {
+      hasCheckedSession.current = {};
+      setVerificationStatus({});
+    };
+
+    window.addEventListener("saturn_wallet_logout", clearSessionCache);
+    return () =>
+      window.removeEventListener("saturn_wallet_logout", clearSessionCache);
+  }, []);
+
+  useEffect(() => {
     if (!isConnected) {
       hasCheckedSession.current = {};
       setVerificationStatus({});
