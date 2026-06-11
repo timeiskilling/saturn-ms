@@ -31,10 +31,12 @@ const server = serve({
     },
 
     "/*": {
-      GET() {
+      GET(req) {
+        console.log("BLOCKED GET:", req.url);
         return new Response("Bad Request", { status: 400 });
       },
-      POST() {
+      POST(req) {
+        console.log("BLOCKED GET:", req.url);
         return new Response("Bad Request", { status: 400 });
       },
     },
