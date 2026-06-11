@@ -158,7 +158,7 @@ export async function subscribeToBundles(
 ) {
   return executeGrpcStream({
     request,
-    endpoint: "/streaming.BundleService/UserBundleRequest",
+    endpoint: `${appConfig.grpcServiceBase}/UserBundleRequest`,
     encode: (req) => streaming.UserBundleRequest.encode(req).finish(),
     decode: (frame) => streaming.UserBundleUpdate.decode(frame),
     onUpdate,
@@ -177,7 +177,7 @@ export async function sendBundleStream(
 ) {
   return executeGrpcStream({
     request,
-    endpoint: "/streaming.BundleService/SendTransactions",
+    endpoint: `${appConfig.grpcServiceBase}/SendTransactions`,
     encode: (req) => streaming.SignedTransactions.encode(req).finish(),
     decode: (frame) => streaming.UserBundleUpdate.decode(frame),
     onUpdate,

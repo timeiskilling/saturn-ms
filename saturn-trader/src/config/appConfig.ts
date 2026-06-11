@@ -5,6 +5,7 @@ export interface AppConfig {
   grpcBaseUrl: string;
   heliuspUrl: string;
   useDevnet: boolean;
+  grpcServiceBase: string;
 }
 
 // Global flag to toggle between Devnet and Mainnet for testing
@@ -32,4 +33,6 @@ export const appConfig: AppConfig = {
       : "https://api.mainnet-beta.solana.com",
 
   useDevnet: USE_DEVNET,
+
+  grpcServiceBase: `/streaming.BundleService`,
 };

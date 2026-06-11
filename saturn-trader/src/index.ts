@@ -2,6 +2,7 @@ import { serve } from "bun";
 import index from "./index.html";
 import Redis from "ioredis";
 import "./polyfill.ts";
+import { appConfig } from "./config/appConfig.ts";
 const redisSubscriber = new Redis({
   host: process.env.REDIS_HOST || "127.0.0.1",
   port: Number(process.env.REDIS_PORT) || 6379,
@@ -13,6 +14,12 @@ const server = serve({
   port: 3030,
   routes: {
     "/": index,
+
+    "/get/list_of_tokens": {
+      GET() {
+        return fetch(`${appConfig.grpcServiceBase}/get/list_of_tokens`);
+      },
+    },
 
     "/ws": {
       GET(req) {
