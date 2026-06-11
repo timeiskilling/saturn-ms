@@ -156,19 +156,19 @@ impl IntoVerifiable for VerifySignature {
 pub async fn verify_payload_signature<T>(
     payload_data: T,
     expected_message: String,
-    expected_hashed_pubkey: Option<&str>,
+    expected_pubkey: Option<&str>,
 ) -> Result<(), ApiError>
 where
     T: IntoVerifiable + Send + 'static,
 {
-    if let Some(expected_hash) = expected_hashed_pubkey {
-        let payload_hash = crate::hash::hash_wallet_address(payload_data.get_public_key());
+    if let Some(expected) = expected_pubkey {
+        let payload = payload_data.get_public_key();
 
-        if payload_hash != expected_hash {
+        if payload != expected {
             tracing::warn!(
-                "Security breach attempt: payload hash {} does not match session hash {}",
-                payload_hash,
-                expected_hash
+                "Security breach attempt: payload {} does not match session pubkey {}",
+                payload,
+                expected
             );
             return Err(ApiError(UserServiceError::Unauthorized));
         }

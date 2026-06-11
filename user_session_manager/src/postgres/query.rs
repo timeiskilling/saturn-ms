@@ -90,7 +90,7 @@ pub async fn get_transaction_history(
 }
 
 pub async fn ensure_that_user_exists(
-    hashed_public_key: String,
+    public_key: String,
     db: &sqlx::PgPool,
 ) -> Result<(), ApiError> {
     sqlx::query!(
@@ -99,7 +99,7 @@ pub async fn ensure_that_user_exists(
         VALUES ($1, '[]'::jsonb)
         ON CONFLICT (wallet_address) DO NOTHING
         "#,
-        hashed_public_key
+        public_key
     )
     .execute(db)
     .await
@@ -331,7 +331,7 @@ pub enum LoginEligibility {
 
 pub async fn acquire_login_lock_and_check(
     pool: &sqlx::PgPool,
-    hashed_public_key: &str,
+    public_key: &str,
 ) -> Result<LoginEligibility, ApiError> {
     let mut tx = pool
         .begin()
@@ -340,7 +340,7 @@ pub async fn acquire_login_lock_and_check(
 
     let lock_key = {
         let mut hasher = std::collections::hash_map::DefaultHasher::new();
-        std::hash::Hash::hash(hashed_public_key, &mut hasher);
+        std::hash::Hash::hash(public_key, &mut hasher);
         std::hash::Hasher::finish(&hasher) as i64
     };
 
@@ -360,7 +360,7 @@ pub async fn acquire_login_lock_and_check(
                 SELECT primary_wallet FROM linked_wallets WHERE address = $1 LIMIT 1
             ) AS linked_to
         "#,
-        hashed_public_key
+        public_key
     )
     .fetch_one(&mut *tx)
     .await
@@ -489,13 +489,10 @@ pub async fn promote_wallet(
     })
 }
 
-pub async fn unlink_wallet(
-    db: DbPool,
-    hashed_public_key: String,
-) -> Result<impl IntoResponse, ApiError> {
+pub async fn unlink_wallet(db: DbPool, public_key: String) -> Result<impl IntoResponse, ApiError> {
     let result = sqlx::query!(
         "DELETE FROM linked_wallets WHERE address = $1 RETURNING address",
-        hashed_public_key
+        public_key
     )
     .fetch_optional(&db.0)
     .await

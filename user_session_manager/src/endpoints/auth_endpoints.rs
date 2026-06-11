@@ -58,16 +58,16 @@ pub async fn verify_signature(
     let expected_nonce =
         redis::command::fetch_nonce_from_redis(&mut conn, &payload.verify_data.request_id).await?;
     let expected_message = format!("Sign in to Saturn.\n\nNonce: {}", expected_nonce);
-    let hashed_public_key = crate::hash::hash_wallet_address(&payload.verify_data.public_key);
+    let public_key = payload.verify_data.public_key.clone();
 
     drop(conn);
     verify_payload_signature(payload.verify_data, expected_message, None).await?;
 
     match existing_session {
         Some(user) => {
-            let wallet_status = get_wallet_status(&db.0, &hashed_public_key).await?;
+            let wallet_status = get_wallet_status(&db.0, &public_key).await?;
 
-            if wallet_status.is_primary && user.wallet_address != hashed_public_key {
+            if wallet_status.is_primary && user.wallet_address != public_key {
                 tracing::warn!("Rejected linking wallet. Already registered as a primary account.",);
                 return Err(ApiError(UserServiceError::Unauthorized));
             }
@@ -82,7 +82,7 @@ pub async fn verify_signature(
             let success_response = insert_wallets(
                 &db.0,
                 user,
-                hashed_public_key,
+                public_key,
                 payload.wallet_id,
                 payload.name,
                 payload.address_type,
@@ -91,7 +91,7 @@ pub async fn verify_signature(
             Ok((axum::http::StatusCode::OK, Json(success_response)).into_response())
         }
         None => {
-            let eligibility = acquire_login_lock_and_check(&db.0, &hashed_public_key).await?;
+            let eligibility = acquire_login_lock_and_check(&db.0, &public_key).await?;
 
             match eligibility {
                 LoginEligibility::IsLinked => {
@@ -101,12 +101,11 @@ pub async fn verify_signature(
                 LoginEligibility::FreeWallet | LoginEligibility::IsPrimary => {
                     tracing::info!("Login approved for wallet");
 
-                    ensure_that_user_exists(hashed_public_key.clone(), &db.0).await?;
+                    ensure_that_user_exists(public_key.clone(), &db.0).await?;
 
                     let mut cleanup_conn = redis.get_connection().await?;
                     let response =
-                        inject_token(hashed_public_key, &mut cleanup_conn, user_agent.as_str())
-                            .await?;
+                        inject_token(public_key, &mut cleanup_conn, user_agent.as_str()).await?;
                     Ok(response.into_response())
                 }
             }
@@ -120,7 +119,7 @@ pub async fn verify_unlink(
     Json(payload): Json<SolVerifyRequest>,
 ) -> Result<impl IntoResponse, ApiError> {
     let mut conn = redis.get_connection().await?;
-    let hashed_public_key = crate::hash::hash_wallet_address(&payload.verify_data.public_key);
+    let public_key = payload.verify_data.public_key.clone();
 
     let expected_nonce =
         redis::command::fetch_nonce_from_redis(&mut conn, &payload.verify_data.request_id).await?;
@@ -130,7 +129,7 @@ pub async fn verify_unlink(
     let expected_message = format!("Unlink from any primary account. Nonce: {}", expected_nonce);
     verify_payload_signature(payload.verify_data, expected_message, None).await?;
 
-    unlink_wallet(db, hashed_public_key).await
+    unlink_wallet(db, public_key).await
 }
 
 pub async fn logout(
