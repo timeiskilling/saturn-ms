@@ -12,13 +12,18 @@ import { PhantomProvider, darkTheme, usePhantom } from "@phantom/react-sdk";
 import { AddressType } from "@phantom/browser-sdk";
 import { CustomWalletProfile } from "./components/wallet/CustomWalletProfile";
 import Support from "./saturnComponents/Support";
+import { useWalletSync } from "./components/wallet/profile/useWalletSync";
+
+function WalletSyncListener() {
+  useWalletSync();
+  return null;
+}
 
 function AppContent() {
   const [activeTab, setActiveTab] = useState<
     "trading" | "bundles" | "roadmap" | "forceUnlink" | "support"
   >("trading");
 
-  // Словник для оптимізації рендерингу класів Tailwind
   const tabTransforms: Record<typeof activeTab, string> = {
     trading: "translate-x-0",
     bundles: "-translate-x-full",
@@ -283,6 +288,7 @@ export function AppTest() {
       appName="Saturn"
       appIcon="./public/saturn_d.jpg"
     >
+      <WalletSyncListener />
       <Toaster
         position="bottom-center"
         visibleToasts={3}
