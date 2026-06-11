@@ -18,17 +18,19 @@ export function useWalletSync() {
       prevActiveAddress.current !== currentActiveAddress
     ) {
       console.log(
-        `[Wallet Sync] State mutated. Old: ${prevActiveAddress.current}, New: ${currentActiveAddress || "Disconnected"}`,
+        `[Wallet Sync] Switch detected. Old: ${prevActiveAddress.current}, New: ${currentActiveAddress || "Disconnected"}`,
       );
 
+      window.dispatchEvent(new Event("saturn_wallet_logout"));
+
       logout().catch((err) => {
-        console.error("[Wallet Sync] Failed to logout on backend:", err);
+        console.error("[Wallet Sync] Backend logout failed:", err);
       });
 
-      disconnect();
       clearSavedWallets();
-
-      window.dispatchEvent(new Event("saturn_wallet_logout"));
+      if (!currentActiveAddress) {
+        disconnect();
+      }
     }
 
     prevActiveAddress.current = currentActiveAddress || null;

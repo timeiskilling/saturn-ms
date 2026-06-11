@@ -39,7 +39,7 @@ export function useTemplateStorage({
   const lastSavedStringRef = useRef<string>("[]");
   const latestTemplatesRef = useRef<Template[]>([]);
 
-  const isLoggedOutRef = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const cleanTemplatesStringified = JSON.stringify(
     getCleanTemplates(templates),
@@ -59,13 +59,14 @@ export function useTemplateStorage({
         return;
       }
 
+      if (abortControllerRef.current) abortControllerRef.current.abort();
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
       setIsFetchingBundles(true);
-      isLoggedOutRef.current = false;
 
       try {
-        const data = await fetchBundles();
-
-        if (isLoggedOutRef.current) return;
+        const data = await fetchBundles(controller.signal);
 
         if (data && data.length > 0) {
           const loadedTemplates = data as unknown as Template[];
@@ -79,14 +80,14 @@ export function useTemplateStorage({
           setActiveTemplateId(null);
           lastSavedStringRef.current = "[]";
         }
-      } catch (err) {
-        if (isLoggedOutRef.current) return;
+      } catch (err: any) {
+        if (err.name === "AbortError" || controller.signal.aborted) return;
         console.error("Failed to load bundles:", err);
         setTemplates([]);
         setActiveTemplateId(null);
         lastSavedStringRef.current = "[]";
       } finally {
-        if (!isLoggedOutRef.current) setIsFetchingBundles(false);
+        if (!controller.signal.aborted) setIsFetchingBundles(false);
       }
     };
 
@@ -95,11 +96,10 @@ export function useTemplateStorage({
     const handleLogin = () => {
       localStorage.setItem("isLoggedIn", "true");
       setIsAuthenticated(true);
-      isLoggedOutRef.current = false;
     };
 
     const handleLogout = () => {
-      isLoggedOutRef.current = true;
+      if (abortControllerRef.current) abortControllerRef.current.abort();
       localStorage.removeItem("isLoggedIn");
       setIsAuthenticated(false);
       setTemplates([]);
@@ -115,12 +115,15 @@ export function useTemplateStorage({
     return () => {
       window.removeEventListener("saturn_wallet_verified", handleLogin);
       window.removeEventListener("saturn_wallet_logout", handleLogout);
+      if (abortControllerRef.current) abortControllerRef.current.abort();
     };
   }, [isAuthenticated, setTemplates, setActiveTemplateId, setIsAuthenticated]);
 
   const handleSaveBundles = useCallback(
     async (templatesToSave: Template[] = latestTemplatesRef.current) => {
-      if (!isAuthenticated || isLoggedOutRef.current) return;
+      if (!isAuthenticated) return;
+      const currentController = abortControllerRef.current;
+      if (currentController?.signal.aborted) return;
 
       const cleanData = getCleanTemplates(templatesToSave);
       const currentSaveString = JSON.stringify(cleanData);
@@ -128,14 +131,15 @@ export function useTemplateStorage({
       setIsSavingBundles(true);
 
       try {
-        await saveBundle(cleanData as any);
-        if (isLoggedOutRef.current) return;
+        await saveBundle(cleanData as any, currentController?.signal);
+        if (currentController?.signal.aborted) return;
         lastSavedStringRef.current = currentSaveString;
-      } catch (err) {
-        if (isLoggedOutRef.current) return;
+      } catch (err: any) {
+        if (err.name === "AbortError" || currentController?.signal.aborted)
+          return;
         console.error("Save bundles failed:", err);
       } finally {
-        if (!isLoggedOutRef.current) setIsSavingBundles(false);
+        if (!currentController?.signal.aborted) setIsSavingBundles(false);
       }
     },
     [isAuthenticated],
@@ -145,13 +149,7 @@ export function useTemplateStorage({
     isAuthenticated && cleanTemplatesStringified !== lastSavedStringRef.current;
 
   useEffect(() => {
-    if (
-      !isAuthenticated ||
-      isFetchingBundles ||
-      !hasUnsavedChanges ||
-      isLoggedOutRef.current
-    )
-      return;
+    if (!isAuthenticated || isFetchingBundles || !hasUnsavedChanges) return;
 
     const timerId = setTimeout(() => {
       handleSaveBundles();

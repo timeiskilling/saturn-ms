@@ -17,12 +17,13 @@ export type HistoryTransactionRequest = Omit<
 
 import { appConfig } from "@/config/appConfig";
 
-export async function fetchTransactionHistory(): Promise<
-  TransactionHistoryRecord[]
-> {
+export async function fetchTransactionHistory(
+  signal?: AbortSignal,
+): Promise<TransactionHistoryRecord[]> {
   try {
     const response = await fetch(`${appConfig.sessionBaseUrl}/wallet/history`, {
       method: "GET",
+      signal,
       credentials: "include",
     });
 
@@ -44,10 +45,12 @@ export async function fetchTransactionHistory(): Promise<
 
 export async function recordTransaction(
   payload: HistoryTransactionRequest,
+  signal?: AbortSignal,
 ): Promise<TransactionHistoryRecord | null> {
   try {
     const response = await fetch(`${appConfig.sessionBaseUrl}/wallet/record`, {
       method: "POST",
+      signal,
       credentials: "include",
       headers: {
         "Content-Type": "application/json",

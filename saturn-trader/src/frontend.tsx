@@ -1,11 +1,4 @@
-/**
- * This file is the entry point for the React app, it sets up the root
- * element and renders the App component to the DOM.
- *
- * It is included in `src/index.html`.
- */
 import "./polyfill";
-import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import { AppTest } from "./App_tester";
@@ -15,11 +8,7 @@ import BigNumber from "bignumber.js";
 BigNumber.config({ EXPONENTIAL_AT: 1e9 });
 console.log("Welcome to Saturn");
 const elem = document.getElementById("root")!;
-const app = (
-  <StrictMode>
-    <AppTest />
-  </StrictMode>
-);
+const app = <AppTest />;
 
 if (import.meta.hot) {
   // With hot module reloading, `import.meta.hot.data` is persisted.

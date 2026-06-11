@@ -17,7 +17,7 @@ export function useHistoryTransaction({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const isLoggedOut = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const loadHistory = useCallback(async () => {
     if (!isAuthenticated) {
@@ -25,19 +25,28 @@ export function useHistoryTransaction({
       return;
     }
 
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     setLoading(true);
     setError(null);
-    isLoggedOut.current = false;
 
     try {
-      const data = await fetchTransactionHistory();
-      if (isLoggedOut.current) return;
+      const data = await fetchTransactionHistory(controller.signal);
       setHistory(data);
-    } catch (err) {
-      if (isLoggedOut.current) return;
+    } catch (err: any) {
+      if (err.name === "AbortError" || controller.signal.aborted) {
+        return;
+      }
       setError(err instanceof Error ? err.message : String(err));
     } finally {
-      if (!isLoggedOut.current) setLoading(false);
+      if (!controller.signal.aborted) {
+        setLoading(false);
+      }
     }
   }, [isAuthenticated]);
 
@@ -47,7 +56,9 @@ export function useHistoryTransaction({
 
   useEffect(() => {
     const handleLogout = () => {
-      isLoggedOut.current = true;
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
       setHistory([]);
       setError(null);
       setLoading(false);
@@ -59,17 +70,30 @@ export function useHistoryTransaction({
   }, []);
 
   const addTransaction = async (payload: HistoryTransactionRequest) => {
-    if (!isAuthenticated || isLoggedOut.current) return null;
+    const currentController = abortControllerRef.current;
 
-    const newRecord = await recordTransaction(payload);
-    if (newRecord && !isLoggedOut.current) {
-      setHistory((prev) => {
-        const updated = [newRecord, ...prev];
-        if (updated.length > 7) updated.pop();
-        return updated;
-      });
+    if (!isAuthenticated || currentController?.signal.aborted) return null;
+
+    try {
+      const newRecord = await recordTransaction(
+        payload,
+        currentController?.signal,
+      );
+
+      if (newRecord && !currentController?.signal.aborted) {
+        setHistory((prev) => {
+          const updated = [newRecord, ...prev];
+          if (updated.length > 7) updated.pop();
+          return updated;
+        });
+      }
+      return newRecord;
+    } catch (err: any) {
+      if (err.name === "AbortError" || currentController?.signal.aborted)
+        return null;
+      console.error("Failed to add transaction", err);
+      return null;
     }
-    return newRecord;
   };
 
   return {

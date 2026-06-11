@@ -13,7 +13,10 @@ export type SaveBundlesPayload = {
   bundles: Json[];
 };
 
-export async function saveBundle(bundles: Json[]): Promise<boolean> {
+export async function saveBundle(
+  bundles: Json[],
+  signal?: AbortSignal,
+): Promise<boolean> {
   if (!navigator.onLine) {
     toast.error("Network Error", {
       description: "You are offline. Cannot save bundles.",
@@ -31,6 +34,7 @@ export async function saveBundle(bundles: Json[]): Promise<boolean> {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(payload),
+      signal,
     });
 
     if (!response.ok) {
@@ -52,7 +56,9 @@ export async function saveBundle(bundles: Json[]): Promise<boolean> {
   }
 }
 
-export async function fetchBundles(): Promise<Json[] | null> {
+export async function fetchBundles(
+  signal?: AbortSignal,
+): Promise<Json[] | null> {
   if (!navigator.onLine) {
     toast.error("Network Error", {
       description: "You are offline. Cannot fetch bundles.",
@@ -63,6 +69,7 @@ export async function fetchBundles(): Promise<Json[] | null> {
   try {
     const response = await fetch(`${appConfig.sessionBaseUrl}/bundles`, {
       method: "GET",
+      signal,
       credentials: "include",
     });
 

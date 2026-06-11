@@ -142,7 +142,7 @@ export function CustomWalletProfile() {
   }, [isConnected]);
 
   useEffect(() => {
-    let mounted = true;
+    const controller = new AbortController();
     const checkAndVerify = async () => {
       if (
         isConnected &&
@@ -158,27 +158,37 @@ export function CustomWalletProfile() {
           [primaryAccount.address]: "Checking session...",
         }));
 
-        const bundles = await fetchBundles();
-        if (!mounted) return;
+        try {
+          const bundles = await fetchBundles(controller.signal);
 
-        if (bundles === null) {
-          if (!isConnecting) {
-            setWalletVerified(primaryAccount.walletId, false);
-            await handleVerify(primaryAccount.address, primaryAccount.walletId);
+          if (controller.signal.aborted) return;
+
+          if (bundles === null) {
+            if (!isConnecting) {
+              setWalletVerified(primaryAccount.walletId, false);
+              await handleVerify(
+                primaryAccount.address,
+                primaryAccount.walletId,
+              );
+            }
+          } else {
+            setVerificationStatus((prev) => ({
+              ...prev,
+              [primaryAccount.address]: "Verified!",
+            }));
           }
-        } else {
-          setVerificationStatus((prev) => ({
-            ...prev,
-            [primaryAccount.address]: "Verified!",
-          }));
+        } catch (err: any) {
+          if (err.name === "AbortError" || controller.signal.aborted) return;
+          console.error("Session check failed:", err);
         }
       }
     };
+
     checkAndVerify();
+
     return () => {
-      mounted = false;
+      controller.abort();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     isConnected,
     isConnecting,
