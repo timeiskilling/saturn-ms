@@ -12,8 +12,7 @@ let serverRef: any = null;
 const server = serve({
   port: 3030,
   routes: {
-    // Serve index.html for all unmatched routes.
-    "/*": index,
+    "/": index,
 
     "/ws": {
       GET(req) {
@@ -23,13 +22,19 @@ const server = serve({
         return new Response("Upgrade failed", { status: 400 });
       },
     },
+
+    "/*": {
+      GET() {
+        return new Response("Bad Request", { status: 400 });
+      },
+      POST() {
+        return new Response("Bad Request", { status: 400 });
+      },
+    },
   },
 
   development: process.env.NODE_ENV !== "production" && {
-    // Enable browser hot reloading in development
     hmr: true,
-
-    // Echo console logs from the browser to the server
     console: true,
   },
 
