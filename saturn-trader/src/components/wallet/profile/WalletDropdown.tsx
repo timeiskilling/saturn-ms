@@ -2,6 +2,7 @@ import React from "react";
 import { ChevronDown, Plus } from "lucide-react";
 import { type AccountInfo } from "./types";
 import { WalletDropdownItem } from "./WalletDropdownItem";
+import { useAllAccounts } from "./useAllAccounts";
 
 interface WalletDropdownProps {
   allAccounts: AccountInfo[];
@@ -30,6 +31,7 @@ export function WalletDropdown({
   onConnectAnother,
   onClearAll,
 }: WalletDropdownProps) {
+  const { primaryAccount } = useAllAccounts();
   return (
     <div className="relative flex flex-col bg-[#242424] rounded-2xl border border-zinc-800/80 transition-all z-20">
       <button
@@ -95,7 +97,8 @@ export function WalletDropdown({
             const isVerified =
               account.isVerified ||
               verificationStatus[account.address] === "Verified!";
-            const isActive = account.walletId === user?.walletId;
+
+            const isActive = account.address === primaryAccount?.address;
             const icon = account.icon || getWalletIconById(account.walletId);
 
             return (

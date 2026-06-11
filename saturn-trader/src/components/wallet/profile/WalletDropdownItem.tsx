@@ -41,7 +41,7 @@ export function WalletDropdownItem({
     null,
   );
 
-  const isPrimaryActive = primaryAccount?.walletId === user?.walletId;
+  const isPrimaryActive = !!primaryAccount;
 
   const accShort = `${account.address.slice(0, 5)}...${account.address.slice(-5)}`;
   const displayType =
