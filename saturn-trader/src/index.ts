@@ -15,11 +15,11 @@ const server = serve({
   routes: {
     "/": index,
 
-    "/get/list_of_tokens": {
-      GET() {
-        return fetch(`${appConfig.grpcServiceBase}/get/list_of_tokens`);
-      },
-    },
+    // "/get/list_of_tokens": {
+    //   GET() {
+    //     return fetch(`${appConfig.grpcServiceBase}/get/list_of_tokens`);
+    //   },
+    // },
 
     "/ws": {
       GET(req) {
