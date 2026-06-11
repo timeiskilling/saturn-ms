@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useAccounts, useDisconnect } from "@phantom/react-sdk";
 import { useConnectedWallets } from "@/hooks/useConnectedWallets";
+import { logout } from "@/api/logout";
 
 export function useWalletSync() {
   const accounts = useAccounts();
@@ -20,8 +21,13 @@ export function useWalletSync() {
         `[Wallet Sync] State mutated. Old: ${prevActiveAddress.current}, New: ${currentActiveAddress || "Disconnected"}`,
       );
 
+      logout().catch((err) => {
+        console.error("[Wallet Sync] Failed to logout on backend:", err);
+      });
+
       disconnect();
       clearSavedWallets();
+
       window.dispatchEvent(new Event("saturn_wallet_logout"));
     }
 

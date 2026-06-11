@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   fetchTransactionHistory,
   recordTransaction,
@@ -17,6 +17,8 @@ export function useHistoryTransaction({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const isLoggedOut = useRef(false);
+
   const loadHistory = useCallback(async () => {
     if (!isAuthenticated) {
       setHistory([]);
@@ -25,13 +27,17 @@ export function useHistoryTransaction({
 
     setLoading(true);
     setError(null);
+    isLoggedOut.current = false;
+
     try {
       const data = await fetchTransactionHistory();
+      if (isLoggedOut.current) return;
       setHistory(data);
     } catch (err) {
+      if (isLoggedOut.current) return;
       setError(err instanceof Error ? err.message : String(err));
     } finally {
-      setLoading(false);
+      if (!isLoggedOut.current) setLoading(false);
     }
   }, [isAuthenticated]);
 
@@ -39,17 +45,27 @@ export function useHistoryTransaction({
     loadHistory();
   }, [loadHistory]);
 
+  useEffect(() => {
+    const handleLogout = () => {
+      isLoggedOut.current = true;
+      setHistory([]);
+      setError(null);
+      setLoading(false);
+    };
+
+    window.addEventListener("saturn_wallet_logout", handleLogout);
+    return () =>
+      window.removeEventListener("saturn_wallet_logout", handleLogout);
+  }, []);
+
   const addTransaction = async (payload: HistoryTransactionRequest) => {
-    if (!isAuthenticated) return null;
+    if (!isAuthenticated || isLoggedOut.current) return null;
 
     const newRecord = await recordTransaction(payload);
-    if (newRecord) {
+    if (newRecord && !isLoggedOut.current) {
       setHistory((prev) => {
-        // Optimistically add to front, removing oldest if > 7 based on backend limits
         const updated = [newRecord, ...prev];
-        if (updated.length > 7) {
-          updated.pop();
-        }
+        if (updated.length > 7) updated.pop();
         return updated;
       });
     }

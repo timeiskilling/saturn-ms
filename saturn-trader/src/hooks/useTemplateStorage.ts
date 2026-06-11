@@ -39,6 +39,8 @@ export function useTemplateStorage({
   const lastSavedStringRef = useRef<string>("[]");
   const latestTemplatesRef = useRef<Template[]>([]);
 
+  const isLoggedOutRef = useRef(false);
+
   const cleanTemplatesStringified = JSON.stringify(
     getCleanTemplates(templates),
   );
@@ -58,15 +60,17 @@ export function useTemplateStorage({
       }
 
       setIsFetchingBundles(true);
+      isLoggedOutRef.current = false;
 
       try {
         const data = await fetchBundles();
+
+        if (isLoggedOutRef.current) return;
 
         if (data && data.length > 0) {
           const loadedTemplates = data as unknown as Template[];
           setTemplates(loadedTemplates);
           setActiveTemplateId(loadedTemplates[0]?.id ?? null);
-
           lastSavedStringRef.current = JSON.stringify(
             getCleanTemplates(loadedTemplates),
           );
@@ -76,12 +80,13 @@ export function useTemplateStorage({
           lastSavedStringRef.current = "[]";
         }
       } catch (err) {
+        if (isLoggedOutRef.current) return;
         console.error("Failed to load bundles:", err);
         setTemplates([]);
         setActiveTemplateId(null);
         lastSavedStringRef.current = "[]";
       } finally {
-        setIsFetchingBundles(false);
+        if (!isLoggedOutRef.current) setIsFetchingBundles(false);
       }
     };
 
@@ -90,14 +95,18 @@ export function useTemplateStorage({
     const handleLogin = () => {
       localStorage.setItem("isLoggedIn", "true");
       setIsAuthenticated(true);
+      isLoggedOutRef.current = false;
     };
 
     const handleLogout = () => {
+      isLoggedOutRef.current = true;
       localStorage.removeItem("isLoggedIn");
       setIsAuthenticated(false);
       setTemplates([]);
       setActiveTemplateId(null);
       lastSavedStringRef.current = "[]";
+      setIsFetchingBundles(false);
+      setIsSavingBundles(false);
     };
 
     window.addEventListener("saturn_wallet_verified", handleLogin);
@@ -111,7 +120,8 @@ export function useTemplateStorage({
 
   const handleSaveBundles = useCallback(
     async (templatesToSave: Template[] = latestTemplatesRef.current) => {
-      if (!isAuthenticated) return;
+      if (!isAuthenticated || isLoggedOutRef.current) return;
+
       const cleanData = getCleanTemplates(templatesToSave);
       const currentSaveString = JSON.stringify(cleanData);
 
@@ -119,20 +129,29 @@ export function useTemplateStorage({
 
       try {
         await saveBundle(cleanData as any);
+        if (isLoggedOutRef.current) return;
         lastSavedStringRef.current = currentSaveString;
       } catch (err) {
+        if (isLoggedOutRef.current) return;
         console.error("Save bundles failed:", err);
       } finally {
-        setIsSavingBundles(false);
+        if (!isLoggedOutRef.current) setIsSavingBundles(false);
       }
     },
     [isAuthenticated],
   );
+
   const hasUnsavedChanges =
     isAuthenticated && cleanTemplatesStringified !== lastSavedStringRef.current;
 
   useEffect(() => {
-    if (!isAuthenticated || isFetchingBundles || !hasUnsavedChanges) return;
+    if (
+      !isAuthenticated ||
+      isFetchingBundles ||
+      !hasUnsavedChanges ||
+      isLoggedOutRef.current
+    )
+      return;
 
     const timerId = setTimeout(() => {
       handleSaveBundles();
