@@ -15,7 +15,7 @@ const tree = {
       label: ["Interface", "Implementation"],
       color: "#e4e4e7",
       leaves: [
-        { label: ["Templates executing", "History"], status: "soon" },
+        { label: ["Templates executing", "History"], status: "done" },
         { label: ["Timer/Event", "to executing"], status: "planned" },
       ],
     },
