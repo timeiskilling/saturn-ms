@@ -59,7 +59,7 @@ impl TokenMetaDataProvider for JupiterClient {
 
         let mut headers = reqwest::header::HeaderMap::new();
         headers.insert("Accept", "application/json".parse()?);
-        headers.insert("x-api-key", "02aaffb2-fd16-4030-9b4f-f9dd7e178a2c".parse()?);
+        headers.insert("x-api-key", "_".parse()?);
 
         let chunks: Vec<&[String]> = mint_addresses.chunks(100).collect();
         let mut all_info = HashMap::new();
@@ -159,7 +159,7 @@ async fn get_token_balances(
     });
 
     let mut all_balances = Vec::with_capacity(legacy_accounts.len() + token22_accounts.len());
-   
+
     all_balances.extend(parse_token_accounts(legacy_accounts, &SPL_TOKEN_ID.to_string()));
     all_balances.extend(parse_token_accounts(token22_accounts, &SPL_TOKEN_2022_ID.to_string()));
 
@@ -208,8 +208,8 @@ fn parse_token_accounts(accounts: Vec<RpcKeyedAccount>, program_id: &str) -> Vec
                     amount,
                     raw,
                     decimals,
-                    usd_price: None, 
-                    token_program: Some(program_id.to_string()), 
+                    usd_price: None,
+                    token_program: Some(program_id.to_string()),
                 });
             }
         }
