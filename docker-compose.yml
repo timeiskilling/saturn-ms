@@ -7,10 +7,6 @@ networks:
           gateway: "10.0.0.254"
 
 services:
-  # =========================================================
-  # INFRASTRUCTURE
-  # =========================================================
-
   haproxy:
     image: haproxy:latest
     container_name: saturn-haproxy
@@ -113,10 +109,6 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
-  # =========================================================
-  # MICROSERVICES
-  # =========================================================
-
   user-session-manager:
     build:
       context: .
@@ -128,7 +120,6 @@ services:
     env_file:
       - .env
     environment:
-      # Connects using Sentinel Pool native to deadpool_redis
       - USER_MANAGER_SENTINEL_URLS=redis://10.0.0.1:26379,redis://10.0.0.2:26379,redis://10.0.0.3:26379
       - USER_MANAGER_SENTINEL_MASTER_NAME=mymaster
       - POSTGRES_HOST=10.0.0.20
@@ -149,7 +140,6 @@ services:
     env_file:
       - .env
     environment:
-      # Connects using Sentinel Pool
       - REDIS_SENTINEL_URLS=redis://10.0.0.1:26379,redis://10.0.0.2:26379,redis://10.0.0.3:26379
       - REDIS_MASTER_SET=mymaster
       - NOTIFICATION_SENTINEL_URLS=redis://10.0.0.1:26379,redis://10.0.0.2:26379,redis://10.0.0.3:26379
@@ -171,7 +161,6 @@ services:
     env_file:
       - .env
     environment:
-      # Uses raw multiplexed async connection (Points to Master directly)
       - REDIS_HOST=10.0.0.10
       - REDIS_PORT=6379
       - JITO_TIP_REDIS_HOST=10.0.0.10
@@ -193,7 +182,6 @@ services:
     env_file:
       - .env
     environment:
-      # Uses raw multiplexed async connection (Points to Master directly)
       - REDIS_URL=redis://10.0.0.10:6379
       - JITO_TIP_REDIS_HOST=10.0.0.10
       - JITO_TIP_REDIS_PORT=6379
@@ -212,7 +200,6 @@ services:
     env_file:
       - .env
     environment:
-      # Uses raw multiplexed async connection (Points to Master directly)
       - PRICE_REDIS_HOST=10.0.0.10
       - PRICE_REDIS_PORT=6379
       - RUST_BACKTRACE=1
@@ -230,7 +217,6 @@ services:
     env_file:
       - .env
     environment:
-      # Uses standard ioredis connection (Points to Master directly)
       - REDIS_HOST=10.0.0.10
       - REDIS_PORT=6379
     depends_on:
